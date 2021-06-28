@@ -1,11 +1,10 @@
 package keccak;
 
-import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Pack;
 
-public class KeccakDigest {
+public class Keccak256Digest {
     //#region Constants
-    private static final long[] KeccakRoundConstants = new long[]{
+    private static final long[] KECCAK_ROUND_CONSTANTS = new long[]{
             0x0000000000000001L,
             0x0000000000008082L,
             0x800000000000808aL,
@@ -31,95 +30,48 @@ public class KeccakDigest {
             0x0000000080000001L,
             0x8000000080008008L
     };
+
+    private static final int FIXED_OUTPUT_LENGTH = 256;
+    private static final int RATE = 1088;
+    private static final int BLOCK_SIZE = 136;
     //#endregion
 
     //#region Fields
     private final long[] state = new long[25];
     private final byte[] dataQueue = new byte[192];
-    private int rate;
-    private int bitsInQueue;
-    private int fixedOutputLength;
-    private boolean squeezing;
-    //#endregion
-
-    //#region Constructor
-    public KeccakDigest(int bitLength) {
-        init(bitLength);
-    }
+    private int bitsInQueue = 0;
     //#endregion
 
     //#region Public Methods
-    public int getDigestSize() {
-        return fixedOutputLength / 8;
-    }
-
-    public void update(byte[] in, int inOff, int len) {
-        absorb(in, inOff, len);
-    }
-
-    public int doFinal(byte[] out, int outOff) {
-        squeeze(out, outOff, fixedOutputLength);
-        reset();
-        return getDigestSize();
-    }
-
-    public void reset() {
-        init(fixedOutputLength);
+    public byte[] digest(byte[] in) {
+        var bytes = new byte[32];
+        absorb(in);
+        squeeze(bytes);
+        return bytes;
     }
     //#endregion
 
     //#region Private Methods
-    //#region Init
-    private void init(int bitLength) {
-        switch (bitLength) {
-            case 128, 224, 256, 288, 384, 512 -> initSponge(1600 - (bitLength << 1));
-            default -> throw new IllegalArgumentException("bitLength must be one of 128, 224, 256, 288, 384, or 512.");
-        }
-    }
+    private void absorb(byte[] msg) {
+        var bytesInQueue = 0;
 
-    private void initSponge(int rate) {
-        if ((rate <= 0) || (rate >= 1600) || ((rate % 64) != 0)) {
-            throw new IllegalStateException("invalid rate value");
-        }
+        var blockOffset = 0;
+        var penultimateBlockOffset = msg.length - BLOCK_SIZE;
 
-        Arrays.fill(state, 0L);
-        Arrays.fill(dataQueue, (byte) 0);
-        this.rate = rate;
-        this.bitsInQueue = 0;
-        this.squeezing = false;
-        this.fixedOutputLength = (1600 - rate) / 2;
-    }
-    //#endregion
-
-    private void absorb(byte[] data, int off, int len) {
-        if ((bitsInQueue % 8) != 0) {
-            throw new IllegalStateException("attempt to absorb with odd length queue");
-        }
-
-        if (squeezing) {
-            throw new IllegalStateException("attempt to absorb while squeezing");
-        }
-
-        int bytesInQueue = bitsInQueue >> 3;
-        int rateBytes = rate >> 3;
-
-        var count = 0;
-
-        while (count < len) {
-            if (bytesInQueue == 0 && count <= (len - rateBytes)) {
+        while (blockOffset < msg.length) {
+            if (bytesInQueue == 0 && blockOffset <= penultimateBlockOffset) {
                 do {
-                    keccakAbsorb(data, off + count);
-                    count += rateBytes;
-                }
-                while (count <= (len - rateBytes));
+                    keccakAbsorb(msg, blockOffset);
+                    blockOffset += BLOCK_SIZE;
+                } while (blockOffset <= penultimateBlockOffset);
             } else {
-                int partialBlock = Math.min(rateBytes - bytesInQueue, len - count);
-                System.arraycopy(data, off + count, dataQueue, bytesInQueue, partialBlock);
+                int partialBlock = Math.min(BLOCK_SIZE - bytesInQueue, msg.length - blockOffset);
+                System.arraycopy(msg, blockOffset, dataQueue, bytesInQueue, partialBlock);
 
                 bytesInQueue += partialBlock;
-                count += partialBlock;
+                blockOffset += partialBlock;
 
-                if (bytesInQueue == rateBytes) {
+                if (bytesInQueue == BLOCK_SIZE) {
                     keccakAbsorb(dataQueue, 0);
                     bytesInQueue = 0;
                 }
@@ -129,10 +81,10 @@ public class KeccakDigest {
         bitsInQueue = bytesInQueue << 3;
     }
 
-    private void padAndSwitchToSqueezingPhase() {
+    private void squeeze(byte[] output) {
         dataQueue[bitsInQueue >> 3] |= (byte) (1L << (bitsInQueue & 7));
 
-        if (++bitsInQueue == rate) {
+        if (++bitsInQueue == RATE) {
             keccakAbsorb(dataQueue, 0);
             bitsInQueue = 0;
         }
@@ -151,34 +103,23 @@ public class KeccakDigest {
             state[full] ^= Pack.littleEndianToLong(dataQueue, off) & mask;
         }
 
-        state[(rate - 1) >> 6] ^= (1L << 63);
+        state[16] ^= 0x8000000000000000L;
 
         keccakPermutation();
         keccakExtract();
 
-        bitsInQueue = rate;
-        squeezing = true;
-    }
-
-    private void squeeze(byte[] output, int offset, long outputLength) {
-        if (!squeezing) {
-            padAndSwitchToSqueezingPhase();
-        }
-
-        if ((outputLength % 8) != 0) {
-            throw new IllegalStateException("outputLength not a multiple of 8");
-        }
+        bitsInQueue = RATE;
 
         long i = 0;
-        while (i < outputLength) {
+        while (i < FIXED_OUTPUT_LENGTH) {
             if (bitsInQueue == 0) {
                 keccakPermutation();
                 keccakExtract();
-                bitsInQueue = rate;
+                bitsInQueue = RATE;
             }
 
-            int partialBlock = (int) Math.min(bitsInQueue, outputLength - i);
-            System.arraycopy(dataQueue, (rate - bitsInQueue) / 8, output, offset + (int) (i / 8), partialBlock / 8);
+            int partialBlock = (int) Math.min(bitsInQueue, FIXED_OUTPUT_LENGTH - i);
+            System.arraycopy(dataQueue, (RATE - bitsInQueue) / 8, output, (int) (i / 8), partialBlock / 8);
 
             bitsInQueue -= partialBlock;
             i += partialBlock;
@@ -186,9 +127,7 @@ public class KeccakDigest {
     }
 
     private void keccakAbsorb(byte[] data, int off) {
-        int count = rate >> 6;
-
-        for (var i = 0; i < count; ++i) {
+        for (var i = 0; i < 17; i++) {
             state[i] ^= Pack.littleEndianToLong(data, off);
             off += 8;
         }
@@ -197,7 +136,7 @@ public class KeccakDigest {
     }
 
     private void keccakExtract() {
-        Pack.longToLittleEndian(state, 0, rate >> 6, dataQueue, 0);
+        Pack.longToLittleEndian(state, 0, 17, dataQueue, 0);
     }
 
     private void keccakPermutation() {
@@ -338,7 +277,7 @@ public class KeccakDigest {
             a21 = c1;
 
             // iota
-            a00 ^= KeccakRoundConstants[i];
+            a00 ^= KECCAK_ROUND_CONSTANTS[i];
         }
 
         a[0] = a00;
