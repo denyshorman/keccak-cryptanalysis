@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm") version "1.5.20"
     application
@@ -31,6 +29,7 @@ tasks {
 
             freeCompilerArgs = freeCompilerArgs + listOf(
                 "-Xjsr305=strict",
+                "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes",
                 "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi",
                 "-Xuse-experimental=kotlinx.coroutines.ObsoleteCoroutinesApi",
                 "-Xuse-experimental=kotlinx.coroutines.FlowPreview",
@@ -48,9 +47,4 @@ tasks {
     withType<Test> {
         useJUnitPlatform()
     }
-}
-
-
-application {
-    mainClassName = "MainKt"
 }
