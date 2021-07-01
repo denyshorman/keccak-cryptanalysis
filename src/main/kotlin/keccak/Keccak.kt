@@ -19,9 +19,7 @@ class Keccak private constructor(
     fun hash(message: ByteArray): ByteArray {
         val state = Array(size = 5) { ULongArray(size = 5) { 0uL } }
         val blocks = message.pad().blocks().uLongBlocks()
-
         absorb(state, blocks)
-
         return squeeze(state)
     }
     //#endregion
@@ -82,70 +80,71 @@ class Keccak private constructor(
     }
 
     private fun permutation(state: Array<ULongArray>) {
-        (0 until permutationRoundCount).forEach { roundNum ->
-            //#region Variables
-            val c = ULongArray(5) { 0uL }
-            val d = ULongArray(5) { 0uL }
-            val b = Array(size = 5) { ULongArray(size = 5) { 0uL } }
-            //#endregion
-
-            //#region θ step
-            (0..4).forEach { x ->
-                c[x] = state[x][0] xor state[x][1] xor state[x][2] xor state[x][3] xor state[x][4]
-            }
-
-            (0..4).forEach { x ->
-                d[x] = c[(x + 4) % 5] xor c[(x + 1) % 5].rotateLeft(1)
-            }
-
-            (0..4).forEach { x ->
-                (0..4).forEach { y ->
-                    state[x][y] = state[x][y] xor d[x]
-                }
-            }
-            //#endregion
-
-            //#region ρ and π steps
-            (0..4).forEach { x ->
-                (0..4).forEach { y ->
-                    b[y][(2 * x + 3 * y) % 5] = state[x][y].rotateLeft(ROTATION_OFFSETS[x][y])
-                }
-            }
-            //#endregion
-
-            //#region χ step
-            (0..4).forEach { x ->
-                (0..4).forEach { y ->
-                    state[x][y] = b[x][y] xor (b[(x + 1) % 5][y].inv() and b[(x + 2) % 5][y])
-                }
-            }
-            //#endregion
-
-            //#region ι step
-            state[0][0] = state[0][0] xor ROUND_CONSTANTS[roundNum]
-            //#endregion
+        (0 until permutationRoundCount).forEach { round ->
+            permutation(state, ROUND_CONSTANTS[round])
         }
     }
 
-    private fun squeeze(state: Array<ULongArray>): ByteArray {
-        val hash = mutableListOf<Byte>()
-        var bytesAdded = 0
+    private fun permutation(state: Array<ULongArray>, roundConstant: ULong) {
+        //#region Variables
+        val c = ULongArray(5) { 0uL }
+        val d = ULongArray(5) { 0uL }
+        val b = Array(size = 5) { ULongArray(size = 5) { 0uL } }
+        //#endregion
 
-        while (bytesAdded < outputSizeBytes) {
-            (0..4).forEach { x ->
-                (0..4).forEach { y ->
-                    if (x + 5 * y < rate / laneLength && bytesAdded < outputSizeBytes) {
-                        val bytes = state[y][x].toLittleEndianBytes()
-                        hash.addAll(bytes.asSequence())
-                        bytesAdded += ULong.SIZE_BYTES
-                    }
-                }
-            }
-
-            permutation(state)
+        //#region θ step
+        (0..4).forEach { x ->
+            c[x] = state[x][0] xor state[x][1] xor state[x][2] xor state[x][3] xor state[x][4]
         }
 
-        return hash.toByteArray()
+        (0..4).forEach { x ->
+            d[x] = c[(x + 4) % 5] xor c[(x + 1) % 5].rotateLeft(1)
+        }
+
+        (0..4).forEach { x ->
+            (0..4).forEach { y ->
+                state[x][y] = state[x][y] xor d[x]
+            }
+        }
+        //#endregion
+
+        //#region ρ and π steps
+        (0..4).forEach { x ->
+            (0..4).forEach { y ->
+                b[y][(2 * x + 3 * y) % 5] = state[x][y].rotateLeft(ROTATION_OFFSETS[x][y])
+            }
+        }
+        //#endregion
+
+        //#region χ step
+        (0..4).forEach { x ->
+            (0..4).forEach { y ->
+                state[x][y] = b[x][y] xor (b[(x + 1) % 5][y].inv() and b[(x + 2) % 5][y])
+            }
+        }
+        //#endregion
+
+        //#region ι step
+        state[0][0] = state[0][0] xor roundConstant
+        //#endregion
+    }
+
+    private fun squeeze(state: Array<ULongArray>): ByteArray {
+        val outputBytesStream = sequence {
+            while (true) {
+                (0..4).forEach { x ->
+                    (0..4).forEach { y ->
+                        if (5 * x + y < rate / laneLength) {
+                            state[y][x].toLittleEndianBytes().forEach { yield(it) }
+                        }
+                    }
+                }
+
+                permutation(state)
+            }
+        }
+
+        return outputBytesStream.take(outputSizeBytes).toList().toByteArray()
     }
 
     private fun ByteArray.littleEndianToULong(): ULong {
@@ -214,7 +213,10 @@ class Keccak private constructor(
         //#endregion
 
         //#region Keccak Implementations
+        val KECCAK_224 = Keccak(rate = 1152, capacity = 448, outputSize = 224)
         val KECCAK_256 = Keccak(rate = 1088, capacity = 512, outputSize = 256)
+        val KECCAK_384 = Keccak(rate = 832, capacity = 768, outputSize = 384)
+        val KECCAK_512 = Keccak(rate = 576, capacity = 1024, outputSize = 512)
         //#endregion
     }
 }
