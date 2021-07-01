@@ -1,30 +1,30 @@
 package keccak
 
-import kotlin.math.log2
-
 class Keccak private constructor(
     private val rate: Int,
     capacity: Int,
     outputSize: Int,
 ) {
     //#region Private Fields
-    private val permutationWidth = rate + capacity
-    private val laneLength = permutationWidth / 25
-    private val permutationRoundCount = 12 + 2 * log2(laneLength.toDouble()).toInt()
+    private val laneLength = (rate + capacity) / (LANE_SIZE * LANE_SIZE)
+    private val permutationRoundCount = 12 + 2 * kotlin.math.log2(laneLength.toDouble()).toInt()
     private val blockSizeBytes = rate / Byte.SIZE_BITS
     private val outputSizeBytes = outputSize / Byte.SIZE_BITS
     //#endregion
 
     //#region Public API
     fun hash(message: ByteArray): ByteArray {
-        val state = Array(size = 5) { LongArray(size = 5) { 0 } }
+        val state = Array(LANE_SIZE) { LongArray(LANE_SIZE) { 0 } }
         val blocks = message.pad().blocks().longBlocks()
-        absorb(state, blocks)
-        return squeeze(state)
+
+        return state.run {
+            absorb(blocks)
+            squeeze()
+        }
     }
     //#endregion
 
-    //#region Utils
+    //#region Implementation
     private fun ByteArray.pad(): ByteArray {
         val message = this
         val paddingSize = blockSizeBytes - message.size % blockSizeBytes
@@ -35,7 +35,7 @@ class Keccak private constructor(
         } else if (paddingSize >= 2) {
             padding.add(0x01)
 
-            for (i in 0 until (paddingSize - 2)) {
+            repeat(paddingSize - 2) {
                 padding.add(0x00)
             }
 
@@ -65,82 +65,91 @@ class Keccak private constructor(
             .toList()
     }
 
-    private fun absorb(state: Array<LongArray>, blocks: List<LongArray>) {
+    private fun Array<LongArray>.absorb(blocks: List<LongArray>) {
         blocks.forEach { block ->
-            (0..4).forEach { x ->
-                (0..4).forEach { y ->
-                    if (x + 5 * y < rate / laneLength) {
-                        state[x][y] = state[x][y] xor block[x + 5 * y]
-                    }
+            absorb(block)
+        }
+    }
+
+    private fun Array<LongArray>.absorb(block: LongArray) {
+        val state = this
+
+        (0 until LANE_SIZE).forEach { x ->
+            (0 until LANE_SIZE).forEach { y ->
+                if (x + LANE_SIZE * y < rate / laneLength) {
+                    state[x][y] = state[x][y] xor block[x + LANE_SIZE * y]
                 }
             }
-
-            permutation(state)
         }
+
+        permutation()
     }
 
-    private fun permutation(state: Array<LongArray>) {
+    private fun Array<LongArray>.permutation() {
         (0 until permutationRoundCount).forEach { round ->
-            permutation(state, ROUND_CONSTANTS[round])
+            permutation(round)
         }
     }
 
-    private fun permutation(state: Array<LongArray>, roundConstant: Long) {
+    private fun Array<LongArray>.permutation(round: Int) {
         //#region Variables
-        val c = LongArray(5) { 0 }
-        val d = LongArray(5) { 0 }
-        val b = Array(size = 5) { LongArray(size = 5) { 0 } }
+        val a = this
+        val b = Array(LANE_SIZE) { LongArray(LANE_SIZE) { 0 } }
+        val c = LongArray(LANE_SIZE) { 0 }
+        val d = LongArray(LANE_SIZE) { 0 }
         //#endregion
 
         //#region θ step
-        (0..4).forEach { x ->
-            c[x] = state[x][0] xor state[x][1] xor state[x][2] xor state[x][3] xor state[x][4]
+        (0 until LANE_SIZE).forEach { x ->
+            c[x] = a[x][0] xor a[x][1] xor a[x][2] xor a[x][3] xor a[x][4]
         }
 
-        (0..4).forEach { x ->
-            d[x] = c[(x + 4) % 5] xor c[(x + 1) % 5].rotateLeft(1)
+        (0 until LANE_SIZE).forEach { x ->
+            d[x] = c[(x + 4) % LANE_SIZE] xor c[(x + 1) % LANE_SIZE].rotateLeft(1)
         }
 
-        (0..4).forEach { x ->
-            (0..4).forEach { y ->
-                state[x][y] = state[x][y] xor d[x]
+        (0 until LANE_SIZE).forEach { x ->
+            (0 until LANE_SIZE).forEach { y ->
+                a[x][y] = a[x][y] xor d[x]
             }
         }
         //#endregion
 
         //#region ρ and π steps
-        (0..4).forEach { x ->
-            (0..4).forEach { y ->
-                b[y][(2 * x + 3 * y) % 5] = state[x][y].rotateLeft(ROTATION_OFFSETS[x][y])
+        (0 until LANE_SIZE).forEach { x ->
+            (0 until LANE_SIZE).forEach { y ->
+                b[y][(2 * x + 3 * y) % LANE_SIZE] = a[x][y].rotateLeft(ROTATION_OFFSETS[x][y])
             }
         }
         //#endregion
 
         //#region χ step
-        (0..4).forEach { x ->
-            (0..4).forEach { y ->
-                state[x][y] = b[x][y] xor (b[(x + 1) % 5][y].inv() and b[(x + 2) % 5][y])
+        (0 until LANE_SIZE).forEach { x ->
+            (0 until LANE_SIZE).forEach { y ->
+                a[x][y] = b[x][y] xor (b[(x + 1) % LANE_SIZE][y].inv() and b[(x + 2) % LANE_SIZE][y])
             }
         }
         //#endregion
 
         //#region ι step
-        state[0][0] = state[0][0] xor roundConstant
+        a[0][0] = a[0][0] xor ROUND_CONSTANTS[round]
         //#endregion
     }
 
-    private fun squeeze(state: Array<LongArray>): ByteArray {
+    private fun Array<LongArray>.squeeze(): ByteArray {
+        val state = this
+
         val outputBytesStream = sequence {
             while (true) {
-                (0..4).forEach { x ->
-                    (0..4).forEach { y ->
-                        if (5 * x + y < rate / laneLength) {
+                (0 until LANE_SIZE).forEach { x ->
+                    (0 until LANE_SIZE).forEach { y ->
+                        if (LANE_SIZE * x + y < rate / laneLength) {
                             state[y][x].toLittleEndianBytes().forEach { yield(it) }
                         }
                     }
                 }
 
-                permutation(state)
+                permutation()
             }
         }
 
@@ -176,6 +185,8 @@ class Keccak private constructor(
 
     companion object {
         //#region Private Constants
+        private const val LANE_SIZE = 5
+        
         private val ROUND_CONSTANTS = longArrayOf(
             0x0000000000000001uL.toLong(),
             0x0000000000008082uL.toLong(),
