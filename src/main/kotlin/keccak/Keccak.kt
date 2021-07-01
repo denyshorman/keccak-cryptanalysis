@@ -17,8 +17,8 @@ class Keccak private constructor(
 
     //#region Public API
     fun hash(message: ByteArray): ByteArray {
-        val state = Array(size = 5) { ULongArray(size = 5) { 0uL } }
-        val blocks = message.pad().blocks().uLongBlocks()
+        val state = Array(size = 5) { LongArray(size = 5) { 0 } }
+        val blocks = message.pad().blocks().longBlocks()
         absorb(state, blocks)
         return squeeze(state)
     }
@@ -52,20 +52,20 @@ class Keccak private constructor(
             .toList()
     }
 
-    private fun List<ByteArray>.uLongBlocks(): List<ULongArray> {
+    private fun List<ByteArray>.longBlocks(): List<LongArray> {
         return asSequence()
             .map { block ->
                 block.asSequence()
-                    .chunked(ULong.SIZE_BYTES)
+                    .chunked(Long.SIZE_BYTES)
                     .map { it.toByteArray() }
-                    .map { it.littleEndianToULong() }
+                    .map { it.littleEndianToLong() }
                     .toList()
-                    .toULongArray()
+                    .toLongArray()
             }
             .toList()
     }
 
-    private fun absorb(state: Array<ULongArray>, blocks: List<ULongArray>) {
+    private fun absorb(state: Array<LongArray>, blocks: List<LongArray>) {
         blocks.forEach { block ->
             (0..4).forEach { x ->
                 (0..4).forEach { y ->
@@ -79,17 +79,17 @@ class Keccak private constructor(
         }
     }
 
-    private fun permutation(state: Array<ULongArray>) {
+    private fun permutation(state: Array<LongArray>) {
         (0 until permutationRoundCount).forEach { round ->
             permutation(state, ROUND_CONSTANTS[round])
         }
     }
 
-    private fun permutation(state: Array<ULongArray>, roundConstant: ULong) {
+    private fun permutation(state: Array<LongArray>, roundConstant: Long) {
         //#region Variables
-        val c = ULongArray(5) { 0uL }
-        val d = ULongArray(5) { 0uL }
-        val b = Array(size = 5) { ULongArray(size = 5) { 0uL } }
+        val c = LongArray(5) { 0 }
+        val d = LongArray(5) { 0 }
+        val b = Array(size = 5) { LongArray(size = 5) { 0 } }
         //#endregion
 
         //#region θ step
@@ -129,7 +129,7 @@ class Keccak private constructor(
         //#endregion
     }
 
-    private fun squeeze(state: Array<ULongArray>): ByteArray {
+    private fun squeeze(state: Array<LongArray>): ByteArray {
         val outputBytesStream = sequence {
             while (true) {
                 (0..4).forEach { x ->
@@ -147,26 +147,26 @@ class Keccak private constructor(
         return outputBytesStream.take(outputSizeBytes).toList().toByteArray()
     }
 
-    private fun ByteArray.littleEndianToULong(): ULong {
+    private fun ByteArray.littleEndianToLong(): Long {
         val bytes = this
-        var value = 0uL
+        var value = 0L
 
         var i = 0
         while (i < bytes.size) {
-            value = value or bytes[i].toULong().shl(i * UByte.SIZE_BITS)
+            value = value or bytes[i].toLong().shl(i * Byte.SIZE_BITS)
             i++
         }
 
         return value
     }
 
-    private fun ULong.toLittleEndianBytes(): ByteArray {
+    private fun Long.toLittleEndianBytes(): ByteArray {
         val value = this
-        val bytes = ByteArray(ULong.SIZE_BYTES) { 0 }
+        val bytes = ByteArray(Long.SIZE_BYTES) { 0 }
 
         var i = 0
-        while (i < ULong.SIZE_BYTES) {
-            bytes[i] = (value.shr(i * UByte.SIZE_BITS) and UByte.MAX_VALUE.toULong()).toByte()
+        while (i < Long.SIZE_BYTES) {
+            bytes[i] = (value.shr(i * Byte.SIZE_BITS) and UByte.MAX_VALUE.toLong()).toByte()
             i++
         }
 
@@ -176,31 +176,31 @@ class Keccak private constructor(
 
     companion object {
         //#region Private Constants
-        private val ROUND_CONSTANTS = ulongArrayOf(
-            0x0000000000000001uL,
-            0x0000000000008082uL,
-            0x800000000000808auL,
-            0x8000000080008000uL,
-            0x000000000000808buL,
-            0x0000000080000001uL,
-            0x8000000080008081uL,
-            0x8000000000008009uL,
-            0x000000000000008auL,
-            0x0000000000000088uL,
-            0x0000000080008009uL,
-            0x000000008000000auL,
-            0x000000008000808buL,
-            0x800000000000008buL,
-            0x8000000000008089uL,
-            0x8000000000008003uL,
-            0x8000000000008002uL,
-            0x8000000000000080uL,
-            0x000000000000800auL,
-            0x800000008000000auL,
-            0x8000000080008081uL,
-            0x8000000000008080uL,
-            0x0000000080000001uL,
-            0x8000000080008008uL,
+        private val ROUND_CONSTANTS = longArrayOf(
+            0x0000000000000001uL.toLong(),
+            0x0000000000008082uL.toLong(),
+            0x800000000000808auL.toLong(),
+            0x8000000080008000uL.toLong(),
+            0x000000000000808buL.toLong(),
+            0x0000000080000001uL.toLong(),
+            0x8000000080008081uL.toLong(),
+            0x8000000000008009uL.toLong(),
+            0x000000000000008auL.toLong(),
+            0x0000000000000088uL.toLong(),
+            0x0000000080008009uL.toLong(),
+            0x000000008000000auL.toLong(),
+            0x000000008000808buL.toLong(),
+            0x800000000000008buL.toLong(),
+            0x8000000000008089uL.toLong(),
+            0x8000000000008003uL.toLong(),
+            0x8000000000008002uL.toLong(),
+            0x8000000000000080uL.toLong(),
+            0x000000000000800auL.toLong(),
+            0x800000008000000auL.toLong(),
+            0x8000000080008081uL.toLong(),
+            0x8000000000008080uL.toLong(),
+            0x0000000080000001uL.toLong(),
+            0x8000000080008008uL.toLong(),
         )
 
         private val ROTATION_OFFSETS = arrayOf(
