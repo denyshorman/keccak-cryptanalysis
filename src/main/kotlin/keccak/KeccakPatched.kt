@@ -166,7 +166,6 @@ class Xor(vararg initNodes: Node) : Node {
     private fun addNode(node: Node) {
         if (nodeSet.contains(node)) {
             nodeSet.remove(node)
-            nodeSet.add(Bit())
         } else {
             nodeSet.add(node)
         }
@@ -196,6 +195,34 @@ fun setVariables(state: LongArray, context: NodeContext) {
             i++
         }
     }
+}
+
+fun Array<BitGroup>.findFunctionsVariableIncludes(): Map<String, Set<String>> {
+    val map = LinkedHashMap<String, Set<String>>()
+
+    (0 until 1600).forEach { i ->
+        val varName = "a$i"
+        val l = LinkedHashSet<String>()
+
+        forEachIndexed { groupIndex, bitGroup -> // 25 groups
+            bitGroup.bits.forEachIndexed { bitIndex, node -> // 64 bits
+                require(node is Xor)
+
+                node.nodes.forEach { xorNode ->
+                    require(xorNode is Variable)
+
+                    if (varName == xorNode.name) {
+                        val f = "f${64 * groupIndex + bitIndex}"
+                        l.add(f)
+                    }
+                }
+            }
+        }
+
+        map[varName] = l
+    }
+
+    return map
 }
 
 class KeccakPatched private constructor() {
@@ -349,6 +376,7 @@ class KeccakPatched private constructor() {
         state0[23] = state0[23] xor d0[4]
         state0[24] = state0[24] xor d0[4]
 
+        val stateVars = state0.findFunctionsVariableIncludes()
         val state1 = state0.map { it.toLong(context) }.toLongArray()
         //#endregion
 
