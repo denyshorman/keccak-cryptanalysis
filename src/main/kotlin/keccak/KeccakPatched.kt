@@ -1,5 +1,156 @@
 package keccak
 
+//#region Bit Operation Nodes
+interface Node {
+    fun evaluate(context: NodeContext): Bit
+}
+
+class NodeContext {
+    val variables = mutableMapOf<String, Bit>()
+
+    companion object {
+        val EmptyContext = NodeContext()
+    }
+}
+
+class Bit(val value: Boolean = false) : Node {
+    override fun evaluate(context: NodeContext): Bit {
+        return this
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Bit
+
+        if (value != other.value) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return value.hashCode()
+    }
+
+    override fun toString(): String {
+        return if (value) "1" else "0"
+    }
+}
+
+class Variable(val name: String) : Node {
+    override fun evaluate(context: NodeContext): Bit {
+        return context.variables[name] ?: throw IllegalStateException("Variable $name not found")
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Variable
+
+        if (name != other.name) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return name.hashCode()
+    }
+
+    override fun toString(): String {
+        return name
+    }
+}
+
+class BitGroup(val bits: Array<Node>) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as BitGroup
+
+        if (!bits.contentEquals(other.bits)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return bits.contentHashCode()
+    }
+
+    override fun toString(): String {
+        return bits.asSequence().map { it.toString() }.joinToString("")
+    }
+}
+
+//#region BitGroup extensions
+infix fun BitGroup.xor(other: BitGroup): BitGroup {
+    require(bits.size == other.bits.size)
+    val bits = bits.zip(other.bits) { l, r -> Xor(l, r) }
+    return BitGroup(bits.toTypedArray())
+}
+
+fun BitGroup.rotateLeft(bitCount: Int): BitGroup {
+    return BitGroup((bits.drop(bitCount) + bits.take(bitCount)).toTypedArray())
+}
+
+fun BitGroup.toLong(context: NodeContext): Long {
+    require(bits.size == Long.SIZE_BITS)
+
+    var value = 0L
+
+    (Long.SIZE_BITS - 1 downTo 0).forEach { i ->
+        if (bits[i].evaluate(context).value) {
+            value = value or (1L shl Long.SIZE_BITS - i - 1)
+        }
+    }
+
+    return value
+}
+
+fun Long.toBitGroup(): BitGroup {
+    val bits = Array<Node>(Long.SIZE_BITS) { Bit() }
+    (0 until Long.SIZE_BITS).forEach { i ->
+        val bit = (this shr i) and 1
+        bits[Long.SIZE_BITS - i - 1] = Bit(bit != 0L)
+    }
+    return BitGroup(bits)
+}
+//#endregion
+
+class Xor(val nodeLeft: Node, val nodeRight: Node) : Node {
+    override fun evaluate(context: NodeContext): Bit {
+        val left = nodeLeft.evaluate(context)
+        val right = nodeRight.evaluate(context)
+
+        return Bit(left != right)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Xor
+
+        if (nodeLeft != other.nodeLeft) return false
+        if (nodeRight != other.nodeRight) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = nodeLeft.hashCode()
+        result = 31 * result + nodeRight.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "($nodeLeft xor $nodeRight)"
+    }
+}
+//#endregion
+
 class KeccakPatched private constructor() {
     //#region Public API
     fun hash(message: ByteArray): ByteArray {
@@ -92,18 +243,71 @@ class KeccakPatched private constructor() {
 
     private fun LongArray.permutation(round: Int) {
         //#region Variables
-        val a = this
+        val state = this
         val b = LongArray(STATE_SIZE) { 0 }
         val c = LongArray(LANE_SIZE) { 0 }
         val d = LongArray(LANE_SIZE) { 0 }
         //#endregion
 
+        //#region alternative θ step
+        val state0 = state.map { it.toBitGroup() }.toTypedArray()
+        val c0 = Array(LANE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) }
+        val d0 = Array(LANE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) }
+
+        c0[0] = state0[0] xor state0[1] xor state0[2] xor state0[3] xor state0[4]
+        c0[1] = state0[5] xor state0[6] xor state0[7] xor state0[8] xor state0[9]
+        c0[2] = state0[10] xor state0[11] xor state0[12] xor state0[13] xor state0[14]
+        c0[3] = state0[15] xor state0[16] xor state0[17] xor state0[18] xor state0[19]
+        c0[4] = state0[20] xor state0[21] xor state0[22] xor state0[23] xor state0[24]
+
+
+        d0[0] = c0[4] xor c0[1].rotateLeft(1)
+        d0[1] = c0[0] xor c0[2].rotateLeft(1)
+        d0[2] = c0[1] xor c0[3].rotateLeft(1)
+        d0[3] = c0[2] xor c0[4].rotateLeft(1)
+        d0[4] = c0[3] xor c0[0].rotateLeft(1)
+
+
+        state0[0] = state0[0] xor d0[0]
+        state0[1] = state0[1] xor d0[0]
+        state0[2] = state0[2] xor d0[0]
+        state0[3] = state0[3] xor d0[0]
+        state0[4] = state0[4] xor d0[0]
+
+        state0[5] = state0[5] xor d0[1]
+        state0[6] = state0[6] xor d0[1]
+        state0[7] = state0[7] xor d0[1]
+        state0[8] = state0[8] xor d0[1]
+        state0[9] = state0[9] xor d0[1]
+
+        state0[10] = state0[10] xor d0[2]
+        state0[11] = state0[11] xor d0[2]
+        state0[12] = state0[12] xor d0[2]
+        state0[13] = state0[13] xor d0[2]
+        state0[14] = state0[14] xor d0[2]
+
+        state0[15] = state0[15] xor d0[3]
+        state0[16] = state0[16] xor d0[3]
+        state0[17] = state0[17] xor d0[3]
+        state0[18] = state0[18] xor d0[3]
+        state0[19] = state0[19] xor d0[3]
+
+        state0[20] = state0[20] xor d0[4]
+        state0[21] = state0[21] xor d0[4]
+        state0[22] = state0[22] xor d0[4]
+        state0[23] = state0[23] xor d0[4]
+        state0[24] = state0[24] xor d0[4]
+
+        val state1 = state0.map { it.toLong(NodeContext.EmptyContext) }.toTypedArray().toLongArray()
+        //#endregion
+
         //#region θ step
-        c[0] = a[0] xor a[1] xor a[2] xor a[3] xor a[4]
-        c[1] = a[5] xor a[6] xor a[7] xor a[8] xor a[9]
-        c[2] = a[10] xor a[11] xor a[12] xor a[13] xor a[14]
-        c[3] = a[15] xor a[16] xor a[17] xor a[18] xor a[19]
-        c[4] = a[20] xor a[21] xor a[22] xor a[23] xor a[24]
+        c[0] = state[0] xor state[1] xor state[2] xor state[3] xor state[4]
+        c[1] = state[5] xor state[6] xor state[7] xor state[8] xor state[9]
+        c[2] = state[10] xor state[11] xor state[12] xor state[13] xor state[14]
+        c[3] = state[15] xor state[16] xor state[17] xor state[18] xor state[19]
+        c[4] = state[20] xor state[21] xor state[22] xor state[23] xor state[24]
+
 
         d[0] = c[4] xor c[1].rotateLeft(1)
         d[1] = c[0] xor c[2].rotateLeft(1)
@@ -111,91 +315,98 @@ class KeccakPatched private constructor() {
         d[3] = c[2] xor c[4].rotateLeft(1)
         d[4] = c[3] xor c[0].rotateLeft(1)
 
-        a[0] = a[0] xor d[0]
-        a[1] = a[1] xor d[0]
-        a[2] = a[2] xor d[0]
-        a[3] = a[3] xor d[0]
-        a[4] = a[4] xor d[0]
-        a[5] = a[5] xor d[1]
-        a[6] = a[6] xor d[1]
-        a[7] = a[7] xor d[1]
-        a[8] = a[8] xor d[1]
-        a[9] = a[9] xor d[1]
-        a[10] = a[10] xor d[2]
-        a[11] = a[11] xor d[2]
-        a[12] = a[12] xor d[2]
-        a[13] = a[13] xor d[2]
-        a[14] = a[14] xor d[2]
-        a[15] = a[15] xor d[3]
-        a[16] = a[16] xor d[3]
-        a[17] = a[17] xor d[3]
-        a[18] = a[18] xor d[3]
-        a[19] = a[19] xor d[3]
-        a[20] = a[20] xor d[4]
-        a[21] = a[21] xor d[4]
-        a[22] = a[22] xor d[4]
-        a[23] = a[23] xor d[4]
-        a[24] = a[24] xor d[4]
+
+        state[0] = state[0] xor d[0]
+        state[1] = state[1] xor d[0]
+        state[2] = state[2] xor d[0]
+        state[3] = state[3] xor d[0]
+        state[4] = state[4] xor d[0]
+
+        state[5] = state[5] xor d[1]
+        state[6] = state[6] xor d[1]
+        state[7] = state[7] xor d[1]
+        state[8] = state[8] xor d[1]
+        state[9] = state[9] xor d[1]
+
+        state[10] = state[10] xor d[2]
+        state[11] = state[11] xor d[2]
+        state[12] = state[12] xor d[2]
+        state[13] = state[13] xor d[2]
+        state[14] = state[14] xor d[2]
+
+        state[15] = state[15] xor d[3]
+        state[16] = state[16] xor d[3]
+        state[17] = state[17] xor d[3]
+        state[18] = state[18] xor d[3]
+        state[19] = state[19] xor d[3]
+
+        state[20] = state[20] xor d[4]
+        state[21] = state[21] xor d[4]
+        state[22] = state[22] xor d[4]
+        state[23] = state[23] xor d[4]
+        state[24] = state[24] xor d[4]
         //#endregion
 
+        require(state1.contentEquals(state))
+
         //#region ρ and π steps
-        b[0] = a[0].rotateLeft(0)
-        b[1] = a[15].rotateLeft(28)
-        b[2] = a[5].rotateLeft(1)
-        b[3] = a[20].rotateLeft(27)
-        b[4] = a[10].rotateLeft(62)
-        b[5] = a[6].rotateLeft(44)
-        b[6] = a[21].rotateLeft(20)
-        b[7] = a[11].rotateLeft(6)
-        b[8] = a[1].rotateLeft(36)
-        b[9] = a[16].rotateLeft(55)
-        b[10] = a[12].rotateLeft(43)
-        b[11] = a[2].rotateLeft(3)
-        b[12] = a[17].rotateLeft(25)
-        b[13] = a[7].rotateLeft(10)
-        b[14] = a[22].rotateLeft(39)
-        b[15] = a[18].rotateLeft(21)
-        b[16] = a[8].rotateLeft(45)
-        b[17] = a[23].rotateLeft(8)
-        b[18] = a[13].rotateLeft(15)
-        b[19] = a[3].rotateLeft(41)
-        b[20] = a[24].rotateLeft(14)
-        b[21] = a[14].rotateLeft(61)
-        b[22] = a[4].rotateLeft(18)
-        b[23] = a[19].rotateLeft(56)
-        b[24] = a[9].rotateLeft(2)
+        b[0] = state[0].rotateLeft(0)
+        b[1] = state[15].rotateLeft(28)
+        b[2] = state[5].rotateLeft(1)
+        b[3] = state[20].rotateLeft(27)
+        b[4] = state[10].rotateLeft(62)
+        b[5] = state[6].rotateLeft(44)
+        b[6] = state[21].rotateLeft(20)
+        b[7] = state[11].rotateLeft(6)
+        b[8] = state[1].rotateLeft(36)
+        b[9] = state[16].rotateLeft(55)
+        b[10] = state[12].rotateLeft(43)
+        b[11] = state[2].rotateLeft(3)
+        b[12] = state[17].rotateLeft(25)
+        b[13] = state[7].rotateLeft(10)
+        b[14] = state[22].rotateLeft(39)
+        b[15] = state[18].rotateLeft(21)
+        b[16] = state[8].rotateLeft(45)
+        b[17] = state[23].rotateLeft(8)
+        b[18] = state[13].rotateLeft(15)
+        b[19] = state[3].rotateLeft(41)
+        b[20] = state[24].rotateLeft(14)
+        b[21] = state[14].rotateLeft(61)
+        b[22] = state[4].rotateLeft(18)
+        b[23] = state[19].rotateLeft(56)
+        b[24] = state[9].rotateLeft(2)
         //#endregion
 
         //#region χ step
-        a[0] = b[0] xor (b[5].inv() and b[10])
-        a[1] = b[1] xor (b[6].inv() and b[11])
-        a[2] = b[2] xor (b[7].inv() and b[12])
-        a[3] = b[3] xor (b[8].inv() and b[13])
-        a[4] = b[4] xor (b[9].inv() and b[14])
-        a[5] = b[5] xor (b[10].inv() and b[15])
-        a[6] = b[6] xor (b[11].inv() and b[16])
-        a[7] = b[7] xor (b[12].inv() and b[17])
-        a[8] = b[8] xor (b[13].inv() and b[18])
-        a[9] = b[9] xor (b[14].inv() and b[19])
-        a[10] = b[10] xor (b[15].inv() and b[20])
-        a[11] = b[11] xor (b[16].inv() and b[21])
-        a[12] = b[12] xor (b[17].inv() and b[22])
-        a[13] = b[13] xor (b[18].inv() and b[23])
-        a[14] = b[14] xor (b[19].inv() and b[24])
-        a[15] = b[15] xor (b[20].inv() and b[0])
-        a[16] = b[16] xor (b[21].inv() and b[1])
-        a[17] = b[17] xor (b[22].inv() and b[2])
-        a[18] = b[18] xor (b[23].inv() and b[3])
-        a[19] = b[19] xor (b[24].inv() and b[4])
-        a[20] = b[20] xor (b[0].inv() and b[5])
-        a[21] = b[21] xor (b[1].inv() and b[6])
-        a[22] = b[22] xor (b[2].inv() and b[7])
-        a[23] = b[23] xor (b[3].inv() and b[8])
-        a[24] = b[24] xor (b[4].inv() and b[9])
+        state[0] = b[0] xor (b[5].inv() and b[10])
+        state[1] = b[1] xor (b[6].inv() and b[11])
+        state[2] = b[2] xor (b[7].inv() and b[12])
+        state[3] = b[3] xor (b[8].inv() and b[13])
+        state[4] = b[4] xor (b[9].inv() and b[14])
+        state[5] = b[5] xor (b[10].inv() and b[15])
+        state[6] = b[6] xor (b[11].inv() and b[16])
+        state[7] = b[7] xor (b[12].inv() and b[17])
+        state[8] = b[8] xor (b[13].inv() and b[18])
+        state[9] = b[9] xor (b[14].inv() and b[19])
+        state[10] = b[10] xor (b[15].inv() and b[20])
+        state[11] = b[11] xor (b[16].inv() and b[21])
+        state[12] = b[12] xor (b[17].inv() and b[22])
+        state[13] = b[13] xor (b[18].inv() and b[23])
+        state[14] = b[14] xor (b[19].inv() and b[24])
+        state[15] = b[15] xor (b[20].inv() and b[0])
+        state[16] = b[16] xor (b[21].inv() and b[1])
+        state[17] = b[17] xor (b[22].inv() and b[2])
+        state[18] = b[18] xor (b[23].inv() and b[3])
+        state[19] = b[19] xor (b[24].inv() and b[4])
+        state[20] = b[20] xor (b[0].inv() and b[5])
+        state[21] = b[21] xor (b[1].inv() and b[6])
+        state[22] = b[22] xor (b[2].inv() and b[7])
+        state[23] = b[23] xor (b[3].inv() and b[8])
+        state[24] = b[24] xor (b[4].inv() and b[9])
         //#endregion
 
         //#region ι step
-        a[0] = a[0] xor ROUND_CONSTANTS[round]
+        state[0] = state[0] xor ROUND_CONSTANTS[round]
         //#endregion
     }
 
