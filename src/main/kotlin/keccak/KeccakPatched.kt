@@ -80,7 +80,7 @@ class BitGroup(val bits: Array<Node>) {
     }
 
     override fun toString(): String {
-        return bits.asSequence().map { it.toString() }.joinToString("")
+        return bits.asSequence().map { "[$it]" }.joinToString("")
     }
 }
 
@@ -119,12 +119,29 @@ fun Long.toBitGroup(): BitGroup {
 }
 //#endregion
 
-class Xor(val nodeLeft: Node, val nodeRight: Node) : Node {
-    override fun evaluate(context: NodeContext): Bit {
-        val left = nodeLeft.evaluate(context)
-        val right = nodeRight.evaluate(context)
+class Xor(vararg initNodes: Node) : Node {
+    private val nodeSet: MutableSet<Node> = HashSet()
 
-        return Bit(left != right)
+    init {
+        initNodes.forEach { node ->
+            when (node) {
+                is Xor -> {
+                    node.nodes.forEach { anotherNode ->
+                        addNode(anotherNode)
+                    }
+                }
+                else -> addNode(node)
+            }
+        }
+    }
+
+    val nodes: Set<Node> = nodeSet
+
+    override fun evaluate(context: NodeContext): Bit {
+        return nodes.fold(Bit()) { bit1, node ->
+            val bit2 = node.evaluate(context)
+            Bit(bit1 != bit2)
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -133,23 +150,53 @@ class Xor(val nodeLeft: Node, val nodeRight: Node) : Node {
 
         other as Xor
 
-        if (nodeLeft != other.nodeLeft) return false
-        if (nodeRight != other.nodeRight) return false
+        if (nodeSet != other.nodeSet) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = nodeLeft.hashCode()
-        result = 31 * result + nodeRight.hashCode()
-        return result
+        return nodeSet.hashCode()
     }
 
     override fun toString(): String {
-        return "($nodeLeft xor $nodeRight)"
+        return nodes.asSequence().map { it.toString() }.joinToString(" ^ ")
+    }
+
+    private fun addNode(node: Node) {
+        if (nodeSet.contains(node)) {
+            nodeSet.remove(node)
+            nodeSet.add(Bit())
+        } else {
+            nodeSet.add(node)
+        }
     }
 }
 //#endregion
+
+fun generateState(): Array<BitGroup> {
+    return (0 until 25 * Long.SIZE_BITS).asSequence()
+        .chunked(Long.SIZE_BITS)
+        .map { bitIndices ->
+            val bits = Array<Node>(Long.SIZE_BITS) { i -> Variable("a${bitIndices[i]}") }
+            BitGroup(bits)
+        }
+        .toList()
+        .toTypedArray()
+}
+
+fun setVariables(state: LongArray, context: NodeContext) {
+    var i = 0
+
+    state.forEach { longValue ->
+        val bitGroup = longValue.toBitGroup()
+
+        bitGroup.bits.forEach { bit ->
+            context.variables["a$i"] = bit.evaluate(context)
+            i++
+        }
+    }
+}
 
 class KeccakPatched private constructor() {
     //#region Public API
@@ -250,7 +297,11 @@ class KeccakPatched private constructor() {
         //#endregion
 
         //#region alternative θ step
-        val state0 = state.map { it.toBitGroup() }.toTypedArray()
+        //val state0 = state.map { it.toBitGroup() }.toTypedArray()
+        val state0 = generateState()
+        val context = NodeContext()
+        setVariables(state, context)
+
         val c0 = Array(LANE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) }
         val d0 = Array(LANE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) }
 
@@ -298,7 +349,7 @@ class KeccakPatched private constructor() {
         state0[23] = state0[23] xor d0[4]
         state0[24] = state0[24] xor d0[4]
 
-        val state1 = state0.map { it.toLong(NodeContext.EmptyContext) }.toTypedArray().toLongArray()
+        val state1 = state0.map { it.toLong(context) }.toLongArray()
         //#endregion
 
         //#region θ step
