@@ -225,6 +225,37 @@ fun Array<BitGroup>.findFunctionsVariableIncludes(): Map<String, Set<String>> {
     return map
 }
 
+fun findTwoVariablesThatHaveSameFunctions(state: Array<BitGroup>, stateVars: Map<String, Set<String>>) = sequence {
+    state.forEach { bitGroup ->
+        val set = HashSet<Set<String>>()
+
+        bitGroup.bits.forEach { xor ->
+            require(xor is Xor)
+
+            xor.nodes.forEach { variable0 ->
+                require(variable0 is Variable)
+
+                xor.nodes.forEach { variable1 ->
+                    require(variable1 is Variable)
+
+                    if (variable0.name != variable1.name) {
+                        set.add(setOf(variable0.name, variable1.name))
+                    }
+                }
+            }
+        }
+
+        set.forEach { pair ->
+            val (q, z) = pair.toList()
+            val f1 = stateVars[q]?.toSortedSet()
+            val f2 = stateVars[z]?.toSortedSet()
+            if (f1 == f2) {
+                yield("($q, $z; $f1, $f2)")
+            }
+        }
+    }
+}
+
 class KeccakPatched private constructor() {
     //#region Public API
     fun hash(message: ByteArray): ByteArray {
@@ -378,6 +409,9 @@ class KeccakPatched private constructor() {
 
         val stateVars = state0.findFunctionsVariableIncludes()
         val state1 = state0.map { it.toLong(context) }.toLongArray()
+
+        val found = findTwoVariablesThatHaveSameFunctions(state0, stateVars).toList()
+        println("found two vars: $found")
         //#endregion
 
         //#region θ step
