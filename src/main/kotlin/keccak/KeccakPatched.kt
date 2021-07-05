@@ -461,9 +461,6 @@ class KeccakPatched private constructor() {
     private fun LongArray.permutation(round: Int) {
         //#region Variables
         val state = this
-        val b = LongArray(STATE_SIZE) { 0 }
-        val c = LongArray(LANE_SIZE) { 0 }
-        val d = LongArray(LANE_SIZE) { 0 }
         //#endregion
 
         //#region alternative θ step
@@ -520,55 +517,6 @@ class KeccakPatched private constructor() {
         state0[24] = state0[24] xor d0[4]
         //#endregion
 
-        //#region θ step
-        c[0] = state[0] xor state[1] xor state[2] xor state[3] xor state[4]
-        c[1] = state[5] xor state[6] xor state[7] xor state[8] xor state[9]
-        c[2] = state[10] xor state[11] xor state[12] xor state[13] xor state[14]
-        c[3] = state[15] xor state[16] xor state[17] xor state[18] xor state[19]
-        c[4] = state[20] xor state[21] xor state[22] xor state[23] xor state[24]
-
-
-        d[0] = c[4] xor c[1].rotateLeft(1)
-        d[1] = c[0] xor c[2].rotateLeft(1)
-        d[2] = c[1] xor c[3].rotateLeft(1)
-        d[3] = c[2] xor c[4].rotateLeft(1)
-        d[4] = c[3] xor c[0].rotateLeft(1)
-
-
-        state[0] = state[0] xor d[0]
-        state[1] = state[1] xor d[0]
-        state[2] = state[2] xor d[0]
-        state[3] = state[3] xor d[0]
-        state[4] = state[4] xor d[0]
-
-        state[5] = state[5] xor d[1]
-        state[6] = state[6] xor d[1]
-        state[7] = state[7] xor d[1]
-        state[8] = state[8] xor d[1]
-        state[9] = state[9] xor d[1]
-
-        state[10] = state[10] xor d[2]
-        state[11] = state[11] xor d[2]
-        state[12] = state[12] xor d[2]
-        state[13] = state[13] xor d[2]
-        state[14] = state[14] xor d[2]
-
-        state[15] = state[15] xor d[3]
-        state[16] = state[16] xor d[3]
-        state[17] = state[17] xor d[3]
-        state[18] = state[18] xor d[3]
-        state[19] = state[19] xor d[3]
-
-        state[20] = state[20] xor d[4]
-        state[21] = state[21] xor d[4]
-        state[22] = state[22] xor d[4]
-        state[23] = state[23] xor d[4]
-        state[24] = state[24] xor d[4]
-        //#endregion
-
-        var state1 = state0.map { it.toLong(context) }.toLongArray()
-        require(state1.contentEquals(state))
-
         //#region Alternative ρ and π steps
         val b0 = Array(STATE_SIZE) { BitGroup(emptyArray()) }
 
@@ -599,34 +547,6 @@ class KeccakPatched private constructor() {
         b0[24] = state0[9].rotateLeft(2)
         //#endregion
 
-        //#region ρ and π steps
-        b[0] = state[0].rotateLeft(0)
-        b[1] = state[15].rotateLeft(28)
-        b[2] = state[5].rotateLeft(1)
-        b[3] = state[20].rotateLeft(27)
-        b[4] = state[10].rotateLeft(62)
-        b[5] = state[6].rotateLeft(44)
-        b[6] = state[21].rotateLeft(20)
-        b[7] = state[11].rotateLeft(6)
-        b[8] = state[1].rotateLeft(36)
-        b[9] = state[16].rotateLeft(55)
-        b[10] = state[12].rotateLeft(43)
-        b[11] = state[2].rotateLeft(3)
-        b[12] = state[17].rotateLeft(25)
-        b[13] = state[7].rotateLeft(10)
-        b[14] = state[22].rotateLeft(39)
-        b[15] = state[18].rotateLeft(21)
-        b[16] = state[8].rotateLeft(45)
-        b[17] = state[23].rotateLeft(8)
-        b[18] = state[13].rotateLeft(15)
-        b[19] = state[3].rotateLeft(41)
-        b[20] = state[24].rotateLeft(14)
-        b[21] = state[14].rotateLeft(61)
-        b[22] = state[4].rotateLeft(18)
-        b[23] = state[19].rotateLeft(56)
-        b[24] = state[9].rotateLeft(2)
-        //#endregion
-
         //#region Alternative χ step
         state0[0] = b0[0] xor b0[10] xor (b0[5] and b0[10])
         state0[1] = b0[1] xor b0[11] xor (b0[6] and b0[11])
@@ -655,47 +575,13 @@ class KeccakPatched private constructor() {
         state0[24] = b0[24] xor b0[9] xor (b0[4] and b0[9])
         //#endregion
 
-        //#region χ step
-        state[0] = b[0] xor b[10] xor (b[5] and b[10])
-        state[1] = b[1] xor b[11] xor (b[6] and b[11])
-        state[2] = b[2] xor b[12] xor (b[7] and b[12])
-        state[3] = b[3] xor b[13] xor (b[8] and b[13])
-        state[4] = b[4] xor b[14] xor (b[9] and b[14])
-        state[5] = b[5] xor b[15] xor (b[10] and b[15])
-        state[6] = b[6] xor b[16] xor (b[11] and b[16])
-        state[7] = b[7] xor b[17] xor (b[12] and b[17])
-        state[8] = b[8] xor b[18] xor (b[13] and b[18])
-        state[9] = b[9] xor b[19] xor (b[14] and b[19])
-        state[10] = b[10] xor b[20] xor (b[15] and b[20])
-        state[11] = b[11] xor b[21] xor (b[16] and b[21])
-        state[12] = b[12] xor b[22] xor (b[17] and b[22])
-        state[13] = b[13] xor b[23] xor (b[18] and b[23])
-        state[14] = b[14] xor b[24] xor (b[19] and b[24])
-        state[15] = b[15] xor b[0] xor (b[20] and b[0])
-        state[16] = b[16] xor b[1] xor (b[21] and b[1])
-        state[17] = b[17] xor b[2] xor (b[22] and b[2])
-        state[18] = b[18] xor b[3] xor (b[23] and b[3])
-        state[19] = b[19] xor b[4] xor (b[24] and b[4])
-        state[20] = b[20] xor b[5] xor (b[0] and b[5])
-        state[21] = b[21] xor b[6] xor (b[1] and b[6])
-        state[22] = b[22] xor b[7] xor (b[2] and b[7])
-        state[23] = b[23] xor b[8] xor (b[3] and b[8])
-        state[24] = b[24] xor b[9] xor (b[4] and b[9])
-        //#endregion
-
-        state1 = state0.map { it.toLong(context) }.toLongArray()
-        require(state1.contentEquals(state))
-
         //#region Alternative ι step
         state0[0] = state0[0] xor ROUND_CONSTANTS[round].toBitGroup()
         //#endregion
 
-        //#region ι step
-        state[0] = state[0] xor ROUND_CONSTANTS[round]
-        //#endregion
-
-        state1 = state0.map { it.toLong(context) }.toLongArray()
-        require(state1.contentEquals(state))
+        state0.forEachIndexed { index, bitGroup ->
+            state[index] = bitGroup.toLong(context)
+        }
     }
 
     private fun LongArray.squeeze(): ByteArray {
