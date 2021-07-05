@@ -1,5 +1,7 @@
 package keccak
 
+import java.util.*
+
 //#region Bit Operation Nodes
 interface Node {
     fun evaluate(context: NodeContext): Bit
@@ -94,6 +96,28 @@ infix fun BitGroup.xor(other: BitGroup): BitGroup {
 infix fun BitGroup.and(other: BitGroup): BitGroup {
     require(bits.size == other.bits.size)
     val bits = bits.zip(other.bits) { l, r -> And(l, r) }
+    return BitGroup(bits.toTypedArray())
+}
+
+infix fun BitGroup.andOptimized(other: BitGroup): BitGroup {
+    require(bits.size == other.bits.size)
+
+    val bits = bits.zip(other.bits) { l, r ->
+        if (l is Xor && r is Xor) {
+            val list = LinkedList<Node>()
+
+            l.nodes.forEach { l0 ->
+                r.nodes.forEach { r0 ->
+                    list.add(And(l0, r0))
+                }
+            }
+
+            Xor(*list.toTypedArray())
+        } else {
+            And(l, r)
+        }
+    }
+
     return BitGroup(bits.toTypedArray())
 }
 
@@ -211,14 +235,13 @@ class Not(private val node: Node) : Node {
 
     override fun toString(): String {
         return when (node) {
-                is Bit, is Variable -> "!$node"
-                else -> "!($node)"
-            }
-
+            is Bit, is Variable -> "!$node"
+            else -> "!($node)"
+        }
     }
 }
 
-class And(vararg initNodes: Node): Node {
+class And(vararg initNodes: Node) : Node {
     private val nodeSet: MutableSet<Node> = HashSet()
 
     init {
@@ -631,7 +654,7 @@ class KeccakPatched private constructor() {
         state0[23] = b0[23] xor b0[8] xor (b0[3] and b0[8])
         state0[24] = b0[24] xor b0[9] xor (b0[4] and b0[9])
         //#endregion
-        
+
         //#region χ step
         state[0] = b[0] xor b[10] xor (b[5] and b[10])
         state[1] = b[1] xor b[11] xor (b[6] and b[11])
