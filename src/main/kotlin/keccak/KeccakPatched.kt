@@ -91,6 +91,17 @@ infix fun BitGroup.xor(other: BitGroup): BitGroup {
     return BitGroup(bits.toTypedArray())
 }
 
+infix fun BitGroup.and(other: BitGroup): BitGroup {
+    require(bits.size == other.bits.size)
+    val bits = bits.zip(other.bits) { l, r -> And(l, r) }
+    return BitGroup(bits.toTypedArray())
+}
+
+fun BitGroup.inv(): BitGroup {
+    val invertedBits = bits.map { Not(it) }
+    return BitGroup(invertedBits.toTypedArray())
+}
+
 fun BitGroup.rotateLeft(bitCount: Int): BitGroup {
     return BitGroup((bits.drop(bitCount) + bits.take(bitCount)).toTypedArray())
 }
@@ -160,7 +171,12 @@ class Xor(vararg initNodes: Node) : Node {
     }
 
     override fun toString(): String {
-        return nodes.asSequence().map { it.toString() }.joinToString(" ^ ")
+        return nodes.asSequence().map {
+            when (it) {
+                is Bit, is Variable, is Not -> it.toString()
+                else -> "($it)"
+            }
+        }.joinToString(" ^ ")
     }
 
     private fun addNode(node: Node) {
@@ -169,6 +185,79 @@ class Xor(vararg initNodes: Node) : Node {
         } else {
             nodeSet.add(node)
         }
+    }
+}
+
+class Not(private val node: Node) : Node {
+    override fun evaluate(context: NodeContext): Bit {
+        val bit = node.evaluate(context)
+        return Bit(!bit.value)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Not
+
+        if (node != other.node) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return node.hashCode()
+    }
+
+    override fun toString(): String {
+        return when (node) {
+                is Bit, is Variable -> "!$node"
+                else -> "!($node)"
+            }
+
+    }
+}
+
+class And(vararg initNodes: Node): Node {
+    private val nodeSet: MutableSet<Node> = HashSet()
+
+    init {
+        initNodes.forEach { node ->
+            when (node) {
+                is And -> nodeSet.addAll(node.nodes)
+                else -> nodeSet.add(node)
+            }
+        }
+    }
+
+    val nodes: Set<Node> = nodeSet
+
+    override fun evaluate(context: NodeContext): Bit {
+        return Bit(nodes.all { it.evaluate(context).value })
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as And
+
+        if (nodeSet != other.nodeSet) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return nodeSet.hashCode()
+    }
+
+    override fun toString(): String {
+        return nodes.asSequence().map {
+            when (it) {
+                is Bit, is Variable, is Not -> it.toString()
+                else -> "($it)"
+            }
+        }.joinToString(" & ")
     }
 }
 //#endregion
@@ -406,12 +495,6 @@ class KeccakPatched private constructor() {
         state0[22] = state0[22] xor d0[4]
         state0[23] = state0[23] xor d0[4]
         state0[24] = state0[24] xor d0[4]
-
-        val stateVars = state0.findFunctionsVariableIncludes()
-        val state1 = state0.map { it.toLong(context) }.toLongArray()
-
-        val found = findTwoVariablesThatHaveSameFunctions(state0, stateVars).toList()
-        println("found two vars: $found")
         //#endregion
 
         //#region θ step
@@ -460,7 +543,38 @@ class KeccakPatched private constructor() {
         state[24] = state[24] xor d[4]
         //#endregion
 
+        var state1 = state0.map { it.toLong(context) }.toLongArray()
         require(state1.contentEquals(state))
+
+        //#region Alternative ρ and π steps
+        val b0 = Array(STATE_SIZE) { BitGroup(emptyArray()) }
+
+        b0[0] = state0[0].rotateLeft(0)
+        b0[1] = state0[15].rotateLeft(28)
+        b0[2] = state0[5].rotateLeft(1)
+        b0[3] = state0[20].rotateLeft(27)
+        b0[4] = state0[10].rotateLeft(62)
+        b0[5] = state0[6].rotateLeft(44)
+        b0[6] = state0[21].rotateLeft(20)
+        b0[7] = state0[11].rotateLeft(6)
+        b0[8] = state0[1].rotateLeft(36)
+        b0[9] = state0[16].rotateLeft(55)
+        b0[10] = state0[12].rotateLeft(43)
+        b0[11] = state0[2].rotateLeft(3)
+        b0[12] = state0[17].rotateLeft(25)
+        b0[13] = state0[7].rotateLeft(10)
+        b0[14] = state0[22].rotateLeft(39)
+        b0[15] = state0[18].rotateLeft(21)
+        b0[16] = state0[8].rotateLeft(45)
+        b0[17] = state0[23].rotateLeft(8)
+        b0[18] = state0[13].rotateLeft(15)
+        b0[19] = state0[3].rotateLeft(41)
+        b0[20] = state0[24].rotateLeft(14)
+        b0[21] = state0[14].rotateLeft(61)
+        b0[22] = state0[4].rotateLeft(18)
+        b0[23] = state0[19].rotateLeft(56)
+        b0[24] = state0[9].rotateLeft(2)
+        //#endregion
 
         //#region ρ and π steps
         b[0] = state[0].rotateLeft(0)
@@ -490,6 +604,34 @@ class KeccakPatched private constructor() {
         b[24] = state[9].rotateLeft(2)
         //#endregion
 
+        //#region Alternative χ step
+        state0[0] = b0[0] xor (b0[5].inv() and b0[10])
+        state0[1] = b0[1] xor (b0[6].inv() and b0[11])
+        state0[2] = b0[2] xor (b0[7].inv() and b0[12])
+        state0[3] = b0[3] xor (b0[8].inv() and b0[13])
+        state0[4] = b0[4] xor (b0[9].inv() and b0[14])
+        state0[5] = b0[5] xor (b0[10].inv() and b0[15])
+        state0[6] = b0[6] xor (b0[11].inv() and b0[16])
+        state0[7] = b0[7] xor (b0[12].inv() and b0[17])
+        state0[8] = b0[8] xor (b0[13].inv() and b0[18])
+        state0[9] = b0[9] xor (b0[14].inv() and b0[19])
+        state0[10] = b0[10] xor (b0[15].inv() and b0[20])
+        state0[11] = b0[11] xor (b0[16].inv() and b0[21])
+        state0[12] = b0[12] xor (b0[17].inv() and b0[22])
+        state0[13] = b0[13] xor (b0[18].inv() and b0[23])
+        state0[14] = b0[14] xor (b0[19].inv() and b0[24])
+        state0[15] = b0[15] xor (b0[20].inv() and b0[0])
+        state0[16] = b0[16] xor (b0[21].inv() and b0[1])
+        state0[17] = b0[17] xor (b0[22].inv() and b0[2])
+        state0[18] = b0[18] xor (b0[23].inv() and b0[3])
+        state0[19] = b0[19] xor (b0[24].inv() and b0[4])
+        state0[20] = b0[20] xor (b0[0].inv() and b0[5])
+        state0[21] = b0[21] xor (b0[1].inv() and b0[6])
+        state0[22] = b0[22] xor (b0[2].inv() and b0[7])
+        state0[23] = b0[23] xor (b0[3].inv() and b0[8])
+        state0[24] = b0[24] xor (b0[4].inv() and b0[9])
+        //#endregion
+        
         //#region χ step
         state[0] = b[0] xor (b[5].inv() and b[10])
         state[1] = b[1] xor (b[6].inv() and b[11])
@@ -518,9 +660,19 @@ class KeccakPatched private constructor() {
         state[24] = b[24] xor (b[4].inv() and b[9])
         //#endregion
 
+        state1 = state0.map { it.toLong(context) }.toLongArray()
+        require(state1.contentEquals(state))
+
+        //#region Alternative ι step
+        state0[0] = state0[0] xor ROUND_CONSTANTS[round].toBitGroup()
+        //#endregion
+
         //#region ι step
         state[0] = state[0] xor ROUND_CONSTANTS[round]
         //#endregion
+
+        state1 = state0.map { it.toLong(context) }.toLongArray()
+        require(state1.contentEquals(state))
     }
 
     private fun LongArray.squeeze(): ByteArray {
