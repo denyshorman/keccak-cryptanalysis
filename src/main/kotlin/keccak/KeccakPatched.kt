@@ -206,7 +206,7 @@ class Xor(vararg initNodes: Node) : Node {
     private fun addNode(node: Node) {
         if (nodeSet.contains(node)) {
             nodeSet.remove(node)
-        } else {
+        } else if (node !is Bit || node.value) {
             nodeSet.add(node)
         }
     }
@@ -285,6 +285,145 @@ class And(vararg initNodes: Node) : Node {
 }
 //#endregion
 
+//#region Equation Solver
+class XorEquation(left: List<Node>, right: List<Node>) {
+    var leftSide = HashSet<Node>()
+    var rightSide = HashSet<Node>()
+
+    init {
+        left.forEach { l ->
+            leftSide.addNode(l)
+        }
+
+        right.forEach { r ->
+            rightSide.addNode(r)
+        }
+    }
+
+    fun contains(variable: Variable): Boolean {
+        return leftSide.contains(variable) || rightSide.contains(variable)
+    }
+
+    fun noVariables(): Boolean {
+        return (leftSide.isEmpty() || leftSide.all { it is Bit }) && (rightSide.isEmpty() || rightSide.all { it is Bit })
+    }
+
+    fun prepare(variable: Variable) {
+        if (rightSide.contains(variable)) {
+            val tmp = leftSide
+            leftSide = rightSide
+            rightSide = tmp
+        }
+
+        require(leftSide.contains(variable))
+
+        leftSide.remove(variable)
+
+        leftSide.forEach { node ->
+            rightSide.addNode(node)
+        }
+
+        leftSide.clear()
+        leftSide.add(variable)
+    }
+
+    fun substitute(equation: XorEquation) {
+        val variable = equation.leftSide.first()
+
+        if (leftSide.contains(variable)) {
+            leftSide.remove(variable)
+            equation.rightSide.forEach { node ->
+                leftSide.addNode(node)
+            }
+        }
+
+        if (rightSide.contains(variable)) {
+            rightSide.remove(variable)
+            equation.rightSide.forEach { node ->
+                rightSide.addNode(node)
+            }
+        }
+    }
+
+    private fun HashSet<Node>.addNode(node: Node) {
+        if (contains(node)) {
+            remove(node)
+        } else if (node !is Bit || node.value) {
+            add(node)
+        }
+    }
+
+    override fun toString(): String {
+        val left = leftSide.asSequence().map { it.toString() }.ifEmpty { sequenceOf("0") }.joinToString(" ^ ")
+        val right = rightSide.asSequence().map { it.toString() }.ifEmpty { sequenceOf("0") }.joinToString(" ^ ")
+        return "$left = $right"
+    }
+}
+
+object EquationSolver {
+    private fun prepare(allVariables: Array<Variable>, equations: Array<XorEquation>) {
+        var i = 0
+        var v = 0
+
+        while (i < equations.size) {
+            var j = i
+            val variable = allVariables[v]
+            var equationFound = false
+
+            while (j < equations.size) {
+                if (equations[j].contains(variable)) {
+                    equations[j].prepare(variable)
+                    equationFound = true
+                    break
+                }
+
+                j++
+            }
+
+            if (equationFound) {
+                if (i < j) {
+                    val tmp = equations[i]
+                    equations[i] = equations[j]
+                    equations[j] = tmp
+                }
+
+                j = i + 1
+
+                while (j < equations.size) {
+                    equations[j].substitute(equations[i])
+                    j++
+                }
+
+                i++
+            } else if (equations[i].noVariables()) {
+                i++
+            }
+
+            v++
+        }
+    }
+
+    private fun evaluate(allVariables: Array<Variable>, equations: Array<XorEquation>, context: NodeContext) {
+        var i = equations.size
+
+        while (i >= 0) {
+            if (equations[i].noVariables()) {
+                i--
+                continue
+            }
+
+
+        }
+    }
+
+    fun solve(allVariables: Array<Variable>, equations: Array<XorEquation>, context: NodeContext) {
+        prepare(allVariables, equations)
+        // evaluate(allVariables, equations, context)
+    }
+}
+//#endregion
+
+//#region General Utils
 fun generateState(): Array<BitGroup> {
     return (0 until 25 * Long.SIZE_BITS).asSequence()
         .chunked(Long.SIZE_BITS)
@@ -367,6 +506,7 @@ fun findTwoVariablesThatHaveSameFunctions(state: Array<BitGroup>, stateVars: Map
         }
     }
 }
+//#endregion
 
 class KeccakPatched private constructor() {
     //#region Public API
