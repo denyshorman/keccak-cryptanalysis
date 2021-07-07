@@ -3,6 +3,8 @@ package keccak
 import io.kotest.core.spec.style.FunSpec
 import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
+import kotlin.random.Random.Default.nextBytes
+import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 
 class Keccak256PatchedTest : FunSpec({
@@ -144,5 +146,24 @@ class Keccak256PatchedTest : FunSpec({
         val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
 
         assertEquals(expected, actual)
+    }
+
+    test("keccak256 randomBytes") {
+        while (true) {
+
+            try {
+                val msgBytes = nextBytes(134)
+
+                val expected = Numeric.toHexString(Hash.sha3(msgBytes))
+                val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+
+                assertEquals(expected, actual)
+            } catch (e: Exception) {
+                if (e.message == "has collision") {
+                    println("great")
+                    exitProcess(0)
+                }
+            }
+        }
     }
 })

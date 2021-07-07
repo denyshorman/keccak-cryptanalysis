@@ -15,7 +15,7 @@ class EquationSolverTest : FunSpec({
 
         EquationSolver.solve(equations, variables)
 
-        printEquations(equations, variables)
+        println(equationsToString(equations, variables))
     }
 
     test("EquationSolver4") {
@@ -30,7 +30,7 @@ class EquationSolverTest : FunSpec({
 
         EquationSolver.solve(equations, variables)
 
-        printEquations(equations, variables)
+        println(equationsToString(equations, variables))
     }
 
     test("EquationSolver5") {
@@ -44,7 +44,7 @@ class EquationSolverTest : FunSpec({
 
         EquationSolver.solve(equations, variables)
 
-        printEquations(equations, variables)
+        println(equationsToString(equations, variables))
     }
 
     test("EquationSolver6") {
@@ -59,6 +59,6 @@ class EquationSolverTest : FunSpec({
 
         EquationSolver.solve(equations, variables)
 
-        printEquations(equations, variables)
+        println(equationsToString(equations, variables))
     }
 })
