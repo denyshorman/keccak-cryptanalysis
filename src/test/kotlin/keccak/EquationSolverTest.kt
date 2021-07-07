@@ -3,54 +3,62 @@ package keccak
 import io.kotest.core.spec.style.FunSpec
 
 class EquationSolverTest : FunSpec({
-    test("EquationSolver") {
-        val variables = arrayOf(
-            Variable("a1"),
-            Variable("a2"),
-            Variable("a3"),
-            Variable("a4"),
-        )
+    test("EquationSolver3") {
+        val variables = bitSet(0, 1, 0, 0)
 
         val equations = arrayOf(
-            XorEquation(
-                left = listOf(Variable("a1"), Variable("a3"), Variable("a4")),
-                right = listOf(Bit(false)),
-            ),
-            XorEquation(
-                left = listOf(Variable("a1"), Variable("a2"), Variable("a3")),
-                right = listOf(Bit(false)),
-            ),
-            XorEquation(
-                left = listOf(Variable("a1"), Variable("a2"), Variable("a4")),
-                right = listOf(Bit(true)),
-            ),
-            XorEquation(
-                left = listOf(Variable("a2"), Variable("a3"), Variable("a4")),
-                right = listOf(Bit(false)),
-            ),
+            bitSet(1, 1, 1, 0),
+            bitSet(1, 1, 0, 1),
+            bitSet(0, 1, 1, 1),
+            bitSet(1, 0, 1, 1),
         )
 
-        val context = NodeContext()
+        EquationSolver.solve(equations, variables)
 
-        EquationSolver.solve(variables, equations, context)
+        printEquations(equations, variables)
     }
 
-    test("EquationSolver2") {
-        val variables = arrayOf(
-            Variable("a1"),
-            Variable("a2"),
-            Variable("a3"),
-        )
+    test("EquationSolver4") {
+        val variables = bitSet(0, 1, 0, 1)
 
         val equations = arrayOf(
-            XorEquation(left = listOf(Variable("a1"), Variable("a2")), right = listOf(Bit(true))),
-            XorEquation(left = listOf(Variable("a1"), Variable("a3")), right = listOf(Bit(false))),
-            XorEquation(left = listOf(Variable("a2"), Variable("a3")), right = listOf(Bit(true))),
+            bitSet(1, 1, 0, 0),
+            bitSet(0, 1, 1, 0),
+            bitSet(0, 0, 1, 1),
+            bitSet(1, 0, 0, 1),
         )
 
-        val context = NodeContext()
+        EquationSolver.solve(equations, variables)
 
-        EquationSolver.solve(variables, equations, context)
-        println("good")
+        printEquations(equations, variables)
+    }
+
+    test("EquationSolver5") {
+        val variables = bitSet(1, 0, 1)
+
+        val equations = arrayOf(
+            bitSet(1, 1, 0),
+            bitSet(1, 0, 1),
+            bitSet(0, 1, 1),
+        )
+
+        EquationSolver.solve(equations, variables)
+
+        printEquations(equations, variables)
+    }
+
+    test("EquationSolver6") {
+        val variables = bitSet(0, 1, 0, 0)
+
+        val equations = arrayOf(
+            bitSet(1, 1, 1, 0),
+            bitSet(0, 0, 1, 1),
+            bitSet(0, 0, 0, 0),
+            bitSet(0, 0, 0, 0),
+        )
+
+        EquationSolver.solve(equations, variables)
+
+        printEquations(equations, variables)
     }
 })

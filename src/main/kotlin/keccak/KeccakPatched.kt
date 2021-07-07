@@ -286,139 +286,136 @@ class And(vararg initNodes: Node) : Node {
 //#endregion
 
 //#region Equation Solver
-class XorEquation(left: List<Node>, right: List<Node>) {
-    var leftSide = HashSet<Node>()
-    var rightSide = HashSet<Node>()
-
-    init {
-        left.forEach { l ->
-            leftSide.addNode(l)
-        }
-
-        right.forEach { r ->
-            rightSide.addNode(r)
-        }
-    }
-
-    fun contains(variable: Variable): Boolean {
-        return leftSide.contains(variable) || rightSide.contains(variable)
-    }
-
-    fun noVariables(): Boolean {
-        return (leftSide.isEmpty() || leftSide.all { it is Bit }) && (rightSide.isEmpty() || rightSide.all { it is Bit })
-    }
-
-    fun prepare(variable: Variable) {
-        if (rightSide.contains(variable)) {
-            val tmp = leftSide
-            leftSide = rightSide
-            rightSide = tmp
-        }
-
-        require(leftSide.contains(variable))
-
-        leftSide.remove(variable)
-
-        leftSide.forEach { node ->
-            rightSide.addNode(node)
-        }
-
-        leftSide.clear()
-        leftSide.add(variable)
-    }
-
-    fun substitute(equation: XorEquation) {
-        val variable = equation.leftSide.first()
-
-        if (leftSide.contains(variable)) {
-            leftSide.remove(variable)
-            equation.rightSide.forEach { node ->
-                leftSide.addNode(node)
-            }
-        }
-
-        if (rightSide.contains(variable)) {
-            rightSide.remove(variable)
-            equation.rightSide.forEach { node ->
-                rightSide.addNode(node)
-            }
-        }
-    }
-
-    private fun HashSet<Node>.addNode(node: Node) {
-        if (contains(node)) {
-            remove(node)
-        } else if (node !is Bit || node.value) {
-            add(node)
-        }
-    }
-
-    override fun toString(): String {
-        val left = leftSide.asSequence().map { it.toString() }.ifEmpty { sequenceOf("0") }.joinToString(" ^ ")
-        val right = rightSide.asSequence().map { it.toString() }.ifEmpty { sequenceOf("0") }.joinToString(" ^ ")
-        return "$left = $right"
-    }
-}
-
 object EquationSolver {
-    private fun prepare(allVariables: Array<Variable>, equations: Array<XorEquation>) {
-        var i = 0
-        var v = 0
+    fun solve(equations: Array<BitSet>, result: BitSet) {
+        bottom(equations, result)
+        top(equations, result)
+    }
 
-        while (i < equations.size) {
-            var j = i
-            val variable = allVariables[v]
-            var equationFound = false
+    private fun bottom(equations: Array<BitSet>, result: BitSet) {
+        var row = 0
+        var col = 0
 
-            while (j < equations.size) {
-                if (equations[j].contains(variable)) {
-                    equations[j].prepare(variable)
-                    equationFound = true
+        while (row < equations.size && col < equations.size) {
+            printMatrix(equations, result)
+            println()
+
+            var i = row
+            var found = false
+
+            while (i < equations.size) {
+                if (equations[i][col]) {
+                    found = true
                     break
                 }
 
-                j++
-            }
-
-            if (equationFound) {
-                if (i < j) {
-                    val tmp = equations[i]
-                    equations[i] = equations[j]
-                    equations[j] = tmp
-                }
-
-                j = i + 1
-
-                while (j < equations.size) {
-                    equations[j].substitute(equations[i])
-                    j++
-                }
-
-                i++
-            } else if (equations[i].noVariables()) {
                 i++
             }
 
-            v++
-        }
-    }
+            if (found) {
+                if (row != i) {
+                    equations.exchange(row, i)
+                    result.exchange(row, i)
+                }
 
-    private fun evaluate(allVariables: Array<Variable>, equations: Array<XorEquation>, context: NodeContext) {
-        var i = equations.size
+                i = row + 1
 
-        while (i >= 0) {
-            if (equations[i].noVariables()) {
-                i--
-                continue
+                while (i < equations.size) {
+                    if (equations[i][col]) {
+                        equations[i].xor(equations[row])
+                        result[i] = result[i] xor result[row]
+                    }
+
+                    i++
+                }
             }
 
-
+            row++
+            col++
         }
     }
 
-    fun solve(allVariables: Array<Variable>, equations: Array<XorEquation>, context: NodeContext) {
-        prepare(allVariables, equations)
-        // evaluate(allVariables, equations, context)
+    private fun top(equations: Array<BitSet>, result: BitSet) {
+        var row = equations.size - 1
+        var col = equations.size - 1
+
+        while (row >= 0 && col >= 0) {
+            printMatrix(equations, result)
+            println()
+
+            if (!equations[row].isEmpty) {
+                var i = row - 1
+
+                while (i >= 0) {
+                    if (equations[i][col]) {
+                        equations[i].xor(equations[row])
+                        result[i] = result[i] xor result[row]
+                    }
+
+                    i--
+                }
+            }
+
+            row--
+            col--
+        }
+    }
+}
+
+private fun <T> Array<T>.exchange(i: Int, j: Int) {
+    val tmp = this[i]
+    this[i] = this[j]
+    this[j] = tmp
+}
+
+private fun BitSet.exchange(i: Int, j: Int) {
+    val tmp = this[i]
+    this[i] = this[j]
+    this[j] = tmp
+}
+
+fun bitSet(vararg values: Boolean): BitSet {
+    val set = BitSet(values.size)
+    values.forEachIndexed { index, value ->
+        set[index] = value
+    }
+    return set
+}
+
+fun bitSet(vararg values: Int): BitSet {
+    val set = BitSet(values.size)
+    values.forEachIndexed { index, value ->
+        set[index] = value == 1
+    }
+    return set
+}
+
+fun printEquations(equations: Array<BitSet>, result: BitSet) {
+    equations.forEachIndexed { index, eq ->
+        val eqStr = equations.indices
+            .filter { eq[it] }
+            .ifEmpty { listOf(index) }
+            .joinToString(" ^ ") { "a${it + 1}" }
+
+        val res = if (!eq.isEmpty) {
+            if (result[index]) {
+                "1"
+            } else {
+                "0"
+            }
+        } else {
+            "x"
+        }
+
+        println("$eqStr = $res")
+    }
+}
+
+fun printMatrix(equations: Array<BitSet>, result: BitSet) {
+    equations.forEachIndexed { index, eq ->
+        val eqStr = equations.indices.joinToString("") { if (eq[it]) "1" else "0" }
+        val res = if (result[index]) "1" else "0"
+        println("$eqStr|$res")
     }
 }
 //#endregion
