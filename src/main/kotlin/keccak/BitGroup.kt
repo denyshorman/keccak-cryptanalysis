@@ -58,11 +58,6 @@ infix fun BitGroup.andOptimized(other: BitGroup): BitGroup {
     return BitGroup(bits.toTypedArray())
 }
 
-fun BitGroup.inv(): BitGroup {
-    val invertedBits = bits.map { Not(it) }
-    return BitGroup(invertedBits.toTypedArray())
-}
-
 fun BitGroup.rotateLeft(bitCount: Int): BitGroup {
     return BitGroup((bits.drop(bitCount) + bits.take(bitCount)).toTypedArray())
 }

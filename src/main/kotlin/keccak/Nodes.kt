@@ -2,10 +2,6 @@ package keccak
 
 class NodeContext {
     val variables = mutableMapOf<String, Bit>()
-
-    companion object {
-        val EmptyContext = NodeContext()
-    }
 }
 
 sealed interface Node {
@@ -79,7 +75,7 @@ class Xor(vararg initNodes: Node) : Node {
     override fun toString(): String {
         return nodes.asSequence().map {
             when (it) {
-                is Bit, is Variable, is Not -> it.toString()
+                is Bit, is Variable -> it.toString()
                 else -> "($it)"
             }
         }.joinToString(" ^ ")
@@ -132,38 +128,9 @@ class And(vararg initNodes: Node) : Node {
     override fun toString(): String {
         return nodes.asSequence().map {
             when (it) {
-                is Bit, is Variable, is Not -> it.toString()
+                is Bit, is Variable -> it.toString()
                 else -> "($it)"
             }
         }.joinToString(" & ")
-    }
-}
-
-class Not(val node: Node) : Node {
-    override fun evaluate(context: NodeContext): Bit {
-        val bit = node.evaluate(context)
-        return Bit(!bit.value)
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Not
-
-        if (node != other.node) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return node.hashCode()
-    }
-
-    override fun toString(): String {
-        return when (node) {
-            is Bit, is Variable -> "!$node"
-            else -> "!($node)"
-        }
     }
 }
