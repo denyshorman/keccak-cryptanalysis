@@ -35,18 +35,7 @@ class Xor(vararg initNodes: Node) : Node {
 
     init {
         val nodeSet = HashSet<Node>()
-
-        initNodes.forEach { node ->
-            when (node) {
-                is Xor -> {
-                    node.nodes.forEach { anotherNode ->
-                        nodeSet.addNode(anotherNode)
-                    }
-                }
-                else -> nodeSet.addNode(node)
-            }
-        }
-
+        nodeSet.addNodes(initNodes.asIterable())
         nodes = nodeSet
     }
 
@@ -81,7 +70,16 @@ class Xor(vararg initNodes: Node) : Node {
         }.joinToString(" ^ ")
     }
 
-    private fun MutableSet<Node>.addNode(node: Node) {
+    private fun HashSet<Node>.addNodes(nodes: Iterable<Node>) {
+        nodes.forEach { node ->
+            when (node) {
+                is Xor -> addNodes(node.nodes)
+                else -> addNode(node)
+            }
+        }
+    }
+
+    private fun HashSet<Node>.addNode(node: Node) {
         if (contains(node)) {
             remove(node)
         } else if (node !is Bit || node.value) {
@@ -94,16 +92,13 @@ class And(vararg initNodes: Node) : Node {
     val nodes: Set<Node>
 
     init {
-        val nodeSet = HashSet<Node>()
-
-        initNodes.forEach { node ->
-            when (node) {
-                is And -> nodeSet.addAll(node.nodes)
-                else -> nodeSet.add(node)
-            }
+        nodes = try {
+            val nodeSet = HashSet<Node>()
+            nodeSet.addNodes(initNodes.asIterable())
+            nodeSet
+        } catch (_: Zero) {
+            emptySet()
         }
-
-        nodes = nodeSet
     }
 
     override fun evaluate(context: NodeContext): Bit {
@@ -132,5 +127,19 @@ class And(vararg initNodes: Node) : Node {
                 else -> "($it)"
             }
         }.joinToString(" & ")
+    }
+
+    private fun HashSet<Node>.addNodes(nodes: Iterable<Node>) {
+        nodes.forEach { node ->
+            when (node) {
+                is Bit -> if (!node.value) throw Zero
+                is And -> addNodes(node.nodes)
+                else -> add(node)
+            }
+        }
+    }
+
+    companion object {
+        private object Zero : Throwable(null, null, false, false)
     }
 }
