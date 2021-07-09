@@ -6,12 +6,17 @@ class NodeContext {
 
 sealed interface Node {
     fun evaluate(context: NodeContext): Bit
+    fun contains(node: Node): Boolean
 }
 
 @JvmInline
 value class Bit(val value: Boolean = false) : Node {
     override fun evaluate(context: NodeContext): Bit {
         return this
+    }
+
+    override fun contains(node: Node): Boolean {
+        return this == node
     }
 
     override fun toString(): String {
@@ -23,6 +28,10 @@ value class Bit(val value: Boolean = false) : Node {
 value class Variable(val name: String) : Node {
     override fun evaluate(context: NodeContext): Bit {
         return context.variables[name] ?: throw IllegalStateException("Variable $name not found")
+    }
+
+    override fun contains(node: Node): Boolean {
+        return this == node
     }
 
     override fun toString(): String {
@@ -44,6 +53,10 @@ class Xor(vararg initNodes: Node) : Node {
             val bit2 = node.evaluate(context)
             Bit(bit1 != bit2)
         }
+    }
+
+    override fun contains(node: Node): Boolean {
+        return nodes.contains(node) || nodes.any { it.contains(node) }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -103,6 +116,10 @@ class And(vararg initNodes: Node) : Node {
 
     override fun evaluate(context: NodeContext): Bit {
         return Bit(nodes.all { it.evaluate(context).value })
+    }
+
+    override fun contains(node: Node): Boolean {
+        return nodes.contains(node) || nodes.any { it.contains(node) }
     }
 
     override fun equals(other: Any?): Boolean {
