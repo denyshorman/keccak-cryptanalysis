@@ -13,7 +13,7 @@ class EquationSolverTest : FunSpec({
             bitSet(1, 0, 1, 1),
         )
 
-        EquationSolver.solve(equations, variables)
+        XorEquationSolver.solve(equations, variables)
 
         println(equationsToString(equations, variables))
     }
@@ -28,7 +28,7 @@ class EquationSolverTest : FunSpec({
             bitSet(1, 0, 0, 1),
         )
 
-        EquationSolver.solve(equations, variables)
+        XorEquationSolver.solve(equations, variables)
 
         println(equationsToString(equations, variables))
     }
@@ -42,7 +42,7 @@ class EquationSolverTest : FunSpec({
             bitSet(0, 1, 1),
         )
 
-        EquationSolver.solve(equations, variables)
+        XorEquationSolver.solve(equations, variables)
 
         println(equationsToString(equations, variables))
     }
@@ -57,7 +57,7 @@ class EquationSolverTest : FunSpec({
             bitSet(0, 0, 0, 0),
         )
 
-        EquationSolver.solve(equations, variables)
+        XorEquationSolver.solve(equations, variables)
 
         println(equationsToString(equations, variables))
     }
