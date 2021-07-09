@@ -3,10 +3,6 @@ package keccak
 import java.util.*
 
 //#region Bit Operation Nodes
-interface Node {
-    fun evaluate(context: NodeContext): Bit
-}
-
 class NodeContext {
     val variables = mutableMapOf<String, Bit>()
 
@@ -15,24 +11,14 @@ class NodeContext {
     }
 }
 
-class Bit(val value: Boolean = false) : Node {
+sealed interface Node {
+    fun evaluate(context: NodeContext): Bit
+}
+
+@JvmInline
+value class Bit(val value: Boolean = false) : Node {
     override fun evaluate(context: NodeContext): Bit {
         return this
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Bit
-
-        if (value != other.value) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return value.hashCode()
     }
 
     override fun toString(): String {
@@ -40,24 +26,10 @@ class Bit(val value: Boolean = false) : Node {
     }
 }
 
-class Variable(val name: String) : Node {
+@JvmInline
+value class Variable(val name: String) : Node {
     override fun evaluate(context: NodeContext): Bit {
         return context.variables[name] ?: throw IllegalStateException("Variable $name not found")
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Variable
-
-        if (name != other.name) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return name.hashCode()
     }
 
     override fun toString(): String {
@@ -65,6 +37,142 @@ class Variable(val name: String) : Node {
     }
 }
 
+class Xor(vararg initNodes: Node) : Node {
+    val nodes: Set<Node>
+
+    init {
+        val nodeSet = HashSet<Node>()
+
+        initNodes.forEach { node ->
+            when (node) {
+                is Xor -> {
+                    node.nodes.forEach { anotherNode ->
+                        nodeSet.addNode(anotherNode)
+                    }
+                }
+                else -> nodeSet.addNode(node)
+            }
+        }
+
+        nodes = nodeSet
+    }
+
+    override fun evaluate(context: NodeContext): Bit {
+        return nodes.fold(Bit()) { bit1, node ->
+            val bit2 = node.evaluate(context)
+            Bit(bit1 != bit2)
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Xor
+
+        if (nodes != other.nodes) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return nodes.hashCode()
+    }
+
+    override fun toString(): String {
+        return nodes.asSequence().map {
+            when (it) {
+                is Bit, is Variable, is Not -> it.toString()
+                else -> "($it)"
+            }
+        }.joinToString(" ^ ")
+    }
+
+    private fun MutableSet<Node>.addNode(node: Node) {
+        if (contains(node)) {
+            remove(node)
+        } else if (node !is Bit || node.value) {
+            add(node)
+        }
+    }
+}
+
+class And(vararg initNodes: Node) : Node {
+    val nodes: Set<Node>
+
+    init {
+        val nodeSet = HashSet<Node>()
+
+        initNodes.forEach { node ->
+            when (node) {
+                is And -> nodeSet.addAll(node.nodes)
+                else -> nodeSet.add(node)
+            }
+        }
+
+        nodes = nodeSet
+    }
+
+    override fun evaluate(context: NodeContext): Bit {
+        return Bit(nodes.all { it.evaluate(context).value })
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as And
+
+        if (nodes != other.nodes) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return nodes.hashCode()
+    }
+
+    override fun toString(): String {
+        return nodes.asSequence().map {
+            when (it) {
+                is Bit, is Variable, is Not -> it.toString()
+                else -> "($it)"
+            }
+        }.joinToString(" & ")
+    }
+}
+
+class Not(val node: Node) : Node {
+    override fun evaluate(context: NodeContext): Bit {
+        val bit = node.evaluate(context)
+        return Bit(!bit.value)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Not
+
+        if (node != other.node) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return node.hashCode()
+    }
+
+    override fun toString(): String {
+        return when (node) {
+            is Bit, is Variable -> "!$node"
+            else -> "!($node)"
+        }
+    }
+}
+//#endregion
+
+//#region BitGroup
 class BitGroup(val bits: Array<Node>) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -153,136 +261,6 @@ fun Long.toBitGroup(): BitGroup {
     return BitGroup(bits)
 }
 //#endregion
-
-class Xor(vararg initNodes: Node) : Node {
-    private val nodeSet: MutableSet<Node> = HashSet()
-
-    init {
-        initNodes.forEach { node ->
-            when (node) {
-                is Xor -> {
-                    node.nodes.forEach { anotherNode ->
-                        addNode(anotherNode)
-                    }
-                }
-                else -> addNode(node)
-            }
-        }
-    }
-
-    val nodes: Set<Node> = nodeSet
-
-    override fun evaluate(context: NodeContext): Bit {
-        return nodes.fold(Bit()) { bit1, node ->
-            val bit2 = node.evaluate(context)
-            Bit(bit1 != bit2)
-        }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Xor
-
-        if (nodeSet != other.nodeSet) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return nodeSet.hashCode()
-    }
-
-    override fun toString(): String {
-        return nodes.asSequence().map {
-            when (it) {
-                is Bit, is Variable, is Not -> it.toString()
-                else -> "($it)"
-            }
-        }.joinToString(" ^ ")
-    }
-
-    private fun addNode(node: Node) {
-        if (nodeSet.contains(node)) {
-            nodeSet.remove(node)
-        } else if (node !is Bit || node.value) {
-            nodeSet.add(node)
-        }
-    }
-}
-
-class Not(private val node: Node) : Node {
-    override fun evaluate(context: NodeContext): Bit {
-        val bit = node.evaluate(context)
-        return Bit(!bit.value)
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Not
-
-        if (node != other.node) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return node.hashCode()
-    }
-
-    override fun toString(): String {
-        return when (node) {
-            is Bit, is Variable -> "!$node"
-            else -> "!($node)"
-        }
-    }
-}
-
-class And(vararg initNodes: Node) : Node {
-    private val nodeSet: MutableSet<Node> = HashSet()
-
-    init {
-        initNodes.forEach { node ->
-            when (node) {
-                is And -> nodeSet.addAll(node.nodes)
-                else -> nodeSet.add(node)
-            }
-        }
-    }
-
-    val nodes: Set<Node> = nodeSet
-
-    override fun evaluate(context: NodeContext): Bit {
-        return Bit(nodes.all { it.evaluate(context).value })
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as And
-
-        if (nodeSet != other.nodeSet) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return nodeSet.hashCode()
-    }
-
-    override fun toString(): String {
-        return nodes.asSequence().map {
-            when (it) {
-                is Bit, is Variable, is Not -> it.toString()
-                else -> "($it)"
-            }
-        }.joinToString(" & ")
-    }
-}
 //#endregion
 
 //#region Equation Solver
@@ -441,7 +419,7 @@ fun setVariables(state: LongArray, context: NodeContext) {
         val bitGroup = longValue.toBitGroup()
 
         bitGroup.bits.forEach { bit ->
-            context.variables["a$i"] = bit.evaluate(context)
+            context.variables["$i"] = bit.evaluate(context)
             i++
         }
     }
