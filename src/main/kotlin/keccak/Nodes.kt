@@ -11,6 +11,8 @@ sealed interface Node {
 
 @JvmInline
 value class Bit(val value: Boolean = false) : Node {
+    constructor(v: Int) : this(v == 1)
+
     override fun evaluate(context: NodeContext): Bit {
         return this
     }
@@ -39,12 +41,15 @@ value class Variable(val name: String) : Node {
     }
 }
 
-class Xor(vararg initNodes: Node) : Node {
+class Xor : Node {
     val nodes: Set<Node>
 
-    init {
+    constructor(vararg initNodes: Node) : this(initNodes.asIterable())
+    constructor(initNodes: Sequence<Node>) : this(initNodes.asIterable())
+
+    constructor(initNodes: Iterable<Node>) {
         val nodeSet = HashSet<Node>()
-        nodeSet.addNodes(initNodes.asIterable())
+        nodeSet.addNodes(initNodes)
         nodes = nodeSet
     }
 
@@ -77,10 +82,10 @@ class Xor(vararg initNodes: Node) : Node {
     override fun toString(): String {
         return nodes.asSequence().map {
             when (it) {
-                is Bit, is Variable -> it.toString()
+                is Bit, is Variable, is And -> it.toString()
                 else -> "($it)"
             }
-        }.joinToString(" ^ ")
+        }.joinToString(" + ")
     }
 
     private fun HashSet<Node>.addNodes(nodes: Iterable<Node>) {
@@ -95,16 +100,19 @@ class Xor(vararg initNodes: Node) : Node {
     private fun HashSet<Node>.addNode(node: Node) {
         if (contains(node)) {
             remove(node)
-        } else if (node !is Bit || node.value) {
+        } else if (!(node is Bit && !node.value || node is Nop)) {
             add(node)
         }
     }
 }
 
-class And(vararg initNodes: Node) : Node {
+class And : Node {
     val nodes: Set<Node>
 
-    init {
+    constructor(vararg initNodes: Node) : this(initNodes.asIterable())
+    constructor(initNodes: Sequence<Node>) : this(initNodes.asIterable())
+
+    constructor(initNodes: Iterable<Node>) {
         nodes = try {
             val nodeSet = HashSet<Node>()
             nodeSet.addNodes(initNodes.asIterable())
@@ -143,7 +151,7 @@ class And(vararg initNodes: Node) : Node {
                 is Bit, is Variable -> it.toString()
                 else -> "($it)"
             }
-        }.joinToString(" & ")
+        }.joinToString("*")
     }
 
     private fun HashSet<Node>.addNodes(nodes: Iterable<Node>) {
@@ -151,6 +159,7 @@ class And(vararg initNodes: Node) : Node {
             when (node) {
                 is Bit -> if (!node.value) throw Zero
                 is And -> addNodes(node.nodes)
+                is Nop -> run {}
                 else -> add(node)
             }
         }
@@ -160,3 +169,46 @@ class And(vararg initNodes: Node) : Node {
         private object Zero : Throwable(null, null, false, false)
     }
 }
+
+object Nop : Node {
+    override fun evaluate(context: NodeContext): Bit {
+        throw IllegalStateException("Can't evaluate nop")
+    }
+
+    override fun contains(node: Node): Boolean {
+        return false
+    }
+
+    override fun toString(): String {
+        return "nop"
+    }
+}
+
+//#region Extensions
+
+infix fun Node.xor(other: Node) = Xor(this, other)
+infix fun Node.and(other: Node) = And(this, other)
+infix fun String.xor(other: Node) = Xor(Variable(this), other)
+infix fun String.and(other: Node) = And(Variable(this), other)
+infix fun Node.xor(other: String) = Xor(this, Variable(other))
+infix fun Node.and(other: String) = And(this, Variable(other))
+infix fun String.xor(other: String) = Xor(Variable(this), Variable(other))
+infix fun String.and(other: String) = And(Variable(this), Variable(other))
+fun String.toVar() = Variable(this)
+
+fun Node.simplify(): Node {
+    return when (this) {
+        is Xor -> when {
+            nodes.isEmpty() -> Nop
+            nodes.size == 1 -> nodes.first()
+            else -> this
+        }
+        is And -> when {
+            nodes.isEmpty() -> Nop
+            nodes.size == 1 -> nodes.first()
+            else -> this
+        }
+        else -> this
+    }
+}
+//#endregion

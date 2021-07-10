@@ -1,7 +1,5 @@
 package keccak
 
-import java.util.*
-
 class BitGroup(val bits: Array<Node>) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -23,7 +21,7 @@ class BitGroup(val bits: Array<Node>) {
     }
 }
 
-//#region BitGroup extensions
+//#region Extensions
 infix fun BitGroup.xor(other: BitGroup): BitGroup {
     require(bits.size == other.bits.size)
     val bits = bits.zip(other.bits) { l, r -> Xor(l, r) }
@@ -33,28 +31,6 @@ infix fun BitGroup.xor(other: BitGroup): BitGroup {
 infix fun BitGroup.and(other: BitGroup): BitGroup {
     require(bits.size == other.bits.size)
     val bits = bits.zip(other.bits) { l, r -> And(l, r) }
-    return BitGroup(bits.toTypedArray())
-}
-
-infix fun BitGroup.andOptimized(other: BitGroup): BitGroup {
-    require(bits.size == other.bits.size)
-
-    val bits = bits.zip(other.bits) { l, r ->
-        if (l is Xor && r is Xor) {
-            val list = LinkedList<Node>()
-
-            l.nodes.forEach { l0 ->
-                r.nodes.forEach { r0 ->
-                    list.add(And(l0, r0))
-                }
-            }
-
-            Xor(*list.toTypedArray())
-        } else {
-            And(l, r)
-        }
-    }
-
     return BitGroup(bits.toTypedArray())
 }
 
