@@ -61,7 +61,11 @@ class Xor : Node {
     }
 
     override fun contains(node: Node): Boolean {
-        return nodes.contains(node) || nodes.any { it.contains(node) }
+        return when (node) {
+            is Bit, is Variable, is And -> nodes.contains(node) || nodes.any { it.contains(node) }
+            is Xor -> nodes.containsAll(node.nodes) || nodes.any { it.contains(node) }
+            is Nop -> false
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -127,7 +131,11 @@ class And : Node {
     }
 
     override fun contains(node: Node): Boolean {
-        return nodes.contains(node) || nodes.any { it.contains(node) }
+        return when (node) {
+            is Bit, is Variable, is Xor -> nodes.contains(node) || nodes.any { it.contains(node) }
+            is And -> nodes.containsAll(node.nodes) || nodes.any { it.contains(node) }
+            is Nop -> false
+        }
     }
 
     override fun equals(other: Any?): Boolean {

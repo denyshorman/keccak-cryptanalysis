@@ -3,8 +3,73 @@ package keccak
 import java.util.*
 
 object GeneralEquationSolver {
-    fun solve(equations: Array<Equation>) {
-        TODO()
+    fun solve(equations: Array<Equation>, variables: Array<Variable>) {
+        bottom(equations, variables)
+        top(equations, variables)
+    }
+
+    private fun bottom(equations: Array<Equation>, variables: Array<Variable>) {
+        var rowId = 0
+        var varId = 0
+
+        while (rowId < equations.size && varId < variables.size) {
+            var i = rowId
+            var found = false
+
+            while (i < equations.size) {
+                if (equations[i].contains(variables[varId])) {
+                    found = true
+                    break
+                }
+
+                i++
+            }
+
+            if (found) {
+                if (rowId != i) {
+                    equations.exchange(rowId, i)
+                }
+
+                equations[rowId] = equations[rowId].extract(variables[varId])
+
+                if (equations[rowId].contains(variables[varId])) {
+                    i = rowId + 1
+
+                    while (i < equations.size) {
+                        if (equations[i].contains(variables[varId])) {
+                            equations[i] = equations[i].substitute(equations[rowId], variables[varId])
+                        }
+
+                        i++
+                    }
+                }
+            }
+
+            rowId++
+            varId++
+        }
+    }
+
+    private fun top(equations: Array<Equation>, variables: Array<Variable>) {
+        var rowId = equations.size - 1
+        var varId = equations.size - 1
+
+        while (rowId >= 0 && varId >= 0) {
+            if (equations[rowId].contains(variables[varId])) {
+                var i = rowId - 1
+
+                while (i >= 0) {
+                    if (equations[i].contains(variables[varId])) {
+                        equations[i] = equations[i].substitute(equations[rowId], variables[varId])
+                    }
+
+                    i--
+                }
+            }
+
+            rowId--
+            varId--
+        }
     }
 }
 
@@ -41,6 +106,33 @@ class Equation(val left: Node, val right: Node) {
         }
     }
 
+    fun substitute(equation: Equation, variable: Variable): Equation {
+        if (!(equation.left.contains(variable) && this.contains(variable))) return this
+
+        return when (equation.left) {
+            is Variable -> {
+                this.replace(equation.left, equation.right)
+            }
+            is And -> {
+                val mul = And(equation.left.nodes.asSequence().filter { it != variable })
+                this.extract(variable).multiply(mul).replace(equation.left, equation.right)
+            }
+            else -> throw IllegalStateException()
+        }
+    }
+
+    fun replace(what: Node, with: Node): Equation {
+        return Equation(left.replace(what, with), right.replace(what, with))
+    }
+
+    fun multiply(mul: And): Equation {
+        return Equation(left.multiply(mul), right.multiply(mul))
+    }
+
+    fun contains(variable: Variable): Boolean {
+        return left.contains(variable) || right.contains(variable)
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -60,47 +152,56 @@ class Equation(val left: Node, val right: Node) {
 
     private fun Node.extract(variable: Variable): Node {
         return when (this) {
-            is Variable -> {
-                if (variable == this) {
-                    this
-                } else {
-                    throw IllegalStateException()
-                }
-            }
+            is Bit, is Nop, is Variable -> this
             is Xor -> {
                 val (varNodes, notVarNodes) = nodes.partition(variable)
+                val varNodesExtracted = LinkedList<Node>()
 
-                val extractedNodes = varNodes.asSequence().map { it.extract(variable) }.map { node ->
-                    when (node) {
-                        is Variable -> Bit(true)
+                varNodes.forEach { varNode ->
+                    when (val extracted = varNode.extract(variable)) {
+                        is Bit -> {
+                            notVarNodes.add(extracted)
+                        }
+                        is Variable -> {
+                            if (variable == extracted) {
+                                varNodesExtracted.add(extracted)
+                            } else {
+                                notVarNodes.add(extracted)
+                            }
+                        }
                         is Xor -> {
-                            var variableNode: Node = Nop
-
-                            node.nodes.forEach { node0 ->
-                                if (node0.contains(variable)) {
-                                    if (variableNode == Nop) {
-                                        variableNode = when (node0) {
-                                            is Variable -> Bit(true)
-                                            is And -> And(node0.nodes.asSequence().filter { it != variable }).simplify()
-                                            else -> throw IllegalStateException()
-                                        }
-                                    } else {
-                                        throw IllegalStateException()
-                                    }
+                            extracted.nodes.forEach { node ->
+                                if (node.contains(variable)) {
+                                    varNodesExtracted.add(node)
                                 } else {
-                                    notVarNodes.add(node0)
+                                    notVarNodes.add(node)
                                 }
                             }
-
-                            variableNode
                         }
-                        is And -> And(node.nodes.asSequence().filter { it != variable }).simplify()
-                        is Nop -> Nop
-                        is Bit -> throw IllegalStateException()
+                        is And -> {
+                            if (extracted.contains(variable)) {
+                                varNodesExtracted.add(extracted)
+                            } else {
+                                notVarNodes.add(extracted)
+                            }
+                        }
+                        is Nop -> run {}
                     }
                 }
 
-                val processedNode = And(variable, Xor(extractedNodes).simplify()).simplify()
+                val extractedNodes = varNodesExtracted.asSequence().map { node ->
+                    when (node) {
+                        is Variable -> Bit(true)
+                        is And -> And(node.nodes.asSequence().filter { it != variable }).simplify()
+                        else -> throw IllegalStateException()
+                    }
+                }
+
+                val processedNode = if (varNodesExtracted.size > 0) {
+                    And(variable, Xor(extractedNodes).simplify()).simplify()
+                } else {
+                    Nop
+                }
 
                 notVarNodes.add(processedNode)
 
@@ -108,12 +209,44 @@ class Equation(val left: Node, val right: Node) {
             }
             is And -> {
                 val (varNodes, notVarNodes) = nodes.partition(variable)
+                val varNodesExtracted = LinkedList<Node>()
 
-                val varNodesAnd = And(varNodes.asSequence().map { it.extract(variable) })
+                varNodes.forEach { varNode ->
+                    when (val extracted = varNode.extract(variable)) {
+                        is Bit -> {
+                            notVarNodes.add(extracted)
+                        }
+                        is Variable -> {
+                            if (variable == extracted) {
+                                varNodesExtracted.add(extracted)
+                            } else {
+                                notVarNodes.add(extracted)
+                            }
+                        }
+                        is Xor -> {
+                            if (extracted.contains(variable)) {
+                                varNodesExtracted.add(extracted)
+                            } else {
+                                notVarNodes.add(extracted)
+                            }
+                        }
+                        is And -> {
+                            extracted.nodes.forEach { node ->
+                                if (node.contains(variable)) {
+                                    varNodesExtracted.add(node)
+                                } else {
+                                    notVarNodes.add(node)
+                                }
+                            }
+                        }
+                        is Nop -> run {}
+                    }
+                }
 
-                if (varNodesAnd.nodes.any { it is Xor }) {
-                    val xorNode = varNodesAnd.nodes.find { it is Xor } as Xor
+                val varNodesAnd = And(varNodesExtracted)
+                val xorNode = varNodesAnd.nodes.find { it is Xor } as Xor?
 
+                if (xorNode != null) {
                     var extractedVar: Node = Nop
                     val remainingNodes = LinkedList<Node>()
 
@@ -141,7 +274,6 @@ class Equation(val left: Node, val right: Node) {
                     And(varNodesAnd.nodes.asSequence() + notVarNodes.asSequence()).simplify()
                 }
             }
-            is Bit, is Nop -> this
         }
     }
 
@@ -151,22 +283,104 @@ class Equation(val left: Node, val right: Node) {
 
         forEach { node ->
             if (node.contains(variable)) {
-                when (node) {
-                    is Bit -> notVarNodes.add(node)
-                    is Variable, is And, is Xor -> {
-                        if (node.contains(variable)) {
-                            varNodes.add(node)
-                        } else {
-                            notVarNodes.add(node)
-                        }
-                    }
-                    is Nop -> run {}
-                }
+                varNodes.add(node)
             } else {
                 notVarNodes.add(node)
             }
         }
 
         return Pair(varNodes, notVarNodes)
+    }
+
+    private fun Node.multiply(mul: And): Node {
+        return when (this) {
+            is And, is Variable, is Bit -> And(sequenceOf(this, mul)).simplify()
+            is Xor -> Xor(this.nodes.asSequence().map { it.multiply(mul) }).simplify()
+            is Nop -> mul
+        }
+    }
+
+    private fun Node.replace(what: Node, with: Node): Node {
+        return when (this) {
+            is Bit, is Variable -> {
+                if (this == what) {
+                    with
+                } else {
+                    this
+                }
+            }
+            is And -> {
+                when (what) {
+                    is Bit, is Nop -> this
+                    is Variable, is Xor -> {
+                        if (this.contains(what)) {
+                            val newNodes = this.nodes.asSequence().map { node ->
+                                if (node.contains(what)) {
+                                    node.replace(what, with)
+                                } else {
+                                    node
+                                }
+                            }
+                            And(newNodes).simplify()
+                        } else {
+                            this
+                        }
+                    }
+                    is And -> {
+                        val containsAll = this.nodes.containsAll(what.nodes)
+                        val containsNested = this.nodes.any { it.contains(what) }
+
+                        if (containsAll || containsNested) {
+                            val newNodes = this.nodes.asSequence().filter {
+                                if (containsAll) {
+                                    !what.nodes.contains(it)
+                                } else {
+                                    true
+                                }
+                            }.map {
+                                it.replace(what, with)
+                            }
+
+                            And(newNodes + if (containsAll) sequenceOf(with) else emptySequence()).simplify()
+                        } else {
+                            this
+                        }
+                    }
+                }
+            }
+            is Xor -> {
+                if (what is Xor) {
+                    val containsAll = this.nodes.containsAll(what.nodes)
+                    val containsNested = this.nodes.any { it.contains(what) }
+
+                    if (containsAll || containsNested) {
+                        val newNodes = this.nodes.asSequence().filter {
+                            if (containsAll) {
+                                !what.nodes.contains(it)
+                            } else {
+                                true
+                            }
+                        }.map {
+                            it.replace(what, with)
+                        }
+
+                        Xor(newNodes + if (containsAll) sequenceOf(with) else emptySequence()).simplify()
+                    } else {
+                        this
+                    }
+                } else {
+                    val newNodes = this.nodes.asSequence().map {
+                        if (it == what) {
+                            with
+                        } else {
+                            it.replace(what, with)
+                        }
+                    }
+
+                    Xor(newNodes).simplify()
+                }
+            }
+            is Nop -> Nop
+        }
     }
 }

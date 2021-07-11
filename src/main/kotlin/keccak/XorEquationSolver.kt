@@ -72,13 +72,13 @@ object XorEquationSolver {
     }
 }
 
-private fun <T> Array<T>.exchange(i: Int, j: Int) {
+fun <T> Array<T>.exchange(i: Int, j: Int) {
     val tmp = this[i]
     this[i] = this[j]
     this[j] = tmp
 }
 
-private fun BitSet.exchange(i: Int, j: Int) {
+fun BitSet.exchange(i: Int, j: Int) {
     val tmp = this[i]
     this[i] = this[j]
     this[j] = tmp
