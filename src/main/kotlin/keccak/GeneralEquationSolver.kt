@@ -20,12 +20,12 @@ class Equation(val left: Node, val right: Node) {
             is Bit -> Equation(extracted, extracted)
             is Variable, is And -> Equation(extracted, Bit())
             is Xor -> {
-                var l: Node = Bit()
+                var l: Node = Nop
                 val r = LinkedList<Node>()
 
                 extracted.nodes.forEach { extractedNode ->
                     if (extractedNode.contains(variable)) {
-                        if (l is Bit) {
+                        if (l is Nop) {
                             l = extractedNode
                         } else {
                             throw IllegalStateException()
@@ -70,12 +70,33 @@ class Equation(val left: Node, val right: Node) {
             is Xor -> {
                 val (varNodes, notVarNodes) = nodes.partition(variable)
 
-                val extractedNodes = varNodes.asSequence().map { node ->
+                val extractedNodes = varNodes.asSequence().map { it.extract(variable) }.map { node ->
                     when (node) {
                         is Variable -> Bit(true)
-                        is Xor -> node.extract(variable)
+                        is Xor -> {
+                            var variableNode: Node = Nop
+
+                            node.nodes.forEach { node0 ->
+                                if (node0.contains(variable)) {
+                                    if (variableNode == Nop) {
+                                        variableNode = when (node0) {
+                                            is Variable -> Bit(true)
+                                            is And -> And(node0.nodes.asSequence().filter { it != variable }).simplify()
+                                            else -> throw IllegalStateException()
+                                        }
+                                    } else {
+                                        throw IllegalStateException()
+                                    }
+                                } else {
+                                    notVarNodes.add(node0)
+                                }
+                            }
+
+                            variableNode
+                        }
                         is And -> And(node.nodes.asSequence().filter { it != variable }).simplify()
-                        is Bit, is Nop -> throw IllegalStateException()
+                        is Nop -> Nop
+                        is Bit -> throw IllegalStateException()
                     }
                 }
 
@@ -88,39 +109,39 @@ class Equation(val left: Node, val right: Node) {
             is And -> {
                 val (varNodes, notVarNodes) = nodes.partition(variable)
 
-                val varNodesAnd = And(varNodes)
+                val varNodesAnd = And(varNodes.asSequence().map { it.extract(variable) })
 
                 if (varNodesAnd.nodes.any { it is Xor }) {
-                    val node = varNodesAnd.nodes.find { it is Xor } as Xor
+                    val xorNode = varNodesAnd.nodes.find { it is Xor } as Xor
 
-                    var extractedVariable: Node = Bit()
+                    var extractedVar: Node = Nop
                     val remainingNodes = LinkedList<Node>()
 
-                    node.nodes.forEach { y ->
-                        if (y.contains(variable)) {
-                            if (extractedVariable is Bit) {
-                                extractedVariable = y
+                    xorNode.nodes.forEach { node ->
+                        if (node.contains(variable)) {
+                            if (extractedVar is Nop) {
+                                extractedVar = node
                             } else {
                                 throw IllegalStateException()
                             }
                         } else {
-                            remainingNodes.add(y)
+                            remainingNodes.add(node)
                         }
                     }
 
-                    val processedExceptCurrent = Xor(varNodesAnd.nodes.asSequence().filter { it != node }).simplify()
+                    val processedExceptCurrent = And(varNodesAnd.nodes.asSequence().filter { it != xorNode }).simplify()
 
                     Xor(
-                        And(sequenceOf(extractedVariable) + processedExceptCurrent + notVarNodes).simplify(),
-                        And(remainingNodes.asSequence() + processedExceptCurrent + notVarNodes).simplify(),
+                        And(sequenceOf(extractedVar) + processedExceptCurrent + notVarNodes).simplify(),
+                        And(sequenceOf(Xor(remainingNodes.asSequence()).simplify()) + processedExceptCurrent + notVarNodes).simplify(),
                     )
                         .simplify()
                         .extract(variable)
                 } else {
-                    And(varNodes.asSequence() + notVarNodes.asSequence()).simplify()
+                    And(varNodesAnd.nodes.asSequence() + notVarNodes.asSequence()).simplify()
                 }
             }
-            is Bit, is Nop -> throw IllegalStateException()
+            is Bit, is Nop -> this
         }
     }
 
@@ -130,35 +151,16 @@ class Equation(val left: Node, val right: Node) {
 
         forEach { node ->
             if (node.contains(variable)) {
-                when (val processed = node.extract(variable)) {
-                    is Bit -> notVarNodes.add(processed)
-                    is Variable, is And -> {
+                when (node) {
+                    is Bit -> notVarNodes.add(node)
+                    is Variable, is And, is Xor -> {
                         if (node.contains(variable)) {
-                            varNodes.add(processed)
+                            varNodes.add(node)
                         } else {
-                            notVarNodes.add(processed)
+                            notVarNodes.add(node)
                         }
                     }
-                    is Xor -> {
-                        if (node.contains(variable)) {
-                            varNodes.add(processed)
-                        } else {
-                            notVarNodes.add(processed)
-                        }
-                        /*val newVarNodes = LinkedList<Node>()
-                        val newNotVarNodes = LinkedList<Node>()
-
-                        processed.nodes.forEach { xorNode ->
-                            if (xorNode.contains(variable)) {
-                                newVarNodes.add(xorNode)
-                            } else {
-                                newNotVarNodes.add(xorNode)
-                            }
-                        }
-
-                        varNodes.addAll(newVarNodes)
-                        notVarNodes.addAll(newNotVarNodes)*/
-                    }
+                    is Nop -> run {}
                 }
             } else {
                 notVarNodes.add(node)
