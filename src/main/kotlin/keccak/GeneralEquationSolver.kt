@@ -85,12 +85,12 @@ class Equation(val left: Node, val right: Node) {
             is Bit -> Equation(extracted, extracted)
             is Variable, is And -> Equation(extracted, Bit())
             is Xor -> {
-                var l: Node = Nop
+                var l: Node = Bit()
                 val r = LinkedList<Node>()
 
                 extracted.nodes.forEach { extractedNode ->
                     if (extractedNode.contains(variable)) {
-                        if (l is Nop) {
+                        if (l is Bit) {
                             l = extractedNode
                         } else {
                             throw IllegalStateException()
@@ -102,7 +102,6 @@ class Equation(val left: Node, val right: Node) {
 
                 Equation(l, Xor(r).simplify())
             }
-            is Nop -> Equation(Bit(), Bit())
         }
     }
 
@@ -152,7 +151,7 @@ class Equation(val left: Node, val right: Node) {
 
     private fun Node.extract(variable: Variable): Node {
         return when (this) {
-            is Bit, is Nop, is Variable -> this
+            is Bit, is Variable -> this
             is Xor -> {
                 val (varNodes, notVarNodes) = nodes.partition(variable)
                 val varNodesExtracted = LinkedList<Node>()
@@ -185,7 +184,6 @@ class Equation(val left: Node, val right: Node) {
                                 notVarNodes.add(extracted)
                             }
                         }
-                        is Nop -> run {}
                     }
                 }
 
@@ -197,11 +195,7 @@ class Equation(val left: Node, val right: Node) {
                     }
                 }
 
-                val processedNode = if (varNodesExtracted.size > 0) {
-                    And(variable, Xor(extractedNodes).simplify()).simplify()
-                } else {
-                    Nop
-                }
+                val processedNode = And(variable, Xor(extractedNodes).simplify()).simplify()
 
                 notVarNodes.add(processedNode)
 
@@ -239,7 +233,6 @@ class Equation(val left: Node, val right: Node) {
                                 }
                             }
                         }
-                        is Nop -> run {}
                     }
                 }
 
@@ -247,12 +240,12 @@ class Equation(val left: Node, val right: Node) {
                 val xorNode = varNodesAnd.nodes.find { it is Xor } as Xor?
 
                 if (xorNode != null) {
-                    var extractedVar: Node = Nop
+                    var extractedVar: Node = Bit()
                     val remainingNodes = LinkedList<Node>()
 
                     xorNode.nodes.forEach { node ->
                         if (node.contains(variable)) {
-                            if (extractedVar is Nop) {
+                            if (extractedVar is Bit) {
                                 extractedVar = node
                             } else {
                                 throw IllegalStateException()
@@ -262,7 +255,7 @@ class Equation(val left: Node, val right: Node) {
                         }
                     }
 
-                    val processedExceptCurrent = And(varNodesAnd.nodes.asSequence().filter { it != xorNode }).simplify()
+                    val processedExceptCurrent = varNodesAnd.nodes.asSequence().filter { it != xorNode }
 
                     Xor(
                         And(sequenceOf(extractedVar) + processedExceptCurrent + notVarNodes).simplify(),
@@ -296,7 +289,6 @@ class Equation(val left: Node, val right: Node) {
         return when (this) {
             is And, is Variable, is Bit -> And(sequenceOf(this, mul)).simplify()
             is Xor -> Xor(this.nodes.asSequence().map { it.multiply(mul) }).simplify()
-            is Nop -> mul
         }
     }
 
@@ -311,7 +303,7 @@ class Equation(val left: Node, val right: Node) {
             }
             is And -> {
                 when (what) {
-                    is Bit, is Nop -> this
+                    is Bit -> this
                     is Variable, is Xor -> {
                         if (this.contains(what)) {
                             val newNodes = this.nodes.asSequence().map { node ->
@@ -380,7 +372,6 @@ class Equation(val left: Node, val right: Node) {
                     Xor(newNodes).simplify()
                 }
             }
-            is Nop -> Nop
         }
     }
 }

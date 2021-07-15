@@ -64,7 +64,6 @@ class Xor : Node {
         return when (node) {
             is Bit, is Variable, is And -> nodes.contains(node) || nodes.any { it.contains(node) }
             is Xor -> nodes.containsAll(node.nodes) || nodes.any { it.contains(node) }
-            is Nop -> false
         }
     }
 
@@ -104,7 +103,7 @@ class Xor : Node {
     private fun HashSet<Node>.addNode(node: Node) {
         if (contains(node)) {
             remove(node)
-        } else if (!(node is Bit && !node.value || node is Nop)) {
+        } else if (node !is Bit || node.value) {
             add(node)
         }
     }
@@ -134,7 +133,6 @@ class And : Node {
         return when (node) {
             is Bit, is Variable, is Xor -> nodes.contains(node) || nodes.any { it.contains(node) }
             is And -> nodes.containsAll(node.nodes) || nodes.any { it.contains(node) }
-            is Nop -> false
         }
     }
 
@@ -167,7 +165,6 @@ class And : Node {
             when (node) {
                 is Bit -> if (!node.value) throw Zero
                 is And -> addNodes(node.nodes)
-                is Nop -> run {}
                 else -> add(node)
             }
         }
@@ -175,20 +172,6 @@ class And : Node {
 
     companion object {
         private object Zero : Throwable(null, null, false, false)
-    }
-}
-
-object Nop : Node {
-    override fun evaluate(context: NodeContext): Bit {
-        throw IllegalStateException("Can't evaluate nop")
-    }
-
-    override fun contains(node: Node): Boolean {
-        return false
-    }
-
-    override fun toString(): String {
-        return "nop"
     }
 }
 
@@ -207,12 +190,12 @@ fun String.toVar() = Variable(this)
 fun Node.simplify(): Node {
     return when (this) {
         is Xor -> when {
-            nodes.isEmpty() -> Nop
+            nodes.isEmpty() -> Bit()
             nodes.size == 1 -> nodes.first()
             else -> this
         }
         is And -> when {
-            nodes.isEmpty() -> Nop
+            nodes.isEmpty() -> Bit()
             nodes.size == 1 -> nodes.first()
             else -> this
         }
