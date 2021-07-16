@@ -50,9 +50,9 @@ class Xor : Node {
     constructor(initNodes: Sequence<Node>) : this(initNodes.asIterable())
 
     constructor(initNodes: Iterable<Node>) {
-        val nodeSet = HashSet<Node>()
-        nodeSet.addNodes(initNodes)
-        nodes = nodeSet
+        nodes = HashSet<Node>()
+        nodes.addNodes(initNodes)
+        nodes.pad()
     }
 
     override fun evaluate(context: NodeContext): Bit {
@@ -105,9 +105,14 @@ class Xor : Node {
     private fun HashSet<Node>.addNode(node: Node) {
         if (contains(node)) {
             remove(node)
-        } else if (node !is Bit || node.value) {
+        } else {
             add(node)
         }
+    }
+
+    private fun HashSet<Node>.pad() {
+        remove(Bit())
+        if (isEmpty()) add(Bit())
     }
 }
 
@@ -121,9 +126,10 @@ class And : Node {
         nodes = try {
             val nodeSet = HashSet<Node>()
             nodeSet.addNodes(initNodes.asIterable())
+            nodeSet.pad()
             nodeSet
         } catch (_: Zero) {
-            emptySet()
+            setOf(Bit())
         }
     }
 
@@ -165,10 +171,18 @@ class And : Node {
     private fun HashSet<Node>.addNodes(nodes: Iterable<Node>) {
         nodes.forEach { node ->
             when (node) {
-                is Bit -> if (!node.value) throw Zero
+                is Bit -> if (node.value) add(node) else throw Zero
                 is And -> addNodes(node.nodes)
                 else -> add(node)
             }
+        }
+    }
+
+    private fun HashSet<Node>.pad() {
+        if (size > 1) {
+            remove(Bit(true))
+        } else if (isEmpty()) {
+            throw IllegalStateException("And operator accepts at least one argument")
         }
     }
 
@@ -192,14 +206,14 @@ fun String.toVar() = Variable(this)
 fun Node.simplify(): Node {
     return when (this) {
         is Xor -> when {
-            nodes.isEmpty() -> Bit()
             nodes.size == 1 -> nodes.first()
-            else -> this
+            nodes.size >= 2 -> this
+            else -> throw IllegalStateException()
         }
         is And -> when {
-            nodes.isEmpty() -> Bit()
             nodes.size == 1 -> nodes.first()
-            else -> this
+            nodes.size >= 2 -> this
+            else -> throw IllegalStateException()
         }
         else -> this
     }
@@ -241,33 +255,27 @@ fun Node.flatten(): Node {
             }
 
             val initXor = if (variables.size == 0) {
-                Xor()
+                Xor(Bit(true))
             } else {
                 Xor(And(variables))
             }
 
             val flattenXor = xors.fold(initXor) { a, b ->
-                if (a.nodes.isEmpty() && b.nodes.isEmpty() || b.nodes.isEmpty()) {
-                    a
-                } else if (a.nodes.isEmpty()) {
-                    b
-                } else {
-                    val nodes = LinkedList<Node>()
+                val nodes = LinkedList<Node>()
 
-                    a.nodes.forEach { l ->
-                        b.nodes.forEach { r ->
-                            nodes.add(And(l, r).simplify())
-                        }
+                a.nodes.forEach { l ->
+                    b.nodes.forEach { r ->
+                        nodes.add(And(l, r).simplify())
                     }
-
-                    Xor(nodes)
                 }
+
+                Xor(nodes)
             }
 
             flattenXor.simplify()
         }
         is Xor -> {
-            val flattenNodes = this.nodes.asSequence().map { it.flatten() }
+            val flattenNodes = this.nodes.asSequence().map { it.flatten().simplify() }
             Xor(flattenNodes).simplify()
         }
     }

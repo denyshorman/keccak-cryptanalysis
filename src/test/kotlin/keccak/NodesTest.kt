@@ -42,6 +42,15 @@ class NodesTest : FunSpec({
                 println(flattenedInput)
                 assertEquals(expected, flattenedInput)
             }
+
+            test("5") {
+                val input = Bit(1) xor ((Bit(1) xor "d") and (Bit(1) xor "d" xor ("d" and (Bit(1) xor "d")))) xor "d" xor ("d" and (Bit(1) xor "d"))
+                val flattenedInput = input.flatten()
+                val expected = Bit()
+                println(input)
+                println(flattenedInput)
+                assertEquals(expected, flattenedInput)
+            }
         }
     }
 })
