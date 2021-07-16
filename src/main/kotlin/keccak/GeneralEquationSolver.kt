@@ -57,13 +57,15 @@ object GeneralEquationSolver {
         while (rowId >= 0 && varId >= 0) {
             if (equations[rowId].contains(variables[varId])) {
                 var i = rowId - 1
+                var j = varId - 1
 
                 while (i >= 0) {
                     if (equations[i].contains(variables[varId])) {
-                        equations[i] = equations[i].substitute(equations[rowId], variables[varId])
+                        equations[i] = equations[i].substitute(equations[rowId], variables[varId]).extract(variables[j])
                     }
 
                     i--
+                    j--
                 }
             }
 
@@ -236,8 +238,7 @@ class Equation(val left: Node, val right: Node) {
                     }
                 }
 
-                val varNodesAnd = And(varNodesExtracted)
-                val xorNode = varNodesAnd.nodes.find { it is Xor } as Xor?
+                val xorNode = varNodesExtracted.find { it is Xor } as Xor?
 
                 if (xorNode != null) {
                     var extractedVar: Node = Bit()
@@ -255,7 +256,7 @@ class Equation(val left: Node, val right: Node) {
                         }
                     }
 
-                    val processedExceptCurrent = varNodesAnd.nodes.asSequence().filter { it != xorNode }
+                    val processedExceptCurrent = varNodesExtracted.asSequence().filter { it != xorNode }
 
                     Xor(
                         And(sequenceOf(extractedVar) + processedExceptCurrent + notVarNodes).simplify(),
@@ -264,7 +265,7 @@ class Equation(val left: Node, val right: Node) {
                         .simplify()
                         .extract(variable)
                 } else {
-                    And(varNodesAnd.nodes.asSequence() + notVarNodes.asSequence()).simplify()
+                    And(varNodesExtracted.asSequence() + notVarNodes.asSequence()).simplify()
                 }
             }
         }
