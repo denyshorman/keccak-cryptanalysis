@@ -1,5 +1,7 @@
 package keccak
 
+import java.util.*
+
 class NodeContext {
     val variables = mutableMapOf<String, Bit>()
 }
@@ -200,6 +202,74 @@ fun Node.simplify(): Node {
             else -> this
         }
         else -> this
+    }
+}
+
+fun Node.flatten(): Node {
+    return when (this) {
+        is Bit, is Variable -> this
+        is And -> {
+            val variables = LinkedList<Variable>()
+            val xors = LinkedList<Xor>()
+
+            this.nodes.forEach { node ->
+                when (node) {
+                    is Variable -> variables.add(node)
+                    is Xor -> {
+                        when (val flattenedNode = node.flatten().simplify()) {
+                            is Bit -> {
+                                if (!flattenedNode.value) {
+                                    return Bit()
+                                }
+                            }
+                            is Variable -> {
+                                variables.add(flattenedNode)
+                            }
+                            is And -> {
+                                flattenedNode.nodes.forEach { variable ->
+                                    require(variable is Variable)
+                                    variables.add(variable)
+                                }
+                            }
+                            is Xor -> {
+                                xors.add(flattenedNode)
+                            }
+                        }
+                    }
+                    else -> throw IllegalStateException()
+                }
+            }
+
+            val initXor = if (variables.size == 0) {
+                Xor()
+            } else {
+                Xor(And(variables))
+            }
+
+            val flattenXor = xors.fold(initXor) { a, b ->
+                if (a.nodes.isEmpty() && b.nodes.isEmpty() || b.nodes.isEmpty()) {
+                    a
+                } else if (a.nodes.isEmpty()) {
+                    b
+                } else {
+                    val nodes = LinkedList<Node>()
+
+                    a.nodes.forEach { l ->
+                        b.nodes.forEach { r ->
+                            nodes.add(And(l, r).simplify())
+                        }
+                    }
+
+                    Xor(nodes)
+                }
+            }
+
+            flattenXor.simplify()
+        }
+        is Xor -> {
+            val flattenNodes = this.nodes.asSequence().map { it.flatten() }
+            Xor(flattenNodes).simplify()
+        }
     }
 }
 //#endregion
