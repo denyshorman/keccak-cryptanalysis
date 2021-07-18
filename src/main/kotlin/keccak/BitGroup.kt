@@ -1,5 +1,7 @@
 package keccak
 
+import kotlin.experimental.or
+
 class BitGroup(val bits: Array<Node>) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -46,6 +48,20 @@ fun BitGroup.toLong(context: NodeContext): Long {
     (Long.SIZE_BITS - 1 downTo 0).forEach { i ->
         if (bits[i].evaluate(context).value) {
             value = value or (1L shl Long.SIZE_BITS - i - 1)
+        }
+    }
+
+    return value
+}
+
+fun BitGroup.toByte(context: NodeContext): Byte {
+    require(bits.size == Byte.SIZE_BITS)
+
+    var value: Byte = 0
+
+    (Byte.SIZE_BITS - 1 downTo 0).forEach { i ->
+        if (bits[i].evaluate(context).value) {
+            value = value or (1.shl(Byte.SIZE_BITS - i - 1)).toByte()
         }
     }
 
