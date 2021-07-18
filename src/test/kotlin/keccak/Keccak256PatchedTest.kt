@@ -13,7 +13,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -23,7 +23,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -47,7 +47,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -71,7 +71,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -95,7 +95,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -119,7 +119,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -143,7 +143,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -155,7 +155,7 @@ class Keccak256PatchedTest : FunSpec({
                 val msgBytes = nextBytes(134)
 
                 val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-                val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes))
+                val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
 
                 assertEquals(expected, actual)
             } catch (e: Exception) {

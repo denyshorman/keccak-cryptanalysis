@@ -123,11 +123,15 @@ fun findTwoVariablesThatHaveSameFunctions(state: Array<BitGroup>, stateVars: Map
         }
     }
 }
+
+fun List<KeccakPatched.Output>.toByteArray(): ByteArray {
+    return map { it.byte }.toByteArray()
+}
 //#endregion
 
 class KeccakPatched private constructor() {
     //#region Public API
-    fun hash(message: ByteArray): ByteArray {
+    fun hash(message: ByteArray): List<Output> {
         val state = State()
         val longBlocks = message.pad().blocks().longBlocks()
         val bitGroupBlocks = longBlocks.seedBlocks()
@@ -145,7 +149,7 @@ class KeccakPatched private constructor() {
             require(x.byte == computedByte) { "Computed byte $computedByte does not equal to real byte ${x.byte}" }
         }
 
-        return output.map { it.byte }.toByteArray()
+        return output
     }
     //#endregion
 
@@ -581,11 +585,17 @@ class KeccakPatched private constructor() {
         val block0: Array<BitGroup>,
         val block1: LongArray,
     )
+    //#endregion
 
-    private class Output(
+    //#region Public Models
+    class Output(
         val byte: Byte,
         val bitGroup: BitGroup,
-    )
+    ) {
+        override fun toString(): String {
+            return "$byte = $bitGroup"
+        }
+    }
     //#endregion
 
     companion object {
