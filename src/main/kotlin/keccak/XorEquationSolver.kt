@@ -1,5 +1,7 @@
 package keccak
 
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.*
 
 object XorEquationSolver {
@@ -135,4 +137,29 @@ fun matrixToString(equations: Array<BitSet>, result: BitSet): String {
     }
 
     return sb.toString()
+}
+
+fun equationsToFile(equations: Array<BitSet>, result: BitSet, filePath: String) {
+    val equationString = equationsToString(equations, result)
+    Files.writeString(Paths.get(filePath), equationString)
+}
+
+fun matrixToFile(equations: Array<BitSet>, result: BitSet, filePath: String) {
+    val matrixString = matrixToString(equations, result)
+    Files.writeString(Paths.get(filePath), matrixString)
+}
+
+fun Byte.toBitSet(): BitSet {
+    val byte = this
+    val bitSet = BitSet(Byte.SIZE_BITS)
+
+    var i = 0
+    while (i < Byte.SIZE_BITS) {
+        if (byte.toInt() and (1 shl Byte.SIZE_BITS - i - 1) > 0) {
+            bitSet.set(i)
+        }
+        i++
+    }
+
+    return bitSet
 }

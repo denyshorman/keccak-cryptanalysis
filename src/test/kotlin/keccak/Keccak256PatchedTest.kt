@@ -166,4 +166,23 @@ class Keccak256PatchedTest : FunSpec({
             }
         }
     }
+
+    test("keccak256 hash test string and find collision") {
+        val msg = "test"
+        val msgBytes = msg.toByteArray()
+
+        val expected = Numeric.toHexString(Hash.sha3(msgBytes))
+        val output = KeccakPatched.KECCAK_256.hash(msgBytes)
+        val variablesCount = 1600
+
+        val (equations, results) = output.toXorEquations(variablesCount)
+
+        equationsToFile(equations, results, "eq.txt")
+        matrixToFile(equations, results, "matrix.txt")
+
+        XorEquationSolver.solve(equations, results)
+
+        equationsToFile(equations, results, "eq_x.txt")
+        matrixToFile(equations, results, "matrix_x.txt")
+    }
 })
