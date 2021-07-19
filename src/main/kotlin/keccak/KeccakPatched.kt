@@ -3,8 +3,6 @@ package keccak
 import java.util.*
 
 //#region General Utils
-private val NonDigitsRegex = "\\D+".toRegex()
-
 fun generateState(): Array<BitGroup> {
     return (0 until 25 * Long.SIZE_BITS).asSequence()
         .chunked(Long.SIZE_BITS)
@@ -145,7 +143,7 @@ fun List<KeccakPatched.Output>.toXorEquations(varCount: Int): Pair<Array<BitSet>
             eq.nodes.forEach { xorNode ->
                 when (xorNode) {
                     is Variable -> {
-                        val varPos = xorNode.name.onlyDigits().toInt()
+                        val varPos = xorNode.name.mapToOnlyDigits().toInt()
                         equations[generalEqIndex].set(varPos)
                     }
                     is Bit -> {
@@ -161,18 +159,26 @@ fun List<KeccakPatched.Output>.toXorEquations(varCount: Int): Pair<Array<BitSet>
 
     return Pair(equations, results)
 }
-
-fun String.onlyDigits(): String {
-    return NonDigitsRegex.replace(this, "")
-}
 //#endregion
 
 class KeccakPatched private constructor() {
     //#region Public API
-    fun hash(message: ByteArray): List<Output> {
+    fun hash(
+        message: ByteArray,
+        replaceRules: List<BitReplacementSubsystem.ReplaceRule> = emptyList(),
+        replaceRulesInverse: Boolean = true,
+        replacePadding: Boolean = true,
+    ): List<Output> {
         val state = State()
-        val longBlocks = message.pad().blocks().longBlocks()
-        val bitGroupBlocks = longBlocks.seedBlocks()
+        val paddedMessage = message.pad()
+        val longBlocks = paddedMessage.blocks().longBlocks()
+        val bitGroupBlocks = BitReplacementSubsystem.getBlocks(
+            message,
+            replaceRules,
+            replaceRulesInverse,
+            replacePadding,
+            BLOCK_SIZE_BYTES,
+        )
         val blocks = bitGroupBlocks.zip(longBlocks) { a, b -> Block(a, b) }
 
         val output = state.run {
@@ -180,7 +186,7 @@ class KeccakPatched private constructor() {
             squeeze()
         }
 
-        val context = longBlocks.seedContext()
+        val context = paddedMessage.seedContext()
 
         output.forEach { x ->
             val computedByte = x.bitGroup.toByte(context)
@@ -260,6 +266,24 @@ class KeccakPatched private constructor() {
                     val varName = "a$varIndex"
                     context.variables[varName] = bit
                 }
+            }
+        }
+
+        return context
+    }
+
+    private fun ByteArray.seedContext(): NodeContext {
+        val context = NodeContext()
+        val bytes = this
+
+        var bitIndex = 0
+        bytes.forEach { byte ->
+            val byte0 = byte.toBitGroup()
+            byte0.bits.forEach { bit ->
+                require(bit is Bit)
+                val varName = "a$bitIndex"
+                context.variables[varName] = bit
+                bitIndex++
             }
         }
 
@@ -575,41 +599,6 @@ class KeccakPatched private constructor() {
         }
 
         return outputBytesStream.take(OUTPUT_SIZE_BYTES).toList()
-    }
-
-    private fun ByteArray.littleEndianToLong(): Long {
-        val bytes = this
-        var value = 0L
-
-        var i = 0
-        while (i < bytes.size) {
-            value = value or bytes[i].toLong().shl(i * Byte.SIZE_BITS)
-            i++
-        }
-
-        return value
-    }
-
-    private fun Long.toLittleEndianBytes(): ByteArray {
-        val value = this
-        val bytes = ByteArray(Long.SIZE_BYTES) { 0 }
-
-        var i = 0
-        while (i < Long.SIZE_BYTES) {
-            bytes[i] = (value.shr(i * Byte.SIZE_BITS) and UByte.MAX_VALUE.toLong()).toByte()
-            i++
-        }
-
-        return bytes
-    }
-
-    private fun BitGroup.toLittleEndianBytes(): Array<BitGroup> {
-        return bits.asSequence()
-            .chunked(Byte.SIZE_BITS)
-            .map { BitGroup(it.toTypedArray()) }
-            .toList()
-            .reversed()
-            .toTypedArray()
     }
     //#endregion
 
