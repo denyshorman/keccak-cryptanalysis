@@ -3,6 +3,7 @@ package keccak
 import io.kotest.core.spec.style.FunSpec
 import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
+import kotlin.random.Random.Default.nextBytes
 import kotlin.test.assertEquals
 
 class Keccak256Test : FunSpec({
@@ -143,6 +144,13 @@ class Keccak256Test : FunSpec({
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
         val actual = Numeric.toHexString(Keccak.KECCAK_256.hash(msgBytes))
 
+        assertEquals(expected, actual)
+    }
+
+    test("keccak256 hash random bytes") {
+        val msgBytes = nextBytes(134)
+        val expected = Numeric.toHexString(Hash.sha3(msgBytes))
+        val actual = Numeric.toHexString(Keccak.KECCAK_256.hash(msgBytes))
         assertEquals(expected, actual)
     }
 })

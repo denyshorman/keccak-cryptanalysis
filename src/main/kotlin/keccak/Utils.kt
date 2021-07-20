@@ -12,7 +12,7 @@ fun ByteArray.littleEndianToLong(): Long {
 
     var i = 0
     while (i < bytes.size) {
-        value = value or bytes[i].toLong().shl(i * Byte.SIZE_BITS)
+        value = value or bytes[i].toUByte().toLong().shl(i * Byte.SIZE_BITS)
         i++
     }
 

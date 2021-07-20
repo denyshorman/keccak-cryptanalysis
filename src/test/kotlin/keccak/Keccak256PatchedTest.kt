@@ -148,6 +148,13 @@ class Keccak256PatchedTest : FunSpec({
         assertEquals(expected, actual)
     }
 
+    test("keccak256 hash random bytes") {
+        val msgBytes = nextBytes(134)
+        val expected = Numeric.toHexString(Hash.sha3(msgBytes))
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
+        assertEquals(expected, actual)
+    }
+
     test("keccak256 randomBytes") {
         while (true) {
             try {
