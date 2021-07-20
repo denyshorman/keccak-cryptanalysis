@@ -1,5 +1,7 @@
 package keccak
 
+import java.util.*
+
 private val NonDigitsRegex = "\\D+".toRegex()
 
 fun String.mapToOnlyDigits(): String {
@@ -30,4 +32,9 @@ fun Long.toLittleEndianBytes(): ByteArray {
     }
 
     return bytes
+}
+
+fun LongArray.toBitSet(): BitSet {
+    val longArray = map { java.lang.Long.reverse(it) }.toLongArray()
+    return BitSet.valueOf(longArray)
 }

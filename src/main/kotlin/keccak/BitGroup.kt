@@ -1,5 +1,6 @@
 package keccak
 
+import java.util.*
 import kotlin.experimental.or
 
 class BitGroup(val bits: Array<Node>) {
@@ -112,5 +113,26 @@ fun Array<BitGroup>.littleEndianBytesToLong(): BitGroup {
     }
 
     return BitGroup(arr)
+}
+
+fun Array<BitGroup>.toArrayBitSet(): Array<BitSet> {
+    val bitGroups = this
+
+    return bitGroups.flatMap { bitGroup ->
+        bitGroup.bits.map { xor ->
+            require(xor is Xor)
+
+            val bitSet = BitSet(bitGroups.size * Long.SIZE_BITS)
+
+            xor.nodes.forEach { variable ->
+                require(variable is Variable)
+
+                val pos = variable.name.toInt()
+                bitSet[pos] = true
+            }
+
+            bitSet
+        }
+    }.toTypedArray()
 }
 //#endregion

@@ -188,13 +188,13 @@ class Keccak256PatchedTest : FunSpec({
 
         val (equations, results) = output.additionalEquations.filterTrueEquations().trueEquationsToXorEquations()
 
-        equationsToFile(equations, results, "eq.txt")
-        matrixToFile(equations, results, "matrix.txt")
+        equationsToFile(equations, results, "build/eq.txt")
+        matrixToFile(equations, results, "build/matrix.txt")
 
         XorEquationSolver.solve(equations, results)
 
-        equationsToFile(equations, results, "eq_x.txt")
-        matrixToFile(equations, results, "matrix_x.txt")
+        equationsToFile(equations, results, "build/eq_x.txt")
+        matrixToFile(equations, results, "build/matrix_x.txt")
     }
 
     test("keccak256 hash test string and find collision") {
@@ -203,16 +203,16 @@ class Keccak256PatchedTest : FunSpec({
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
         val output = KeccakPatched.KECCAK_256.hash(msgBytes)
-        val variablesCount = 1600
+        val variablesCount = 1088
 
         val (equations, results) = output.bytes.toXorEquations(variablesCount)
 
-        equationsToFile(equations, results, "eq.txt")
-        matrixToFile(equations, results, "matrix.txt")
+        equationsToFile(equations, results, "build/eq.txt")
+        matrixToFile(equations, results, "build/matrix.txt")
 
         XorEquationSolver.solve(equations, results)
 
-        equationsToFile(equations, results, "eq_x.txt")
-        matrixToFile(equations, results, "matrix_x.txt")
+        equationsToFile(equations, results, "build/eq_x.txt")
+        matrixToFile(equations, results, "build/matrix_x.txt")
     }
 })
