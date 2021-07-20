@@ -124,11 +124,11 @@ fun findTwoVariablesThatHaveSameFunctions(state: Array<BitGroup>, stateVars: Map
     }
 }
 
-fun List<KeccakPatched.Output>.toByteArray(): ByteArray {
+fun Array<KeccakPatched.CustomByte>.toByteArray(): ByteArray {
     return map { it.byte }.toByteArray()
 }
 
-fun List<KeccakPatched.Output>.toXorEquations(varCount: Int): Pair<Array<BitSet>, BitSet> {
+fun Array<KeccakPatched.CustomByte>.toXorEquations(varCount: Int): Pair<Array<BitSet>, BitSet> {
     val equations = Array(varCount) {BitSet(varCount)}
     val results = BitSet(varCount)
 
@@ -168,7 +168,7 @@ class KeccakPatched private constructor() {
         replaceRules: List<BitReplacementSubsystem.ReplaceRule> = emptyList(),
         replaceRulesInverse: Boolean = true,
         replacePadding: Boolean = true,
-    ): List<Output> {
+    ): Result {
         val state = State()
         val paddedMessage = message.pad()
         val longBlocks = paddedMessage.blocks().longBlocks()
@@ -181,19 +181,19 @@ class KeccakPatched private constructor() {
         )
         val blocks = bitGroupBlocks.zip(longBlocks) { a, b -> Block(a, b) }
 
-        val output = state.run {
+        val bytes = state.run {
             absorb(blocks)
             squeeze()
         }
 
-        val context = paddedMessage.seedContext()
+        val context = seedContext(paddedMessage, state)
 
-        output.forEach { x ->
+        bytes.forEach { x ->
             val computedByte = x.bitGroup.toByte(context)
             require(x.byte == computedByte) { "Computed byte $computedByte does not equal to real byte ${x.byte}" }
         }
 
-        return output
+        return Result(bytes, state.state2)
     }
     //#endregion
 
@@ -272,12 +272,11 @@ class KeccakPatched private constructor() {
         return context
     }
 
-    private fun ByteArray.seedContext(): NodeContext {
+    private fun seedContext(paddedMessage: ByteArray, state: State): NodeContext {
         val context = NodeContext()
-        val bytes = this
 
         var bitIndex = 0
-        bytes.forEach { byte ->
+        paddedMessage.forEach { byte ->
             val byte0 = byte.toBitGroup()
             byte0.bits.forEach { bit ->
                 require(bit is Bit)
@@ -286,6 +285,10 @@ class KeccakPatched private constructor() {
                 bitIndex++
             }
         }
+
+        /*state.state2.forEach { eq ->
+            context.variables[eq.varName] = eq.evaluatedValue
+        }*/
 
         return context
     }
@@ -349,7 +352,7 @@ class KeccakPatched private constructor() {
     }
 
     private fun State.permutation() {
-        repeat(24) { round ->
+        repeat(ROUND_COUNT) { round ->
             permutation(round)
         }
     }
@@ -546,32 +549,62 @@ class KeccakPatched private constructor() {
         state1[24] = b1[24] xor b1[9] xor (b1[4] and b1[9])
         //#endregion
 
+        //#region Preparation for alternative χ step
+        val x0 = Array(STATE_SIZE) { BitGroup(emptyArray()) }
+        
+        x0[0] = addAndEqToState(b0[5], b0[10], (b1[5] and b1[10]).toBitGroup())
+        x0[1] = addAndEqToState(b0[6], b0[11], (b1[6] and b1[11]).toBitGroup())
+        x0[2] = addAndEqToState(b0[7], b0[12], (b1[7] and b1[12]).toBitGroup())
+        x0[3] = addAndEqToState(b0[8], b0[13], (b1[8] and b1[13]).toBitGroup())
+        x0[4] = addAndEqToState(b0[9], b0[14], (b1[9] and b1[14]).toBitGroup())
+        x0[5] = addAndEqToState(b0[10], b0[15], (b1[10] and b1[15]).toBitGroup())
+        x0[6] = addAndEqToState(b0[11], b0[16], (b1[11] and b1[16]).toBitGroup())
+        x0[7] = addAndEqToState(b0[12], b0[17], (b1[12] and b1[17]).toBitGroup())
+        x0[8] = addAndEqToState(b0[13], b0[18], (b1[13] and b1[18]).toBitGroup())
+        x0[9] = addAndEqToState(b0[14], b0[19], (b1[14] and b1[19]).toBitGroup())
+        x0[10] = addAndEqToState(b0[15], b0[20], (b1[15] and b1[20]).toBitGroup())
+        x0[11] = addAndEqToState(b0[16], b0[21], (b1[16] and b1[21]).toBitGroup())
+        x0[12] = addAndEqToState(b0[17], b0[22], (b1[17] and b1[22]).toBitGroup())
+        x0[13] = addAndEqToState(b0[18], b0[23], (b1[18] and b1[23]).toBitGroup())
+        x0[14] = addAndEqToState(b0[19], b0[24], (b1[19] and b1[24]).toBitGroup())
+        x0[15] = addAndEqToState(b0[20], b0[0], (b1[20] and b1[0]).toBitGroup())
+        x0[16] = addAndEqToState(b0[21], b0[1], (b1[21] and b1[1]).toBitGroup())
+        x0[17] = addAndEqToState(b0[22], b0[2], (b1[22] and b1[2]).toBitGroup())
+        x0[18] = addAndEqToState(b0[23], b0[3], (b1[23] and b1[3]).toBitGroup())
+        x0[19] = addAndEqToState(b0[24], b0[4], (b1[24] and b1[4]).toBitGroup())
+        x0[20] = addAndEqToState(b0[0], b0[5], (b1[0] and b1[5]).toBitGroup())
+        x0[21] = addAndEqToState(b0[1], b0[6], (b1[1] and b1[6]).toBitGroup())
+        x0[22] = addAndEqToState(b0[2], b0[7], (b1[2] and b1[7]).toBitGroup())
+        x0[23] = addAndEqToState(b0[3], b0[8], (b1[3] and b1[8]).toBitGroup())
+        x0[24] = addAndEqToState(b0[4], b0[9], (b1[4] and b1[9]).toBitGroup())
+        //#endregion
+        
         //#region Alternative χ step
-        state0[0] = b0[0] xor b0[10] xor (b1[5] and b1[10]).toBitGroup()
-        state0[1] = b0[1] xor b0[11] xor (b1[6] and b1[11]).toBitGroup()
-        state0[2] = b0[2] xor b0[12] xor (b1[7] and b1[12]).toBitGroup()
-        state0[3] = b0[3] xor b0[13] xor (b1[8] and b1[13]).toBitGroup()
-        state0[4] = b0[4] xor b0[14] xor (b1[9] and b1[14]).toBitGroup()
-        state0[5] = b0[5] xor b0[15] xor (b1[10] and b1[15]).toBitGroup()
-        state0[6] = b0[6] xor b0[16] xor (b1[11] and b1[16]).toBitGroup()
-        state0[7] = b0[7] xor b0[17] xor (b1[12] and b1[17]).toBitGroup()
-        state0[8] = b0[8] xor b0[18] xor (b1[13] and b1[18]).toBitGroup()
-        state0[9] = b0[9] xor b0[19] xor (b1[14] and b1[19]).toBitGroup()
-        state0[10] = b0[10] xor b0[20] xor (b1[15] and b1[20]).toBitGroup()
-        state0[11] = b0[11] xor b0[21] xor (b1[16] and b1[21]).toBitGroup()
-        state0[12] = b0[12] xor b0[22] xor (b1[17] and b1[22]).toBitGroup()
-        state0[13] = b0[13] xor b0[23] xor (b1[18] and b1[23]).toBitGroup()
-        state0[14] = b0[14] xor b0[24] xor (b1[19] and b1[24]).toBitGroup()
-        state0[15] = b0[15] xor b0[0] xor (b1[20] and b1[0]).toBitGroup()
-        state0[16] = b0[16] xor b0[1] xor (b1[21] and b1[1]).toBitGroup()
-        state0[17] = b0[17] xor b0[2] xor (b1[22] and b1[2]).toBitGroup()
-        state0[18] = b0[18] xor b0[3] xor (b1[23] and b1[3]).toBitGroup()
-        state0[19] = b0[19] xor b0[4] xor (b1[24] and b1[4]).toBitGroup()
-        state0[20] = b0[20] xor b0[5] xor (b1[0] and b1[5]).toBitGroup()
-        state0[21] = b0[21] xor b0[6] xor (b1[1] and b1[6]).toBitGroup()
-        state0[22] = b0[22] xor b0[7] xor (b1[2] and b1[7]).toBitGroup()
-        state0[23] = b0[23] xor b0[8] xor (b1[3] and b1[8]).toBitGroup()
-        state0[24] = b0[24] xor b0[9] xor (b1[4] and b1[9]).toBitGroup()
+        state0[0] = b0[0] xor b0[10] xor x0[0]
+        state0[1] = b0[1] xor b0[11] xor x0[1]
+        state0[2] = b0[2] xor b0[12] xor x0[2]
+        state0[3] = b0[3] xor b0[13] xor x0[3]
+        state0[4] = b0[4] xor b0[14] xor x0[4]
+        state0[5] = b0[5] xor b0[15] xor x0[5]
+        state0[6] = b0[6] xor b0[16] xor x0[6]
+        state0[7] = b0[7] xor b0[17] xor x0[7]
+        state0[8] = b0[8] xor b0[18] xor x0[8]
+        state0[9] = b0[9] xor b0[19] xor x0[9]
+        state0[10] = b0[10] xor b0[20] xor x0[10]
+        state0[11] = b0[11] xor b0[21] xor x0[11]
+        state0[12] = b0[12] xor b0[22] xor x0[12]
+        state0[13] = b0[13] xor b0[23] xor x0[13]
+        state0[14] = b0[14] xor b0[24] xor x0[14]
+        state0[15] = b0[15] xor b0[0] xor x0[15]
+        state0[16] = b0[16] xor b0[1] xor x0[16]
+        state0[17] = b0[17] xor b0[2] xor x0[17]
+        state0[18] = b0[18] xor b0[3] xor x0[18]
+        state0[19] = b0[19] xor b0[4] xor x0[19]
+        state0[20] = b0[20] xor b0[5] xor x0[20]
+        state0[21] = b0[21] xor b0[6] xor x0[21]
+        state0[22] = b0[22] xor b0[7] xor x0[22]
+        state0[23] = b0[23] xor b0[8] xor x0[23]
+        state0[24] = b0[24] xor b0[9] xor x0[24]
         //#endregion
 
         //#region ι step
@@ -583,22 +616,50 @@ class KeccakPatched private constructor() {
         //#endregion
     }
 
-    private fun State.squeeze(): List<Output> {
-        val state0 = this.state0
-        val state1 = this.state1
+    private fun State.squeeze(): Array<CustomByte> {
+        val hashBytes = byteArrayOf(
+            *state1[0].toLittleEndianBytes(),
+            *state1[5].toLittleEndianBytes(),
+            *state1[10].toLittleEndianBytes(),
+            *state1[15].toLittleEndianBytes(),
+        )
 
-        val outputBytesStream = sequence {
-            while (true) {
-                state1[0].toLittleEndianBytes().zip(state0[0].toLittleEndianBytes()).forEach { (a, b) -> yield(Output(a, b)) }
-                state1[5].toLittleEndianBytes().zip(state0[5].toLittleEndianBytes()).forEach { (a, b) -> yield(Output(a, b)) }
-                state1[10].toLittleEndianBytes().zip(state0[10].toLittleEndianBytes()).forEach { (a, b) -> yield(Output(a, b)) }
-                state1[15].toLittleEndianBytes().zip(state0[15].toLittleEndianBytes()).forEach { (a, b) -> yield(Output(a, b)) }
+        val hashBitGroup = arrayOf(
+            *state0[0].toLittleEndianBytes(),
+            *state0[5].toLittleEndianBytes(),
+            *state0[10].toLittleEndianBytes(),
+            *state0[15].toLittleEndianBytes(),
+        )
 
-                permutation()
-            }
+        return Array(OUTPUT_SIZE_BYTES) { i ->
+            CustomByte(hashBytes[i], hashBitGroup[i])
+        }
+    }
+
+    private fun State.addAndEqToState(
+        leftGroup: BitGroup,
+        rightGroup: BitGroup,
+        evaluatedValuesGroup: BitGroup,
+    ): BitGroup {
+        require(leftGroup.bits.size == rightGroup.bits.size && rightGroup.bits.size == evaluatedValuesGroup.bits.size)
+
+        val size = leftGroup.bits.size
+        var i = 0
+
+        while (i < size) {
+            val andEqInfo = AndEqInfo(
+                leftGroup.bits[i],
+                rightGroup.bits[i],
+                "b${state2VarCounter++}",
+                (evaluatedValuesGroup.bits[i] as Bit),
+            )
+
+            state2.add(andEqInfo)
+
+            i++
         }
 
-        return outputBytesStream.take(OUTPUT_SIZE_BYTES).toList()
+        return evaluatedValuesGroup
     }
     //#endregion
 
@@ -606,6 +667,8 @@ class KeccakPatched private constructor() {
     private class State(
         val state0: Array<BitGroup> = Array(STATE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) },
         val state1: LongArray = LongArray(STATE_SIZE) { 0 },
+        val state2: LinkedList<AndEqInfo> = LinkedList<AndEqInfo>(),
+        var state2VarCounter: Int = 0,
     )
 
     private class Block(
@@ -615,7 +678,18 @@ class KeccakPatched private constructor() {
     //#endregion
 
     //#region Public Models
-    class Output(
+    data class AndEqInfo(
+        val leftNode: Node,
+        val rightNode: Node,
+        val varName: String,
+        val evaluatedValue: Bit,
+    ) {
+        override fun toString(): String {
+            return "$evaluatedValue = $varName = $leftNode * $rightNode"
+        }
+    }
+
+    class CustomByte(
         val byte: Byte,
         val bitGroup: BitGroup,
     ) {
@@ -623,10 +697,16 @@ class KeccakPatched private constructor() {
             return "$byte = $bitGroup"
         }
     }
+
+    class Result(
+        val bytes: Array<CustomByte>,
+        val additionalEquations: List<AndEqInfo>,
+    )
     //#endregion
 
     companion object {
         //#region Private Constants
+        private const val ROUND_COUNT = 24
         private const val LANE_SIZE = 5
         private const val STATE_SIZE = LANE_SIZE * LANE_SIZE
         private const val BLOCK_SIZE_BYTES = 136

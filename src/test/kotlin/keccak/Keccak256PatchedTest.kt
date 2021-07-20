@@ -13,7 +13,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -23,7 +23,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -47,7 +47,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -71,7 +71,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -95,7 +95,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -119,7 +119,7 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
         assertEquals(expected, actual)
     }
@@ -143,19 +143,18 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = msg.toByteArray()
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
+        val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
         assertEquals(expected, actual)
     }
 
     test("keccak256 randomBytes") {
         while (true) {
-
             try {
                 val msgBytes = nextBytes(134)
 
                 val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-                val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).toByteArray())
+                val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
                 assertEquals(expected, actual)
             } catch (e: Exception) {
@@ -167,6 +166,14 @@ class Keccak256PatchedTest : FunSpec({
         }
     }
 
+    test("keccak256 hash test string and additional tests") {
+        val msg = "test"
+        val msgBytes = msg.toByteArray()
+        val result = KeccakPatched.KECCAK_256.hash(msgBytes)
+        val countTrueValues = result.additionalEquations.asSequence().filter {it.evaluatedValue.value}.count()
+        println("true values $countTrueValues")
+    }
+
     test("keccak256 hash test string and find collision") {
         val msg = "test"
         val msgBytes = msg.toByteArray()
@@ -175,7 +182,7 @@ class Keccak256PatchedTest : FunSpec({
         val output = KeccakPatched.KECCAK_256.hash(msgBytes)
         val variablesCount = 1600
 
-        val (equations, results) = output.toXorEquations(variablesCount)
+        val (equations, results) = output.bytes.toXorEquations(variablesCount)
 
         equationsToFile(equations, results, "eq.txt")
         matrixToFile(equations, results, "matrix.txt")
