@@ -127,38 +127,6 @@ fun findTwoVariablesThatHaveSameFunctions(state: Array<BitGroup>, stateVars: Map
 fun Array<KeccakPatched.CustomByte>.toByteArray(): ByteArray {
     return map { it.byte }.toByteArray()
 }
-
-fun Array<KeccakPatched.CustomByte>.toXorEquations(varCount: Int): Pair<Array<BitSet>, BitSet> {
-    val equations = Array(varCount) {BitSet(varCount)}
-    val results = BitSet(varCount)
-
-    forEachIndexed { byteIndex, output ->
-        val byteBitSet = output.byte.toBitSet()
-
-        output.bitGroup.bits.forEachIndexed { eqIndex, eq ->
-            val generalEqIndex = byteIndex * Byte.SIZE_BITS + eqIndex
-
-            require(eq is Xor)
-
-            eq.nodes.forEach { xorNode ->
-                when (xorNode) {
-                    is Variable -> {
-                        val varPos = xorNode.name.mapToOnlyDigits().toInt()
-                        equations[generalEqIndex].set(varPos)
-                    }
-                    is Bit -> {
-                        results[generalEqIndex] = results[generalEqIndex] xor xorNode.value
-                    }
-                    else -> throw IllegalStateException()
-                }
-            }
-
-            results[generalEqIndex] = results[generalEqIndex] xor byteBitSet[eqIndex]
-        }
-    }
-
-    return Pair(equations, results)
-}
 //#endregion
 
 class KeccakPatched private constructor() {
