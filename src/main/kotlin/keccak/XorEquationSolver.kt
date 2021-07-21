@@ -5,11 +5,14 @@ import java.nio.file.Paths
 import java.util.*
 
 object XorEquationSolver {
+    //#region Public API
     fun solve(equations: Array<BitSet>, result: BitSet) {
         bottom(equations, result)
         top(equations, result)
     }
+    //#endregion
 
+    //#region Implementation
     private fun bottom(equations: Array<BitSet>, result: BitSet) {
         var row = 0
         var col = 0
@@ -19,6 +22,10 @@ object XorEquationSolver {
             var found = false
 
             while (i < equations.size) {
+                if (equations[i].isEmpty && result[i]) {
+                    throw NoSolution(i)
+                }
+
                 if (equations[i][col]) {
                     found = true
                     break
@@ -39,6 +46,10 @@ object XorEquationSolver {
                     if (equations[i][col]) {
                         equations[i].xor(equations[row])
                         result[i] = result[i] xor result[row]
+
+                        if (equations[i].isEmpty && result[i]) {
+                            throw NoSolution(i)
+                        }
                     }
 
                     i++
@@ -55,13 +66,21 @@ object XorEquationSolver {
         var col = equations.size - 1
 
         while (row >= 0 && col >= 0) {
-            if (!equations[row].isEmpty) {
+            if (equations[row].isEmpty) {
+                if (result[row]) {
+                    throw NoSolution(row)
+                }
+            } else {
                 var i = row - 1
 
                 while (i >= 0) {
                     if (equations[i][col]) {
                         equations[i].xor(equations[row])
                         result[i] = result[i] xor result[row]
+
+                        if (equations[i].isEmpty && result[i]) {
+                            throw NoSolution(i)
+                        }
                     }
 
                     i--
@@ -72,6 +91,11 @@ object XorEquationSolver {
             col--
         }
     }
+    //#endregion
+
+    //#region Exceptions
+    data class NoSolution(val eqIndex: Int) : Throwable(null, null, false, false)
+    //#endregion
 }
 
 fun <T> Array<T>.exchange(i: Int, j: Int) {
