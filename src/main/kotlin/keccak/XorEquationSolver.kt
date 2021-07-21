@@ -3,21 +3,15 @@ package keccak
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
+import kotlin.math.min
 
 object XorEquationSolver {
     //#region Public API
-    fun solve(equations: Array<BitSet>, result: BitSet) {
-        bottom(equations, result)
-        top(equations, result)
-    }
-    //#endregion
-
-    //#region Implementation
-    private fun bottom(equations: Array<BitSet>, result: BitSet) {
+    fun solve(equations: Array<BitSet>, result: BitSet, varCount: Int) {
         var row = 0
         var col = 0
 
-        while (row < equations.size && col < equations.size) {
+        while (row < equations.size && col < varCount) {
             var i = row
             var found = false
 
@@ -59,11 +53,9 @@ object XorEquationSolver {
             row++
             col++
         }
-    }
 
-    private fun top(equations: Array<BitSet>, result: BitSet) {
-        var row = equations.size - 1
-        var col = equations.size - 1
+        row = min(equations.size, varCount) - 1
+        col = row
 
         while (row >= 0 && col >= 0) {
             if (equations[row].isEmpty) {
@@ -126,17 +118,17 @@ fun bitSet(vararg values: Int): BitSet {
     return set
 }
 
-fun equationsToString(equations: Array<BitSet>, result: BitSet): String {
+fun equationsToString(equations: Array<BitSet>, result: BitSet, varCount: Int): String {
     val sb = StringBuilder()
 
-    equations.forEachIndexed { index, eq ->
-        val eqStr = equations.indices
+    equations.forEachIndexed { eqIndex, eq ->
+        val eqStr = (0 until varCount)
             .filter { eq[it] }
-            .ifEmpty { listOf(index) }
+            .ifEmpty { listOf(eqIndex) }
             .joinToString(" ^ ") { "a${it + 1}" }
 
         val res = if (!eq.isEmpty) {
-            if (result[index]) {
+            if (result[eqIndex]) {
                 "1"
             } else {
                 "0"
@@ -151,25 +143,25 @@ fun equationsToString(equations: Array<BitSet>, result: BitSet): String {
     return sb.toString()
 }
 
-fun matrixToString(equations: Array<BitSet>, result: BitSet): String {
+fun matrixToString(equations: Array<BitSet>, result: BitSet, varCount: Int): String {
     val sb = StringBuilder()
 
-    equations.forEachIndexed { index, eq ->
-        val eqStr = equations.indices.joinToString("") { if (eq[it]) "1" else "0" }
-        val res = if (result[index]) "1" else "0"
+    equations.forEachIndexed { eqIndex, eq ->
+        val eqStr = (0 until varCount).joinToString("") { if (eq[it]) "1" else "0" }
+        val res = if (result[eqIndex]) "1" else "0"
         sb.appendLine("$eqStr|$res")
     }
 
     return sb.toString()
 }
 
-fun equationsToFile(equations: Array<BitSet>, result: BitSet, filePath: String) {
-    val equationString = equationsToString(equations, result)
+fun equationsToFile(equations: Array<BitSet>, result: BitSet, varCount: Int, filePath: String) {
+    val equationString = equationsToString(equations, result, varCount)
     Files.writeString(Paths.get(filePath), equationString)
 }
 
-fun matrixToFile(equations: Array<BitSet>, result: BitSet, filePath: String) {
-    val matrixString = matrixToString(equations, result)
+fun matrixToFile(equations: Array<BitSet>, result: BitSet, varCount: Int, filePath: String) {
+    val matrixString = matrixToString(equations, result, varCount)
     Files.writeString(Paths.get(filePath), matrixString)
 }
 
