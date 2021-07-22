@@ -199,12 +199,35 @@ class Keccak256PatchedTest : FunSpec({
 
         val (equations, results) = output.bytes.toXorEquations(variablesCount)
 
-        equationsToFile(equations, results, equations.size, "build/eq.txt")
-        matrixToFile(equations, results, equations.size, "build/matrix.txt")
+        equationsToFile(equations, results, variablesCount, "build/eq.txt")
+        matrixToFile(equations, results, variablesCount, "build/matrix.txt")
 
-        XorEquationSolver.solve(equations, results, equations.size)
+        try {
+            XorEquationSolver.solve(equations, results, variablesCount)
+        } catch (e: Throwable) {
+            println("No solution")
+        }
 
-        equationsToFile(equations, results, equations.size, "build/eq_x.txt")
-        matrixToFile(equations, results, equations.size, "build/matrix_x.txt")
+        equationsToFile(equations, results, variablesCount, "build/eq_x.txt")
+        matrixToFile(equations, results, variablesCount, "build/matrix_x.txt")
+    }
+
+    test("keccak256 hash test string and find collision2 random") {
+        while(true) {
+            val msgBytes = nextBytes(134)
+
+            val output = KeccakPatched.KECCAK_256.hash(msgBytes)
+            val variablesCount = 1088
+
+            val (equations, results) = output.bytes.toXorEquations(variablesCount)
+
+            try {
+                XorEquationSolver.solve(equations, results, variablesCount)
+                println("has solution")
+                // break
+            } catch (e: XorEquationSolver.NoSolution) {
+                println("No solution: ${e.eqIndex}")
+            }
+        }
     }
 })

@@ -243,7 +243,7 @@ class KeccakPatched private constructor() {
             state1[x[0]] = b1[x[0]] xor b1[x[1]] xor (b1[x[1]] and b1[x[2]])
 
             recordConstraint(b0[x[1]], b0[x[2]])
-            state0[x[0]] = b0[x[0]] xor b0[x[2]] xor ONE_64
+            state0[x[0]] = b0[x[0]] xor b0[x[1]] xor b0[x[2]]
         }
 
         state1[0] = state1[0] xor ROUND_CONSTANTS[round]

@@ -37,10 +37,12 @@ fun Array<Node>.trueEquationsToXorEquations(): Pair<Array<BitSet>, BitSet> {
 }
 
 fun Array<KeccakPatched.CustomByte>.toXorEquations(varCount: Int): Pair<Array<BitSet>, BitSet> {
-    val equations = Array(varCount) { BitSet(varCount) }
+    val bytes = this
+    val eqCount = bytes.size * Byte.SIZE_BITS
+    val equations = Array(eqCount) { BitSet(varCount) }
     val results = BitSet(varCount)
 
-    forEachIndexed { byteIndex, output ->
+    bytes.forEachIndexed { byteIndex, output ->
         val byteBitSet = output.byte.toBitSet()
 
         output.bitGroup.bits.forEachIndexed { eqIndex, eq ->
