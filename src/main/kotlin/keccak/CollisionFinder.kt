@@ -4,7 +4,7 @@ import java.util.*
 
 fun List<KeccakPatched.AndEqInfo>.filterTrueEquations(): Array<Node> {
     return asSequence()
-        .filter { it.evaluatedValue.value }
+        // .filter { it.evaluatedValue.value }
         .flatMap { sequenceOf(it.leftNode, it.rightNode) }
         .toList()
         .toTypedArray()

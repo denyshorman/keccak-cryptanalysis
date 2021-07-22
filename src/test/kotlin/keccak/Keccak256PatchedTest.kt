@@ -173,20 +173,12 @@ class Keccak256PatchedTest : FunSpec({
         }
     }
 
-    test("keccak256 hash test string and additional tests") {
-        val msg = "test"
-        val msgBytes = msg.toByteArray()
-        val result = KeccakPatched.KECCAK_256.hash(msgBytes)
-        val countTrueValues = result.additionalEquations.asSequence().filter { it.evaluatedValue.value }.count()
-        println("true values $countTrueValues")
-    }
-
     test("keccak256 hash test string and find collision for true equations") {
         val msgBytes = nextBytes(134)
 
         val output = KeccakPatched.KECCAK_256.hash(msgBytes)
 
-        val (equations, results) = output.additionalEquations.filterTrueEquations().trueEquationsToXorEquations()
+        val (equations, results) = output.constraints.filterTrueEquations().trueEquationsToXorEquations()
 
         equationsToFile(equations, results, equations.size, "build/eq.txt")
         matrixToFile(equations, results, equations.size, "build/matrix.txt")

@@ -33,12 +33,12 @@ class KeccakPatched private constructor() {
             squeeze()
         }
 
-        val context = seedContext(paddedMessage, state)
+        /*val context = seedContext(paddedMessage, state)
 
         bytes.forEach { x ->
             val computedByte = x.bitGroup.toByte(context)
             require(x.byte == computedByte) { "Computed byte $computedByte does not equal to real byte ${x.byte}" }
-        }
+        }*/
 
         return Result(bytes, state.state2)
     }
@@ -241,7 +241,9 @@ class KeccakPatched private constructor() {
 
         ROUND_OFFSETS[4].forEach { x ->
             state1[x[0]] = b1[x[0]] xor b1[x[1]] xor (b1[x[1]] and b1[x[2]])
-            state0[x[0]] = b0[x[0]] xor b0[x[1]] xor (b1[x[1]] and b1[x[2]]).toBitGroup()
+
+            recordConstraint(b0[x[1]], b0[x[2]])
+            state0[x[0]] = b0[x[0]] xor b0[x[2]] xor ONE_64
         }
 
         state1[0] = state1[0] xor ROUND_CONSTANTS[round]
@@ -268,12 +270,11 @@ class KeccakPatched private constructor() {
         }
     }
 
-    private fun State.addAndEqToState(
+    private fun State.recordConstraint(
         leftGroup: BitGroup,
         rightGroup: BitGroup,
-        evaluatedValuesGroup: BitGroup,
-    ): BitGroup {
-        require(leftGroup.bits.size == rightGroup.bits.size && rightGroup.bits.size == evaluatedValuesGroup.bits.size)
+    ) {
+        require(leftGroup.bits.size == rightGroup.bits.size)
 
         val size = leftGroup.bits.size
         var i = 0
@@ -282,16 +283,12 @@ class KeccakPatched private constructor() {
             val andEqInfo = AndEqInfo(
                 leftGroup.bits[i],
                 rightGroup.bits[i],
-                "b${state2VarCounter++}",
-                (evaluatedValuesGroup.bits[i] as Bit),
             )
 
             state2.add(andEqInfo)
 
             i++
         }
-
-        return evaluatedValuesGroup
     }
     //#endregion
 
@@ -313,13 +310,7 @@ class KeccakPatched private constructor() {
     data class AndEqInfo(
         val leftNode: Node,
         val rightNode: Node,
-        val varName: String,
-        val evaluatedValue: Bit,
-    ) {
-        override fun toString(): String {
-            return "$evaluatedValue = $varName = $leftNode * $rightNode"
-        }
-    }
+    )
 
     class CustomByte(
         val byte: Byte,
@@ -332,7 +323,7 @@ class KeccakPatched private constructor() {
 
     class Result(
         val bytes: Array<CustomByte>,
-        val additionalEquations: List<AndEqInfo>,
+        val constraints: List<AndEqInfo>,
     )
     //#endregion
 
@@ -344,6 +335,8 @@ class KeccakPatched private constructor() {
         private const val BLOCK_SIZE_BYTES = 136
         private const val BLOCK_SIZE_BITS = BLOCK_SIZE_BYTES * Byte.SIZE_BITS
         private const val OUTPUT_SIZE_BYTES = 32
+
+        private val ONE_64 = BitGroup(Array(Long.SIZE_BITS) { Bit(true) })
 
         private val ROUND_CONSTANTS = longArrayOf(
             0x0000000000000001uL.toLong(),
