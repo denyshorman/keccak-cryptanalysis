@@ -208,259 +208,44 @@ class KeccakPatched private constructor() {
         //#region Variables
         val state0 = this.state0
         val state1 = this.state1
-        //#endregion
 
-        //#region θ step
-        val c1 = LongArray(LANE_SIZE) { 0 }
-        val d1 = LongArray(LANE_SIZE) { 0 }
-
-        c1[0] = state1[0] xor state1[1] xor state1[2] xor state1[3] xor state1[4]
-        c1[1] = state1[5] xor state1[6] xor state1[7] xor state1[8] xor state1[9]
-        c1[2] = state1[10] xor state1[11] xor state1[12] xor state1[13] xor state1[14]
-        c1[3] = state1[15] xor state1[16] xor state1[17] xor state1[18] xor state1[19]
-        c1[4] = state1[20] xor state1[21] xor state1[22] xor state1[23] xor state1[24]
-
-
-        d1[0] = c1[4] xor c1[1].rotateLeft(1)
-        d1[1] = c1[0] xor c1[2].rotateLeft(1)
-        d1[2] = c1[1] xor c1[3].rotateLeft(1)
-        d1[3] = c1[2] xor c1[4].rotateLeft(1)
-        d1[4] = c1[3] xor c1[0].rotateLeft(1)
-
-
-        state1[0] = state1[0] xor d1[0]
-        state1[1] = state1[1] xor d1[0]
-        state1[2] = state1[2] xor d1[0]
-        state1[3] = state1[3] xor d1[0]
-        state1[4] = state1[4] xor d1[0]
-
-        state1[5] = state1[5] xor d1[1]
-        state1[6] = state1[6] xor d1[1]
-        state1[7] = state1[7] xor d1[1]
-        state1[8] = state1[8] xor d1[1]
-        state1[9] = state1[9] xor d1[1]
-
-        state1[10] = state1[10] xor d1[2]
-        state1[11] = state1[11] xor d1[2]
-        state1[12] = state1[12] xor d1[2]
-        state1[13] = state1[13] xor d1[2]
-        state1[14] = state1[14] xor d1[2]
-
-        state1[15] = state1[15] xor d1[3]
-        state1[16] = state1[16] xor d1[3]
-        state1[17] = state1[17] xor d1[3]
-        state1[18] = state1[18] xor d1[3]
-        state1[19] = state1[19] xor d1[3]
-
-        state1[20] = state1[20] xor d1[4]
-        state1[21] = state1[21] xor d1[4]
-        state1[22] = state1[22] xor d1[4]
-        state1[23] = state1[23] xor d1[4]
-        state1[24] = state1[24] xor d1[4]
-        //#endregion
-
-        //#region Alternative θ step
         val c0 = Array(LANE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) }
         val d0 = Array(LANE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) }
 
-        c0[0] = state0[0] xor state0[1] xor state0[2] xor state0[3] xor state0[4]
-        c0[1] = state0[5] xor state0[6] xor state0[7] xor state0[8] xor state0[9]
-        c0[2] = state0[10] xor state0[11] xor state0[12] xor state0[13] xor state0[14]
-        c0[3] = state0[15] xor state0[16] xor state0[17] xor state0[18] xor state0[19]
-        c0[4] = state0[20] xor state0[21] xor state0[22] xor state0[23] xor state0[24]
+        val c1 = LongArray(LANE_SIZE) { 0 }
+        val d1 = LongArray(LANE_SIZE) { 0 }
 
-
-        d0[0] = c0[4] xor c0[1].rotateLeft(1)
-        d0[1] = c0[0] xor c0[2].rotateLeft(1)
-        d0[2] = c0[1] xor c0[3].rotateLeft(1)
-        d0[3] = c0[2] xor c0[4].rotateLeft(1)
-        d0[4] = c0[3] xor c0[0].rotateLeft(1)
-
-
-        state0[0] = state0[0] xor d0[0]
-        state0[1] = state0[1] xor d0[0]
-        state0[2] = state0[2] xor d0[0]
-        state0[3] = state0[3] xor d0[0]
-        state0[4] = state0[4] xor d0[0]
-
-        state0[5] = state0[5] xor d0[1]
-        state0[6] = state0[6] xor d0[1]
-        state0[7] = state0[7] xor d0[1]
-        state0[8] = state0[8] xor d0[1]
-        state0[9] = state0[9] xor d0[1]
-
-        state0[10] = state0[10] xor d0[2]
-        state0[11] = state0[11] xor d0[2]
-        state0[12] = state0[12] xor d0[2]
-        state0[13] = state0[13] xor d0[2]
-        state0[14] = state0[14] xor d0[2]
-
-        state0[15] = state0[15] xor d0[3]
-        state0[16] = state0[16] xor d0[3]
-        state0[17] = state0[17] xor d0[3]
-        state0[18] = state0[18] xor d0[3]
-        state0[19] = state0[19] xor d0[3]
-
-        state0[20] = state0[20] xor d0[4]
-        state0[21] = state0[21] xor d0[4]
-        state0[22] = state0[22] xor d0[4]
-        state0[23] = state0[23] xor d0[4]
-        state0[24] = state0[24] xor d0[4]
-        //#endregion
-
-        //#region ρ and π steps
         val b1 = LongArray(STATE_SIZE) { 0 }
-
-        b1[0] = state1[0].rotateLeft(0)
-        b1[1] = state1[15].rotateLeft(28)
-        b1[2] = state1[5].rotateLeft(1)
-        b1[3] = state1[20].rotateLeft(27)
-        b1[4] = state1[10].rotateLeft(62)
-        b1[5] = state1[6].rotateLeft(44)
-        b1[6] = state1[21].rotateLeft(20)
-        b1[7] = state1[11].rotateLeft(6)
-        b1[8] = state1[1].rotateLeft(36)
-        b1[9] = state1[16].rotateLeft(55)
-        b1[10] = state1[12].rotateLeft(43)
-        b1[11] = state1[2].rotateLeft(3)
-        b1[12] = state1[17].rotateLeft(25)
-        b1[13] = state1[7].rotateLeft(10)
-        b1[14] = state1[22].rotateLeft(39)
-        b1[15] = state1[18].rotateLeft(21)
-        b1[16] = state1[8].rotateLeft(45)
-        b1[17] = state1[23].rotateLeft(8)
-        b1[18] = state1[13].rotateLeft(15)
-        b1[19] = state1[3].rotateLeft(41)
-        b1[20] = state1[24].rotateLeft(14)
-        b1[21] = state1[14].rotateLeft(61)
-        b1[22] = state1[4].rotateLeft(18)
-        b1[23] = state1[19].rotateLeft(56)
-        b1[24] = state1[9].rotateLeft(2)
-        //#endregion
-
-        //#region Alternative ρ and π steps
         val b0 = Array(STATE_SIZE) { BitGroup(emptyArray()) }
-
-        b0[0] = state0[0].rotateLeft(0)
-        b0[1] = state0[15].rotateLeft(28)
-        b0[2] = state0[5].rotateLeft(1)
-        b0[3] = state0[20].rotateLeft(27)
-        b0[4] = state0[10].rotateLeft(62)
-        b0[5] = state0[6].rotateLeft(44)
-        b0[6] = state0[21].rotateLeft(20)
-        b0[7] = state0[11].rotateLeft(6)
-        b0[8] = state0[1].rotateLeft(36)
-        b0[9] = state0[16].rotateLeft(55)
-        b0[10] = state0[12].rotateLeft(43)
-        b0[11] = state0[2].rotateLeft(3)
-        b0[12] = state0[17].rotateLeft(25)
-        b0[13] = state0[7].rotateLeft(10)
-        b0[14] = state0[22].rotateLeft(39)
-        b0[15] = state0[18].rotateLeft(21)
-        b0[16] = state0[8].rotateLeft(45)
-        b0[17] = state0[23].rotateLeft(8)
-        b0[18] = state0[13].rotateLeft(15)
-        b0[19] = state0[3].rotateLeft(41)
-        b0[20] = state0[24].rotateLeft(14)
-        b0[21] = state0[14].rotateLeft(61)
-        b0[22] = state0[4].rotateLeft(18)
-        b0[23] = state0[19].rotateLeft(56)
-        b0[24] = state0[9].rotateLeft(2)
         //#endregion
 
-        //#region χ step
-        state1[0] = b1[0] xor b1[10] xor (b1[5] and b1[10])
-        state1[1] = b1[1] xor b1[11] xor (b1[6] and b1[11])
-        state1[2] = b1[2] xor b1[12] xor (b1[7] and b1[12])
-        state1[3] = b1[3] xor b1[13] xor (b1[8] and b1[13])
-        state1[4] = b1[4] xor b1[14] xor (b1[9] and b1[14])
-        state1[5] = b1[5] xor b1[15] xor (b1[10] and b1[15])
-        state1[6] = b1[6] xor b1[16] xor (b1[11] and b1[16])
-        state1[7] = b1[7] xor b1[17] xor (b1[12] and b1[17])
-        state1[8] = b1[8] xor b1[18] xor (b1[13] and b1[18])
-        state1[9] = b1[9] xor b1[19] xor (b1[14] and b1[19])
-        state1[10] = b1[10] xor b1[20] xor (b1[15] and b1[20])
-        state1[11] = b1[11] xor b1[21] xor (b1[16] and b1[21])
-        state1[12] = b1[12] xor b1[22] xor (b1[17] and b1[22])
-        state1[13] = b1[13] xor b1[23] xor (b1[18] and b1[23])
-        state1[14] = b1[14] xor b1[24] xor (b1[19] and b1[24])
-        state1[15] = b1[15] xor b1[0] xor (b1[20] and b1[0])
-        state1[16] = b1[16] xor b1[1] xor (b1[21] and b1[1])
-        state1[17] = b1[17] xor b1[2] xor (b1[22] and b1[2])
-        state1[18] = b1[18] xor b1[3] xor (b1[23] and b1[3])
-        state1[19] = b1[19] xor b1[4] xor (b1[24] and b1[4])
-        state1[20] = b1[20] xor b1[5] xor (b1[0] and b1[5])
-        state1[21] = b1[21] xor b1[6] xor (b1[1] and b1[6])
-        state1[22] = b1[22] xor b1[7] xor (b1[2] and b1[7])
-        state1[23] = b1[23] xor b1[8] xor (b1[3] and b1[8])
-        state1[24] = b1[24] xor b1[9] xor (b1[4] and b1[9])
-        //#endregion
+        ROUND_OFFSETS[0].forEach { x ->
+            c1[x[0]] = state1[x[1]] xor state1[x[2]] xor state1[x[3]] xor state1[x[4]] xor state1[x[5]]
+            c0[x[0]] = state0[x[1]] xor state0[x[2]] xor state0[x[3]] xor state0[x[4]] xor state0[x[5]]
+        }
 
-        //#region Preparation for alternative χ step
-        val x0 = Array(STATE_SIZE) { BitGroup(emptyArray()) }
-        
-        x0[0] = addAndEqToState(b0[5], b0[10], (b1[5] and b1[10]).toBitGroup())
-        x0[1] = addAndEqToState(b0[6], b0[11], (b1[6] and b1[11]).toBitGroup())
-        x0[2] = addAndEqToState(b0[7], b0[12], (b1[7] and b1[12]).toBitGroup())
-        x0[3] = addAndEqToState(b0[8], b0[13], (b1[8] and b1[13]).toBitGroup())
-        x0[4] = addAndEqToState(b0[9], b0[14], (b1[9] and b1[14]).toBitGroup())
-        x0[5] = addAndEqToState(b0[10], b0[15], (b1[10] and b1[15]).toBitGroup())
-        x0[6] = addAndEqToState(b0[11], b0[16], (b1[11] and b1[16]).toBitGroup())
-        x0[7] = addAndEqToState(b0[12], b0[17], (b1[12] and b1[17]).toBitGroup())
-        x0[8] = addAndEqToState(b0[13], b0[18], (b1[13] and b1[18]).toBitGroup())
-        x0[9] = addAndEqToState(b0[14], b0[19], (b1[14] and b1[19]).toBitGroup())
-        x0[10] = addAndEqToState(b0[15], b0[20], (b1[15] and b1[20]).toBitGroup())
-        x0[11] = addAndEqToState(b0[16], b0[21], (b1[16] and b1[21]).toBitGroup())
-        x0[12] = addAndEqToState(b0[17], b0[22], (b1[17] and b1[22]).toBitGroup())
-        x0[13] = addAndEqToState(b0[18], b0[23], (b1[18] and b1[23]).toBitGroup())
-        x0[14] = addAndEqToState(b0[19], b0[24], (b1[19] and b1[24]).toBitGroup())
-        x0[15] = addAndEqToState(b0[20], b0[0], (b1[20] and b1[0]).toBitGroup())
-        x0[16] = addAndEqToState(b0[21], b0[1], (b1[21] and b1[1]).toBitGroup())
-        x0[17] = addAndEqToState(b0[22], b0[2], (b1[22] and b1[2]).toBitGroup())
-        x0[18] = addAndEqToState(b0[23], b0[3], (b1[23] and b1[3]).toBitGroup())
-        x0[19] = addAndEqToState(b0[24], b0[4], (b1[24] and b1[4]).toBitGroup())
-        x0[20] = addAndEqToState(b0[0], b0[5], (b1[0] and b1[5]).toBitGroup())
-        x0[21] = addAndEqToState(b0[1], b0[6], (b1[1] and b1[6]).toBitGroup())
-        x0[22] = addAndEqToState(b0[2], b0[7], (b1[2] and b1[7]).toBitGroup())
-        x0[23] = addAndEqToState(b0[3], b0[8], (b1[3] and b1[8]).toBitGroup())
-        x0[24] = addAndEqToState(b0[4], b0[9], (b1[4] and b1[9]).toBitGroup())
-        //#endregion
-        
-        //#region Alternative χ step
-        state0[0] = b0[0] xor b0[10] xor x0[0]
-        state0[1] = b0[1] xor b0[11] xor x0[1]
-        state0[2] = b0[2] xor b0[12] xor x0[2]
-        state0[3] = b0[3] xor b0[13] xor x0[3]
-        state0[4] = b0[4] xor b0[14] xor x0[4]
-        state0[5] = b0[5] xor b0[15] xor x0[5]
-        state0[6] = b0[6] xor b0[16] xor x0[6]
-        state0[7] = b0[7] xor b0[17] xor x0[7]
-        state0[8] = b0[8] xor b0[18] xor x0[8]
-        state0[9] = b0[9] xor b0[19] xor x0[9]
-        state0[10] = b0[10] xor b0[20] xor x0[10]
-        state0[11] = b0[11] xor b0[21] xor x0[11]
-        state0[12] = b0[12] xor b0[22] xor x0[12]
-        state0[13] = b0[13] xor b0[23] xor x0[13]
-        state0[14] = b0[14] xor b0[24] xor x0[14]
-        state0[15] = b0[15] xor b0[0] xor x0[15]
-        state0[16] = b0[16] xor b0[1] xor x0[16]
-        state0[17] = b0[17] xor b0[2] xor x0[17]
-        state0[18] = b0[18] xor b0[3] xor x0[18]
-        state0[19] = b0[19] xor b0[4] xor x0[19]
-        state0[20] = b0[20] xor b0[5] xor x0[20]
-        state0[21] = b0[21] xor b0[6] xor x0[21]
-        state0[22] = b0[22] xor b0[7] xor x0[22]
-        state0[23] = b0[23] xor b0[8] xor x0[23]
-        state0[24] = b0[24] xor b0[9] xor x0[24]
-        //#endregion
+        ROUND_OFFSETS[1].forEach { x ->
+            d1[x[0]] = c1[x[1]] xor c1[x[2]].rotateLeft(1)
+            d0[x[0]] = c0[x[1]] xor c0[x[2]].rotateLeft(1)
+        }
 
-        //#region ι step
+        ROUND_OFFSETS[2].forEach { x ->
+            state1[x[0]] = state1[x[0]] xor d1[x[1]]
+            state0[x[0]] = state0[x[0]] xor d0[x[1]]
+        }
+
+        ROUND_OFFSETS[3].forEach { x ->
+            b1[x[0]] = state1[x[1]].rotateLeft(x[2])
+            b0[x[0]] = state0[x[1]].rotateLeft(x[2])
+        }
+
+        ROUND_OFFSETS[4].forEach { x ->
+            state1[x[0]] = b1[x[0]] xor b1[x[1]] xor (b1[x[1]] and b1[x[2]])
+            state0[x[0]] = b0[x[0]] xor b0[x[1]] xor (b1[x[1]] and b1[x[2]]).toBitGroup()
+        }
+
         state1[0] = state1[0] xor ROUND_CONSTANTS[round]
-        //#endregion
-
-        //#region Alternative ι step
         state0[0] = state0[0] xor ROUND_CONSTANTS[round].toBitGroup()
-        //#endregion
     }
 
     private fun State.squeeze(): Array<CustomByte> {
@@ -585,6 +370,104 @@ class KeccakPatched private constructor() {
             0x8000000000008080uL.toLong(),
             0x0000000080000001uL.toLong(),
             0x8000000080008008uL.toLong(),
+        )
+
+        private val ROUND_OFFSETS = arrayOf(
+            arrayOf(
+                intArrayOf(0, 0, 1, 2, 3, 4),
+                intArrayOf(1, 5, 6, 7, 8, 9),
+                intArrayOf(2, 10, 11, 12, 13, 14),
+                intArrayOf(3, 15, 16, 17, 18, 19),
+                intArrayOf(4, 20, 21, 22, 23, 24),
+            ),
+            arrayOf(
+                intArrayOf(0, 4, 1),
+                intArrayOf(1, 0, 2),
+                intArrayOf(2, 1, 3),
+                intArrayOf(3, 2, 4),
+                intArrayOf(4, 3, 0),
+            ),
+            arrayOf(
+                intArrayOf(0, 0),
+                intArrayOf(1, 0),
+                intArrayOf(2, 0),
+                intArrayOf(3, 0),
+                intArrayOf(4, 0),
+                intArrayOf(5, 1),
+                intArrayOf(6, 1),
+                intArrayOf(7, 1),
+                intArrayOf(8, 1),
+                intArrayOf(9, 1),
+                intArrayOf(10, 2),
+                intArrayOf(11, 2),
+                intArrayOf(12, 2),
+                intArrayOf(13, 2),
+                intArrayOf(14, 2),
+                intArrayOf(15, 3),
+                intArrayOf(16, 3),
+                intArrayOf(17, 3),
+                intArrayOf(18, 3),
+                intArrayOf(19, 3),
+                intArrayOf(20, 4),
+                intArrayOf(21, 4),
+                intArrayOf(22, 4),
+                intArrayOf(23, 4),
+                intArrayOf(24, 4),
+            ),
+            arrayOf(
+                intArrayOf(0, 0, 0),
+                intArrayOf(1, 15, 28),
+                intArrayOf(2, 5, 1),
+                intArrayOf(3, 20, 27),
+                intArrayOf(4, 10, 62),
+                intArrayOf(5, 6, 44),
+                intArrayOf(6, 21, 20),
+                intArrayOf(7, 11, 6),
+                intArrayOf(8, 1, 36),
+                intArrayOf(9, 16, 55),
+                intArrayOf(10, 12, 43),
+                intArrayOf(11, 2, 3),
+                intArrayOf(12, 17, 25),
+                intArrayOf(13, 7, 10),
+                intArrayOf(14, 22, 39),
+                intArrayOf(15, 18, 21),
+                intArrayOf(16, 8, 45),
+                intArrayOf(17, 23, 8),
+                intArrayOf(18, 13, 15),
+                intArrayOf(19, 3, 41),
+                intArrayOf(20, 24, 14),
+                intArrayOf(21, 14, 61),
+                intArrayOf(22, 4, 18),
+                intArrayOf(23, 19, 56),
+                intArrayOf(24, 9, 2),
+            ),
+            arrayOf(
+                intArrayOf(0, 10, 5),
+                intArrayOf(1, 11, 6),
+                intArrayOf(2, 12, 7),
+                intArrayOf(3, 13, 8),
+                intArrayOf(4, 14, 9),
+                intArrayOf(5, 15, 10),
+                intArrayOf(6, 16, 11),
+                intArrayOf(7, 17, 12),
+                intArrayOf(8, 18, 13),
+                intArrayOf(9, 19, 14),
+                intArrayOf(10, 20, 15),
+                intArrayOf(11, 21, 16),
+                intArrayOf(12, 22, 17),
+                intArrayOf(13, 23, 18),
+                intArrayOf(14, 24, 19),
+                intArrayOf(15, 0, 20),
+                intArrayOf(16, 1, 21),
+                intArrayOf(17, 2, 22),
+                intArrayOf(18, 3, 23),
+                intArrayOf(19, 4, 24),
+                intArrayOf(20, 5, 0),
+                intArrayOf(21, 6, 1),
+                intArrayOf(22, 7, 2),
+                intArrayOf(23, 8, 3),
+                intArrayOf(24, 9, 4),
+            ),
         )
         //#endregion
 
