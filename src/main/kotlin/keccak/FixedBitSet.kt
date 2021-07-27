@@ -2,8 +2,19 @@ package keccak
 
 import java.util.*
 
-class FixedBitSet(val size: Int) {
-    private val bitSet = BitSet(size)
+class FixedBitSet {
+    val size: Int
+    private val bitSet: BitSet
+
+    constructor(size: Int) {
+        this.size = size
+        this.bitSet = BitSet(size)
+    }
+
+    constructor(size: Int, bitSet: BitSet) {
+        this.size = size
+        this.bitSet = bitSet
+    }
 
     operator fun get(bitIndex: Int): Boolean {
         return bitSet.get(bitIndex)
@@ -68,7 +79,7 @@ class FixedBitSet(val size: Int) {
     }
 
     fun clone(): FixedBitSet {
-        return bitSet.clone() as FixedBitSet
+        return FixedBitSet(size, bitSet.clone() as BitSet)
     }
 
     override fun equals(other: Any?): Boolean {

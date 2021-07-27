@@ -18,13 +18,6 @@ class KeccakPatched private constructor() {
     ): Result {
         val paddedMessage = message.pad()
         val longBlocks = paddedMessage.blocks().longBlocks()
-        val bitGroupBlocks = BitReplacementSubsystem.getBlocks(
-            message,
-            replaceRules,
-            replaceRulesInverse,
-            replacePadding,
-            BLOCK_SIZE_BYTES,
-        )
 
         val varsCount = BLOCK_SIZE_BITS + longBlocks.size * 38400
         val constraintIndex = longBlocks.size * BLOCK_SIZE_BITS
@@ -38,10 +31,10 @@ class KeccakPatched private constructor() {
             varsCount,
         )
 
-        val blocks = longBlocks.zip(bitGroupBlocks).zip(eqSystemBlocks) { a, b -> Block(a.second, a.first, b) }
+        val blocks = longBlocks.zip(eqSystemBlocks) { a, b -> Block(a, b) }
 
         val state = State(
-            state3 = Array(STATE_SIZE) { EquationSystem(Long.SIZE_BITS, varsCount) },
+            state1 = Array(STATE_SIZE) { EquationSystem(Long.SIZE_BITS, varsCount) },
             constraintIndex = constraintIndex,
             allVarsCount = varsCount,
         )
@@ -51,18 +44,7 @@ class KeccakPatched private constructor() {
             squeeze()
         }
 
-        /*val context = seedContext(paddedMessage, state)
-
-        bytes.forEach { x ->
-            val computedByte = x.bitGroup.toByte(context)
-            require(x.byte == computedByte) { "Computed byte $computedByte does not equal to real byte ${x.byte}" }
-        }*/
-
-        return Result(
-            bytes,
-            state.state2,
-            state.constraints,
-        )
+        return Result(bytes, state.constraints)
     }
     //#endregion
 
@@ -107,61 +89,6 @@ class KeccakPatched private constructor() {
             .toList()
     }
 
-    private fun List<LongArray>.bitGroupBlocks(): List<Array<BitGroup>> {
-        return map { block -> block.map { it.toBitGroup() }.toTypedArray() }
-    }
-
-    private fun List<LongArray>.seedBlocks(): List<Array<BitGroup>> {
-        return mapIndexed { blockIndex, block ->
-            block.mapIndexed { longIndex, _ ->
-                BitGroup(Array(Long.SIZE_BITS) { eqIndex ->
-                    val varIndex = BLOCK_SIZE_BITS * blockIndex + Long.SIZE_BITS * longIndex + eqIndex
-                    val varName = "a$varIndex"
-                    Variable(varName)
-                })
-            }.toTypedArray()
-        }
-    }
-
-    private fun List<LongArray>.seedContext(): NodeContext {
-        val context = NodeContext()
-
-        forEachIndexed { blockIndex, block ->
-            block.forEachIndexed { longIndex, long ->
-                val bitGroup = long.toBitGroup()
-                bitGroup.bits.forEachIndexed { bitIndex, bit ->
-                    require(bit is Bit)
-                    val varIndex = BLOCK_SIZE_BITS * blockIndex + Long.SIZE_BITS * longIndex + bitIndex
-                    val varName = "a$varIndex"
-                    context.variables[varName] = bit
-                }
-            }
-        }
-
-        return context
-    }
-
-    private fun seedContext(paddedMessage: ByteArray, state: State): NodeContext {
-        val context = NodeContext()
-
-        var bitIndex = 0
-        paddedMessage.forEach { byte ->
-            val byte0 = byte.toBitGroup()
-            byte0.bits.forEach { bit ->
-                require(bit is Bit)
-                val varName = "a$bitIndex"
-                context.variables[varName] = bit
-                bitIndex++
-            }
-        }
-
-        /*state.state2.forEach { eq ->
-            context.variables[eq.varName] = eq.evaluatedValue
-        }*/
-
-        return context
-    }
-
     private fun State.absorb(blocks: List<Block>) {
         blocks.forEach { block ->
             absorb(block)
@@ -171,8 +98,7 @@ class KeccakPatched private constructor() {
     private fun State.absorb(block: Block) {
         ABSORB_CONSTANTS.forEach { x ->
             state0[x[0]] = state0[x[0]] xor block.block0[x[1]]
-            state1[x[0]] = state1[x[0]] xor block.block1[x[1]]
-            state3[x[0]].xor(block.block3[x[1]])
+            state1[x[0]].xor(block.block1[x[1]])
         }
 
         permutation()
@@ -185,91 +111,64 @@ class KeccakPatched private constructor() {
     }
 
     private fun State.permutation(round: Int) {
-        //#region Variables
-        val state0 = this.state0
-        val state1 = this.state1
-        val state3 = this.state3
+        val c0 = LongArray(LANE_SIZE) { 0 }
+        val d0 = LongArray(LANE_SIZE) { 0 }
+        val b0 = LongArray(STATE_SIZE) { 0 }
 
-        val c0 = Array(LANE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) }
-        val d0 = Array(LANE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) }
-
-        val c1 = LongArray(LANE_SIZE) { 0 }
-        val d1 = LongArray(LANE_SIZE) { 0 }
-
-        val c3 = Array(LANE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
-        val d3 = Array(LANE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
-
-        val b3 = Array(STATE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
-        val b1 = LongArray(STATE_SIZE) { 0 }
-        val b0 = Array(STATE_SIZE) { BitGroup(emptyArray()) }
-        //#endregion
+        val c1 = Array(LANE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
+        val d1 = Array(LANE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
+        val b1 = Array(STATE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
 
         ROUND_OFFSETS[0].forEach { x ->
-            c3[x[0]].xor(state3[x[1]], state3[x[2]], state3[x[3]], state3[x[4]], state3[x[5]])
-            c1[x[0]] = state1[x[1]] xor state1[x[2]] xor state1[x[3]] xor state1[x[4]] xor state1[x[5]]
             c0[x[0]] = state0[x[1]] xor state0[x[2]] xor state0[x[3]] xor state0[x[4]] xor state0[x[5]]
+            c1[x[0]].xor(state1[x[1]], state1[x[2]], state1[x[3]], state1[x[4]], state1[x[5]])
         }
 
         ROUND_OFFSETS[1].forEach { x ->
-            d3[x[0]].xor(c3[x[2]])
-            d3[x[0]].rotateEquationsLeft(1)
-            d3[x[0]].xor(c3[x[1]])
-
-            d1[x[0]] = c1[x[1]] xor c1[x[2]].rotateLeft(1)
             d0[x[0]] = c0[x[1]] xor c0[x[2]].rotateLeft(1)
+
+            d1[x[0]].xor(c1[x[2]])
+            d1[x[0]].rotateEquationsLeft(1)
+            d1[x[0]].xor(c1[x[1]])
         }
 
         ROUND_OFFSETS[2].forEach { x ->
-            state3[x[0]].xor(d3[x[1]])
-            state1[x[0]] = state1[x[0]] xor d1[x[1]]
             state0[x[0]] = state0[x[0]] xor d0[x[1]]
+            state1[x[0]].xor(d1[x[1]])
         }
 
         ROUND_OFFSETS[3].forEach { x ->
-            b3[x[0]].xor(state3[x[1]])
-            b3[x[0]].rotateEquationsLeft(x[2])
-
-            b1[x[0]] = state1[x[1]].rotateLeft(x[2])
             b0[x[0]] = state0[x[1]].rotateLeft(x[2])
+
+            b1[x[0]].xor(state1[x[1]])
+            b1[x[0]].rotateEquationsLeft(x[2])
         }
 
         ROUND_OFFSETS[4].forEach { x ->
+            state0[x[0]] = b0[x[0]] xor b0[x[1]] xor (b0[x[1]] and b0[x[2]])
+
             val eqSystem = EquationSystem(Long.SIZE_BITS, allVarsCount)
             eqSystem.xor(
-                b3[x[0]],
-                b3[x[1]],
-                recordConstraint(b3[x[1]].clone(), b3[x[2]].clone(), (b1[x[1]] and b1[x[2]]).toFixedBitSet())
+                b1[x[0]],
+                b1[x[1]],
+                recordConstraint(b1[x[1]].clone(), b1[x[2]].clone(), (b0[x[1]] and b0[x[2]]).toFixedBitSet())
             )
-            state3[x[0]] = eqSystem
-
-            state1[x[0]] = b1[x[0]] xor b1[x[1]] xor (b1[x[1]] and b1[x[2]])
-
-            recordConstraint(b0[x[1]], b0[x[2]])
-            // state0[x[0]] = b0[x[0]] xor b0[x[1]] xor b0[x[2]]
-            state0[x[0]] = b0[x[0]] xor b0[x[1]]// xor (b1[x[1]] and b1[x[2]]).toBitGroup()
+            state1[x[0]] = eqSystem
         }
 
-        state3[0].results.xor(ROUND_CONSTANTS_FIXED_BIT_SET[round])
-        state1[0] = state1[0] xor ROUND_CONSTANTS[round]
-        state0[0] = state0[0] xor ROUND_CONSTANTS[round].toBitGroup()
+        state0[0] = state0[0] xor ROUND_CONSTANTS[round]
+        state1[0].results.xor(ROUND_CONSTANTS_FIXED_BIT_SET[round])
     }
 
     private fun State.squeeze(): Array<CustomByte> {
         val hashEqSystem = arrayOf(
-            *state3[0].toLittleEndianBytes(),
-            *state3[5].toLittleEndianBytes(),
-            *state3[10].toLittleEndianBytes(),
-            *state3[15].toLittleEndianBytes(),
-        )
-
-        val hashBytes = byteArrayOf(
             *state1[0].toLittleEndianBytes(),
             *state1[5].toLittleEndianBytes(),
             *state1[10].toLittleEndianBytes(),
             *state1[15].toLittleEndianBytes(),
         )
 
-        val hashBitGroup = arrayOf(
+        val hashBytes = byteArrayOf(
             *state0[0].toLittleEndianBytes(),
             *state0[5].toLittleEndianBytes(),
             *state0[10].toLittleEndianBytes(),
@@ -277,28 +176,7 @@ class KeccakPatched private constructor() {
         )
 
         return Array(OUTPUT_SIZE_BYTES) { i ->
-            CustomByte(hashBytes[i], hashBitGroup[i], hashEqSystem[i])
-        }
-    }
-
-    private fun State.recordConstraint(
-        leftGroup: BitGroup,
-        rightGroup: BitGroup,
-    ) {
-        require(leftGroup.bits.size == rightGroup.bits.size)
-
-        val size = leftGroup.bits.size
-        var i = 0
-
-        while (i < size) {
-            val andEqInfo = AndEqInfo(
-                leftGroup.bits[i] as Xor,
-                rightGroup.bits[i] as Xor,
-            )
-
-            state2.add(andEqInfo)
-
-            i++
+            CustomByte(hashBytes[i], hashEqSystem[i])
         }
     }
 
@@ -324,31 +202,22 @@ class KeccakPatched private constructor() {
 
     //#region Private Models
     private class State(
-        val state0: Array<BitGroup> = Array(STATE_SIZE) { BitGroup(Array(Long.SIZE_BITS) { Bit() }) },
-        val state1: LongArray = LongArray(STATE_SIZE) { 0 },
-        val state2: LinkedList<AndEqInfo> = LinkedList<AndEqInfo>(),
+        val state0: LongArray = LongArray(STATE_SIZE) { 0 },
+        val state1: Array<EquationSystem>,
         val constraints: LinkedList<Constraint> = LinkedList<Constraint>(),
-        val state3: Array<EquationSystem>,
         var constraintIndex: Int,
         val allVarsCount: Int,
     )
 
     private class Block(
-        val block0: Array<BitGroup>,
-        val block1: LongArray,
-        val block3: Array<EquationSystem>,
+        val block0: LongArray,
+        val block1: Array<EquationSystem>,
     )
     //#endregion
 
     //#region Public Models
-    data class AndEqInfo(
-        val leftNode: Xor,
-        val rightNode: Xor,
-    )
-
-    class CustomByte(
+    data class CustomByte(
         val byte: Byte,
-        val bitGroup: BitGroup,
         val eqSystem: EquationSystem,
     ) {
         override fun toString(): String {
@@ -356,11 +225,32 @@ class KeccakPatched private constructor() {
         }
     }
 
-    class Result(
+    data class Result(
         val bytes: Array<CustomByte>,
-        val constraints: List<AndEqInfo>,
-        val constraints2: List<Constraint>,
-    )
+        val constraints: List<Constraint>,
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Result
+
+            if (!bytes.contentEquals(other.bytes)) return false
+            if (constraints != other.constraints) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = bytes.contentHashCode()
+            result = 31 * result + constraints.hashCode()
+            return result
+        }
+
+        override fun toString(): String {
+            return "Result(bytes=${bytes.contentToString()}, constraints=$constraints)"
+        }
+    }
 
     data class Constraint(
         val leftSystem: EquationSystem,

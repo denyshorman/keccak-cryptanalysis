@@ -4,7 +4,6 @@ import io.kotest.core.spec.style.FunSpec
 import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 import kotlin.random.Random.Default.nextBytes
-import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 
 class Keccak256PatchedTest : FunSpec({
@@ -157,77 +156,22 @@ class Keccak256PatchedTest : FunSpec({
 
     test("keccak256 randomBytes") {
         while (true) {
-            try {
-                val msgBytes = nextBytes(134)
-
-                val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-                val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
-
-                assertEquals(expected, actual)
-            } catch (e: Exception) {
-                if (e.message == "has collision") {
-                    println("great")
-                    exitProcess(0)
-                }
-            }
-        }
-    }
-
-    test("keccak256 hash test string and find collision for true equations") {
-        val msgBytes = nextBytes(134)
-
-        val output = KeccakPatched.KECCAK_256.hash(msgBytes)
-
-        val (equations, results) = output.constraints.filterTrueEquations().trueEquationsToXorEquations()
-
-        equationsToFile(equations, results, equations.size, "build/eq.txt")
-        matrixToFile(equations, results, equations.size, "build/matrix.txt")
-
-        XorEquationSolver.solve(equations, results, equations.size)
-
-        equationsToFile(equations, results, equations.size, "build/eq_x.txt")
-        matrixToFile(equations, results, equations.size, "build/matrix_x.txt")
-    }
-
-    test("keccak256 hash test string and find collision") {
-        val msg = "test"
-        val msgBytes = msg.toByteArray()
-
-        val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val output = KeccakPatched.KECCAK_256.hash(msgBytes)
-        val variablesCount = 1088
-
-        val (equations, results) = output.bytes.toXorEquations(variablesCount)
-
-        equationsToFile(equations, results, variablesCount, "build/eq.txt")
-        matrixToFile(equations, results, variablesCount, "build/matrix.txt")
-
-        try {
-            XorEquationSolver.solve(equations, results, variablesCount)
-        } catch (e: Throwable) {
-            println("No solution")
-        }
-
-        equationsToFile(equations, results, variablesCount, "build/eq_x.txt")
-        matrixToFile(equations, results, variablesCount, "build/matrix_x.txt")
-    }
-
-    test("keccak256 hash test string and find collision2 random") {
-        while(true) {
             val msgBytes = nextBytes(134)
 
-            val output = KeccakPatched.KECCAK_256.hash(msgBytes)
-            val variablesCount = 1088
+            val expected = Numeric.toHexString(Hash.sha3(msgBytes))
+            val actual = Numeric.toHexString(KeccakPatched.KECCAK_256.hash(msgBytes).bytes.toByteArray())
 
-            val (equations, results) = output.bytes.toXorEquations(variablesCount)
-
-            try {
-                XorEquationSolver.solve(equations, results, variablesCount)
-                println("has solution")
-                // break
-            } catch (e: XorEquationSolver.NoSolution) {
-                println("No solution: ${e.eqIndex}")
-            }
+            assertEquals(expected, actual)
         }
+    }
+
+    test("keccak256 some bytes") {
+        val msgBytes = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45)
+
+        val expected = Numeric.toHexString(Hash.sha3(msgBytes))
+        val hashResult = KeccakPatched.KECCAK_256.hash(msgBytes, replaceRulesInverse = true, replacePadding = true)
+        val actual = Numeric.toHexString(hashResult.bytes.toByteArray())
+
+        assertEquals(expected, actual)
     }
 })

@@ -52,14 +52,6 @@ fun LongArray.toBitSet(): BitSet {
     return BitSet.valueOf(longArray)
 }
 
-fun List<KeccakPatched.AndEqInfo>.toBitEquations(varsCount: Int): List<Pair<BitEquation, BitEquation>> {
-    return map {eq ->
-        val l = eq.leftNode.toBitEquation(varsCount)
-        val r = eq.rightNode.toBitEquation(varsCount)
-        Pair(l, r)
-    }
-}
-
 fun Xor.toBitEquation(varsCount: Int): BitEquation {
     val eq = BitEquation(varsCount)
 
