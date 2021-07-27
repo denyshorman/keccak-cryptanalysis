@@ -90,6 +90,137 @@ object XorEquationSolver {
     //#endregion
 }
 
+class SolutionsFinder(val equationSystem: EquationSystem) {
+    val mask = FixedBitSet(equationSystem.cols)
+    val iterator = FixedBitSet(equationSystem.cols)
+    var solution = FixedBitSet(equationSystem.rows)
+    var solutionIndex = 0
+    val solutionsCount: Long
+
+    init {
+        initMask()
+        solutionsCount = pow(2, mask.setBitsCount())
+    }
+
+    fun hasNext(): Boolean {
+        return solutionIndex + 1 < solutionsCount
+    }
+
+    fun next() {
+        solution = equationSystem.results.clone()
+
+        var i = 0
+        while (i < equationSystem.rows) {
+            val setBits = iterator.clone()
+            setBits.and(equationSystem.equations[i])
+            if (setBits.setBitsCount() % 2 != 0) {
+                solution[i] = solution[i] xor true
+            }
+            i++
+        }
+
+        solutionIndex++
+        iteratorIncrement()
+    }
+
+    private fun initMask() {
+        var i = 0
+        while (i < equationSystem.rows) {
+            mask.or(equationSystem.equations[i])
+            mask.clear(i)
+            i++
+        }
+    }
+
+    private fun iteratorIncrement() {
+        var i = mask.previousSetBit(equationSystem.cols - 1)
+
+        while (i >= 0) {
+            if (iterator[i]) {
+                iterator.clear(i)
+                i = mask.previousSetBit(i - 1)
+            } else {
+                iterator.set(i)
+                break
+            }
+        }
+    }
+}
+
+fun solveXorEquations(system: EquationSystem) {
+    var row = 0
+    var col = 0
+
+    while (row < system.rows && col < system.cols) {
+        var i = row
+        var found = false
+
+        while (i < system.rows) {
+            if (system.isInvalid(i)) {
+                throw XorEquationSolver.NoSolution(i)
+            }
+
+            if (system.equations[i][col]) {
+                found = true
+                break
+            }
+
+            i++
+        }
+
+        if (found) {
+            if (row != i) {
+                system.exchange(row, i)
+            }
+
+            i = row + 1
+
+            while (i < system.rows) {
+                if (system.equations[i][col]) {
+                    system.xor(i, row)
+
+                    if (system.isInvalid(i)) {
+                        throw XorEquationSolver.NoSolution(i)
+                    }
+                }
+
+                i++
+            }
+        }
+
+        row++
+        col++
+    }
+
+    row = min(system.rows, system.cols) - 1
+    col = row
+
+    while (row >= 0 && col >= 0) {
+        if (system.equations[row].isEmpty()) {
+            if (system.results[row]) {
+                throw XorEquationSolver.NoSolution(row)
+            }
+        } else {
+            var i = row - 1
+
+            while (i >= 0) {
+                if (system.equations[i][col]) {
+                    system.xor(i, row)
+
+                    if (system.isInvalid(i)) {
+                        throw XorEquationSolver.NoSolution(i)
+                    }
+                }
+
+                i--
+            }
+        }
+
+        row--
+        col--
+    }
+}
+
 fun <T> Array<T>.exchange(i: Int, j: Int) {
     val tmp = this[i]
     this[i] = this[j]
@@ -112,6 +243,14 @@ fun bitSet(vararg values: Boolean): BitSet {
 
 fun bitSet(vararg values: Int): BitSet {
     val set = BitSet(values.size)
+    values.forEachIndexed { index, value ->
+        set[index] = value == 1
+    }
+    return set
+}
+
+fun fixedBitSet(vararg values: Int): FixedBitSet {
+    val set = FixedBitSet(values.size)
     values.forEachIndexed { index, value ->
         set[index] = value == 1
     }

@@ -69,3 +69,36 @@ fun Array<KeccakPatched.CustomByte>.toXorEquations(varCount: Int): Pair<Array<Bi
 
     return Pair(equations, results)
 }
+
+fun Array<KeccakPatched.CustomByte>.toEquationSystem(varCount: Int): EquationSystem {
+    val bytes = this
+    val eqCount = bytes.size * Byte.SIZE_BITS
+    val eqSystem = EquationSystem(eqCount, varCount)
+
+    bytes.forEachIndexed { byteIndex, byteAndBitGroup ->
+        val byteBitSet = byteAndBitGroup.byte.toBitSet()
+
+        byteAndBitGroup.bitGroup.bits.forEachIndexed { bitIndex, eq ->
+            val eqIndex = byteIndex * Byte.SIZE_BITS + bitIndex
+
+            require(eq is Xor)
+
+            eq.nodes.forEach { xorNode ->
+                when (xorNode) {
+                    is Variable -> {
+                        val varPos = xorNode.name.mapToOnlyDigits().toInt()
+                        eqSystem.equations[eqIndex].xor(varPos, true)
+                    }
+                    is Bit -> {
+                        eqSystem.results[eqIndex] = eqSystem.results[eqIndex] xor xorNode.value
+                    }
+                    else -> throw IllegalStateException()
+                }
+            }
+
+            eqSystem.results[eqIndex] = eqSystem.results[eqIndex] xor byteBitSet[bitIndex]
+        }
+    }
+
+    return eqSystem
+}
