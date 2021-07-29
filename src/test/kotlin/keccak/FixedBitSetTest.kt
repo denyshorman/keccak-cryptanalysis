@@ -1,6 +1,7 @@
 package keccak
 
 import io.kotest.core.spec.style.FunSpec
+import keccak.util.toFixedBitSet
 import kotlin.test.assertEquals
 
 class FixedBitSetTest : FunSpec({

@@ -1,5 +1,8 @@
 package keccak
 
+import keccak.util.littleEndianBytesToLong
+import keccak.util.toLittleEndianBytes
+
 class Keccak private constructor(
     private val rate: Int,
     capacity: Int,

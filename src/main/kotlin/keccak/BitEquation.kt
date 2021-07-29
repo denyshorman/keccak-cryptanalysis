@@ -1,5 +1,7 @@
 package keccak
 
+import keccak.util.toNumChar
+
 class BitEquation(val cols: Int) {
     val bitSet = FixedBitSet(cols)
     var result = false

@@ -1,5 +1,8 @@
 package keccak
 
+import keccak.util.littleEndianBytesToLong
+import keccak.util.toFixedBitSet
+import keccak.util.toLittleEndianBytes
 import java.util.*
 
 //#region General Utils

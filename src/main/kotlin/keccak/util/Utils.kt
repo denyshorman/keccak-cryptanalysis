@@ -1,5 +1,6 @@
-package keccak
+package keccak.util
 
+import keccak.*
 import java.util.*
 import kotlin.math.min
 

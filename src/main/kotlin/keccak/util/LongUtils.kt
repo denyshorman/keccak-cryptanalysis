@@ -1,4 +1,6 @@
-package keccak
+package keccak.util
+
+import keccak.FixedBitSet
 
 fun Long.bit(bitIndex: Int): Boolean {
     return ((this shr (Long.SIZE_BITS - bitIndex - 1)) and 1) > 0

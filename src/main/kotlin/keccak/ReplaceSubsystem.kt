@@ -1,5 +1,8 @@
 package keccak
 
+import keccak.util.littleEndianBytesToLong
+import keccak.util.toEquationSystem
+
 object BitReplacementSubsystem {
     sealed interface ReplaceRule
     data class ByteRule(val index: Int) : ReplaceRule

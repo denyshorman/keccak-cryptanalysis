@@ -1,4 +1,7 @@
-package keccak
+package keccak.util
+
+import keccak.EquationSystem
+import keccak.FixedBitSet
 
 fun Byte.bit(bitIndex: Int): Boolean {
     return ((this.toInt() shr (Byte.SIZE_BITS - bitIndex - 1)) and 1) > 0

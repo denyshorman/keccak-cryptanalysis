@@ -1,4 +1,4 @@
-package keccak
+package keccak.util
 
 fun pow(a: Int, b: Int): Long {
     var count = 1L

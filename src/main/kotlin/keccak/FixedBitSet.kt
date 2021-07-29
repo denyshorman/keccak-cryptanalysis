@@ -1,5 +1,6 @@
 package keccak
 
+import keccak.util.toNumChar
 import java.util.*
 
 class FixedBitSet {

@@ -1,4 +1,4 @@
-package keccak
+package keccak.util
 
 private val NonDigitsRegex = "\\D+".toRegex()
 

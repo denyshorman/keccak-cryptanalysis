@@ -1,4 +1,4 @@
-package keccak
+package keccak.util
 
 import io.kotest.core.spec.style.FunSpec
 import kotlin.test.assertEquals

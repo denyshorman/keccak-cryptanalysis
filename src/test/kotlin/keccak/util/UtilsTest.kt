@@ -1,6 +1,7 @@
-package keccak
+package keccak.util
 
 import io.kotest.core.spec.style.FunSpec
+import keccak.BitEquation
 import kotlin.test.assertEquals
 
 class UtilsTest : FunSpec({
