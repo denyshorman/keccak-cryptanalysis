@@ -82,7 +82,7 @@ class KeccakPatched private constructor() {
                 block.asSequence()
                     .chunked(Long.SIZE_BYTES)
                     .map { it.toByteArray() }
-                    .map { it.littleEndianToLong() }
+                    .map { it.littleEndianBytesToLong() }
                     .toList()
                     .toLongArray()
             }

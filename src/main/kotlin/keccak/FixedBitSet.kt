@@ -106,17 +106,3 @@ class FixedBitSet {
         return String(CharArray(size) { bitSet[it].toNumChar() })
     }
 }
-
-fun Long.toFixedBitSet(): FixedBitSet {
-    val long = this
-    val bits = FixedBitSet(Long.SIZE_BITS)
-
-    var i = 0
-    while (i < Long.SIZE_BITS) {
-        val bit = (long shr (Long.SIZE_BITS - i - 1)) and 1
-        bits[i] = bit > 0
-        i++
-    }
-
-    return bits
-}

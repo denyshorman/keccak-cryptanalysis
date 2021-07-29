@@ -42,6 +42,28 @@ class FixedBitSetTest : FunSpec({
         }
     }
 
+    context("extensions") {
+        context("Byte.toFixedBitSet") {
+            test("1") {
+                val byte = 0xFA.toByte()
+                val bitSet = byte.toFixedBitSet()
+
+                assertEquals(8, bitSet.size)
+                assertEquals("11111010", bitSet.toString())
+            }
+        }
+
+        context("ByteArray.toFixedBitSet()") {
+            test("1") {
+                val bytes = byteArrayOf(0x1A.toByte(), 0xF1.toByte())
+                val bitSet = bytes.toFixedBitSet()
+
+                assertEquals(16, bitSet.size)
+                assertEquals("0001101011110001", bitSet.toString())
+            }
+        }
+    }
+
     test("toString()") {
         val bitSet = FixedBitSet(8)
         bitSet[0] = true

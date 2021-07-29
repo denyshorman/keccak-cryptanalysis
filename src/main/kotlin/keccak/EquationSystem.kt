@@ -200,16 +200,3 @@ fun Array<EquationSystem>.littleEndianBytesToLong(cols: Int): EquationSystem {
     return system
 }
 
-fun Byte.toEquationSystem(cols: Int): EquationSystem {
-    val byte = this
-    val system = EquationSystem(Byte.SIZE_BITS, cols)
-
-    var bitIndex = 0
-    while (bitIndex < Byte.SIZE_BITS) {
-        val bit = (byte.toInt() shr (Byte.SIZE_BITS - bitIndex - 1)) and 1
-        system.results[bitIndex] = bit > 0
-        bitIndex++
-    }
-
-    return system
-}
