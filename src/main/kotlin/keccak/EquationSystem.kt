@@ -73,6 +73,38 @@ class EquationSystem {
         }
     }
 
+    fun evaluate(vars: FixedBitSet) {
+        var i = 0
+        while (i < rows) {
+            equations[i].and(vars)
+            if (equations[i].setBitsCount() % 2 != 0) {
+                results.xor(i, true)
+            }
+            equations[i].clear()
+            i++
+        }
+    }
+
+    fun partiallyEvaluate(varValues: FixedBitSet, availableVars: FixedBitSet) {
+        val availableVarsInverted = availableVars.clone()
+        availableVarsInverted.invert()
+
+        var i = 0
+        while (i < rows) {
+            val res = equations[i].clone()
+            res.and(varValues)
+            res.and(availableVars)
+
+            equations[i].and(availableVarsInverted)
+
+            if (res.setBitsCount() % 2 != 0) {
+                results.xor(i, true)
+            }
+
+            i++
+        }
+    }
+
     fun clear() {
         var i = 0
         while (i < equations.size) {
@@ -96,8 +128,8 @@ class EquationSystem {
 
         if (rows != other.rows) return false
         if (cols != other.cols) return false
-        if (!equations.contentEquals(other.equations)) return false
         if (results != other.results) return false
+        if (!equations.contentEquals(other.equations)) return false
 
         return true
     }

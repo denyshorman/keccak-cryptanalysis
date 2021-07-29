@@ -56,6 +56,10 @@ class FixedBitSet {
         bitSet.and(set.bitSet)
     }
 
+    fun invert() {
+        bitSet.flip(0, size)
+    }
+
     fun nextSetBit(fromIndex: Int): Int {
         return bitSet.nextSetBit(fromIndex)
     }
