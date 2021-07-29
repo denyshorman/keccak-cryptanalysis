@@ -92,9 +92,9 @@ object XorEquationSolver {
 }
 
 class SolutionsFinder(val equationSystem: EquationSystem) {
-    val mask = FixedBitSet(equationSystem.cols)
-    val iterator = FixedBitSet(equationSystem.cols)
-    var solution = FixedBitSet(equationSystem.rows)
+    val mask = BitGroup(equationSystem.cols)
+    val iterator = BitGroup(equationSystem.cols)
+    var solution = BitGroup(equationSystem.rows)
     var solutionIndex = 0
     val solutionsCount: Long
 
@@ -250,8 +250,8 @@ fun bitSet(vararg values: Int): BitSet {
     return set
 }
 
-fun fixedBitSet(vararg values: Int): FixedBitSet {
-    val set = FixedBitSet(values.size)
+fun fixedBitSet(vararg values: Int): BitGroup {
+    val set = BitGroup(values.size)
     values.forEachIndexed { index, value ->
         set[index] = value == 1
     }

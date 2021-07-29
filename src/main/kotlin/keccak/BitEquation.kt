@@ -3,11 +3,11 @@ package keccak
 import keccak.util.toNumChar
 
 class BitEquation(val cols: Int) {
-    val bitSet = FixedBitSet(cols)
+    val bitGroup = BitGroup(cols)
     var result = false
 
     fun setVariable(varIndex: Int) {
-        bitSet[varIndex] = bitSet[varIndex] xor true
+        bitGroup[varIndex] = bitGroup[varIndex] xor true
     }
 
     fun setBit(value: Boolean) {
@@ -21,7 +21,7 @@ class BitEquation(val cols: Int) {
         other as BitEquation
 
         if (cols != other.cols) return false
-        if (bitSet != other.bitSet) return false
+        if (bitGroup != other.bitGroup) return false
         if (result != other.result) return false
 
         return true
@@ -29,12 +29,12 @@ class BitEquation(val cols: Int) {
 
     override fun hashCode(): Int {
         var hash = cols
-        hash = 31 * hash + bitSet.hashCode()
+        hash = 31 * hash + bitGroup.hashCode()
         hash = 31 * hash + result.hashCode()
         return hash
     }
 
     override fun toString(): String {
-        return "$bitSet = ${result.toNumChar()}"
+        return "$bitGroup = ${result.toNumChar()}"
     }
 }

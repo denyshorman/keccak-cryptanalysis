@@ -4,11 +4,6 @@ import keccak.*
 import java.util.*
 import kotlin.math.min
 
-fun LongArray.toBitSet(): BitSet {
-    val longArray = map { java.lang.Long.reverse(it) }.toLongArray()
-    return BitSet.valueOf(longArray)
-}
-
 fun Xor.toBitEquation(varsCount: Int): BitEquation {
     val eq = BitEquation(varsCount)
 
@@ -40,8 +35,8 @@ fun BitEquation.substitute(eqSystem: EquationSystem) {
     val size = min(eqSystem.rows, eqSystem.cols)
 
     while (i < size) {
-        if (eqSystem.equations[i][i] && bitSet[i]) {
-            bitSet.xor(eqSystem.equations[i])
+        if (eqSystem.equations[i][i] && bitGroup[i]) {
+            bitGroup.xor(eqSystem.equations[i])
             result = result xor eqSystem.results[i]
         }
 
@@ -49,12 +44,12 @@ fun BitEquation.substitute(eqSystem: EquationSystem) {
     }
 }
 
-fun List<Pair<BitEquation, BitEquation>>.allSetBits(varsCount: Int): FixedBitSet {
-    val mask = FixedBitSet(varsCount)
+fun List<Pair<BitEquation, BitEquation>>.allSetBits(varsCount: Int): BitGroup {
+    val mask = BitGroup(varsCount)
 
     forEach {
-        mask.or(it.first.bitSet)
-        mask.or(it.second.bitSet)
+        mask.or(it.first.bitGroup)
+        mask.or(it.second.bitGroup)
     }
 
     return mask
@@ -72,36 +67,36 @@ fun List<Pair<BitEquation, BitEquation>>.additionalEqToBitSystem(varsCount: Int,
     val system = EquationSystem(size, varCombinationsCount)
 
     forEachIndexed { eqIndex, eq ->
-        var leftSetBitIndex = eq.first.bitSet.nextSetBit(0)
+        var leftSetBitIndex = eq.first.bitGroup.nextSetBit(0)
         while (leftSetBitIndex >= 0) {
             if (leftSetBitIndex == Integer.MAX_VALUE) break
-            var rightSetBitIndex = eq.second.bitSet.nextSetBit(0)
+            var rightSetBitIndex = eq.second.bitGroup.nextSetBit(0)
             while (rightSetBitIndex >= 0) {
                 if (rightSetBitIndex == Integer.MAX_VALUE) break
                 val varCombinationIndex = calcCombinationIndex(leftSetBitIndex - offset, rightSetBitIndex - offset, varsCount)
                 system.equations[eqIndex].xor(varCombinationIndex, true)
-                rightSetBitIndex = eq.second.bitSet.nextSetBit(rightSetBitIndex + 1)
+                rightSetBitIndex = eq.second.bitGroup.nextSetBit(rightSetBitIndex + 1)
             }
-            leftSetBitIndex = eq.first.bitSet.nextSetBit(leftSetBitIndex + 1)
+            leftSetBitIndex = eq.first.bitGroup.nextSetBit(leftSetBitIndex + 1)
         }
 
         if (eq.first.result) {
-            var bitIndex = eq.second.bitSet.nextSetBit(0)
+            var bitIndex = eq.second.bitGroup.nextSetBit(0)
             while (bitIndex >= 0) {
                 if (bitIndex == Integer.MAX_VALUE) break
                 val varCombinationIndex = calcCombinationIndex(bitIndex - offset, varsCount)
                 system.equations[eqIndex].xor(varCombinationIndex, true)
-                bitIndex = eq.second.bitSet.nextSetBit(bitIndex + 1)
+                bitIndex = eq.second.bitGroup.nextSetBit(bitIndex + 1)
             }
         }
 
         if (eq.second.result) {
-            var bitIndex = eq.first.bitSet.nextSetBit(0)
+            var bitIndex = eq.first.bitGroup.nextSetBit(0)
             while (bitIndex >= 0) {
                 if (bitIndex == Integer.MAX_VALUE) break
                 val varCombinationIndex = calcCombinationIndex(bitIndex - offset, varsCount)
                 system.equations[eqIndex].xor(varCombinationIndex, true)
-                bitIndex = eq.first.bitSet.nextSetBit(bitIndex + 1)
+                bitIndex = eq.first.bitGroup.nextSetBit(bitIndex + 1)
             }
         }
 
@@ -109,12 +104,12 @@ fun List<Pair<BitEquation, BitEquation>>.additionalEqToBitSystem(varsCount: Int,
             system.results.xor(eqIndex, true)
         }
 
-        var bitIndex = eq.second.bitSet.nextSetBit(0)
+        var bitIndex = eq.second.bitGroup.nextSetBit(0)
         while (bitIndex >= 0) {
             if (bitIndex == Integer.MAX_VALUE) break
             val varCombinationIndex = calcCombinationIndex(bitIndex - offset, varsCount)
             system.equations[eqIndex].xor(varCombinationIndex, true)
-            bitIndex = eq.second.bitSet.nextSetBit(bitIndex + 1)
+            bitIndex = eq.second.bitGroup.nextSetBit(bitIndex + 1)
         }
 
         if (eq.second.result) {

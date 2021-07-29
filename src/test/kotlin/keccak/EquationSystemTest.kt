@@ -9,7 +9,7 @@ class EquationSystemTest : FunSpec({
             val rows = 2
             val cols = 2
             val eqSystem = EquationSystem(rows, cols)
-            val vars = FixedBitSet(cols)
+            val vars = BitGroup(cols)
 
             vars[0] = true
             vars[1] = true
@@ -40,7 +40,7 @@ class EquationSystemTest : FunSpec({
             val rows = 2
             val cols = 2
             val eqSystem = EquationSystem(rows, cols)
-            val vars = FixedBitSet(cols)
+            val vars = BitGroup(cols)
 
             vars[0] = true
             vars[1] = true
@@ -73,12 +73,12 @@ class EquationSystemTest : FunSpec({
             val rows = 2
             val cols = 2
 
-            val varValues = FixedBitSet(cols)
+            val varValues = BitGroup(cols)
 
             varValues[0] = true
             varValues[1] = true
 
-            val availableVars = FixedBitSet(cols)
+            val availableVars = BitGroup(cols)
 
             availableVars[0] = true
             availableVars[1] = true
@@ -112,12 +112,12 @@ class EquationSystemTest : FunSpec({
             val rows = 2
             val cols = 2
 
-            val varValues = FixedBitSet(cols)
+            val varValues = BitGroup(cols)
 
             varValues[0] = true
             varValues[1] = true
 
-            val availableVars = FixedBitSet(cols)
+            val availableVars = BitGroup(cols)
 
             availableVars[0] = false
             availableVars[1] = false
@@ -151,12 +151,12 @@ class EquationSystemTest : FunSpec({
             val rows = 2
             val cols = 2
 
-            val varValues = FixedBitSet(cols)
+            val varValues = BitGroup(cols)
 
             varValues[0] = true
             varValues[1] = true
 
-            val availableVars = FixedBitSet(cols)
+            val availableVars = BitGroup(cols)
 
             availableVars[0] = false
             availableVars[1] = true

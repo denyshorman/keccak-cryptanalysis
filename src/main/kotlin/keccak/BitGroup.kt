@@ -1,138 +1,109 @@
 package keccak
 
+import keccak.util.toNumChar
 import java.util.*
-import kotlin.experimental.or
 
-class BitGroup(val bits: Array<Node>) {
+class BitGroup {
+    val size: Int
+    private val bitSet: BitSet
+
+    constructor(size: Int) {
+        this.size = size
+        this.bitSet = BitSet(size)
+    }
+
+    constructor(size: Int, bitSet: BitSet) {
+        this.size = size
+        this.bitSet = bitSet
+    }
+
+    operator fun get(bitIndex: Int): Boolean {
+        return bitSet.get(bitIndex)
+    }
+
+    operator fun set(bitIndex: Int, value: Boolean) {
+        return bitSet.set(bitIndex, value)
+    }
+
+    fun set(bitIndex: Int) {
+        return bitSet.set(bitIndex, true)
+    }
+
+    fun clear() {
+        bitSet.clear()
+    }
+
+    fun clear(bitIndex: Int) {
+        bitSet.clear(bitIndex)
+    }
+
+    fun xor(set: BitGroup) {
+        bitSet.xor(set.bitSet)
+    }
+
+    fun xor(set: BitSet) {
+        bitSet.xor(set)
+    }
+
+    fun xor(bitIndex: Int, value: Boolean) {
+        bitSet[bitIndex] = bitSet[bitIndex] xor value
+    }
+
+    fun or(set: BitGroup) {
+        bitSet.or(set.bitSet)
+    }
+
+    fun and(set: BitGroup) {
+        bitSet.and(set.bitSet)
+    }
+
+    fun invert() {
+        bitSet.flip(0, size)
+    }
+
+    fun nextSetBit(fromIndex: Int): Int {
+        return bitSet.nextSetBit(fromIndex)
+    }
+
+    fun previousSetBit(fromIndex: Int): Int {
+        return bitSet.previousSetBit(fromIndex)
+    }
+
+    fun isEmpty(): Boolean {
+        return bitSet.isEmpty
+    }
+
+    fun setBitsCount(): Int {
+        return bitSet.cardinality()
+    }
+
+    fun exchange(i: Int, j: Int) {
+        val tmp = bitSet[i]
+        bitSet[i] = bitSet[j]
+        bitSet[j] = tmp
+    }
+
+    fun clone(): BitGroup {
+        return BitGroup(size, bitSet.clone() as BitSet)
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
         other as BitGroup
 
-        if (!bits.contentEquals(other.bits)) return false
+        if (size != other.size) return false
+        if (bitSet != other.bitSet) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        return bits.contentHashCode()
+        return 31 * size + bitSet.hashCode()
     }
 
     override fun toString(): String {
-        return bits.asSequence().map { "[$it]" }.joinToString("")
+        return String(CharArray(size) { bitSet[it].toNumChar() })
     }
 }
-
-//#region Extensions
-infix fun BitGroup.xor(other: BitGroup): BitGroup {
-    require(bits.size == other.bits.size)
-    val bits = bits.zip(other.bits) { l, r -> Xor(l, r) }
-    return BitGroup(bits.toTypedArray())
-}
-
-infix fun BitGroup.and(other: BitGroup): BitGroup {
-    require(bits.size == other.bits.size)
-    val bits = bits.zip(other.bits) { l, r -> And(l, r) }
-    return BitGroup(bits.toTypedArray())
-}
-
-fun BitGroup.rotateLeft(bitCount: Int): BitGroup {
-    return BitGroup((bits.drop(bitCount) + bits.take(bitCount)).toTypedArray())
-}
-
-fun BitGroup.toLong(context: NodeContext): Long {
-    require(bits.size == Long.SIZE_BITS)
-
-    var value = 0L
-
-    (Long.SIZE_BITS - 1 downTo 0).forEach { i ->
-        if (bits[i].evaluate(context).value) {
-            value = value or (1L shl Long.SIZE_BITS - i - 1)
-        }
-    }
-
-    return value
-}
-
-fun BitGroup.toByte(context: NodeContext): Byte {
-    require(bits.size == Byte.SIZE_BITS)
-
-    var value: Byte = 0
-
-    (Byte.SIZE_BITS - 1 downTo 0).forEach { i ->
-        if (bits[i].evaluate(context).value) {
-            value = value or (1.shl(Byte.SIZE_BITS - i - 1)).toByte()
-        }
-    }
-
-    return value
-}
-
-fun Long.toBitGroup(): BitGroup {
-    val long = this
-
-    val bits = Array<Node>(Long.SIZE_BITS) { bitIndex ->
-        val bit = (long shr (Long.SIZE_BITS - bitIndex - 1)) and 1
-        Bit(bit > 0)
-    }
-
-    return BitGroup(bits)
-}
-
-fun Byte.toBitGroup(): BitGroup {
-    val byte = this
-
-    val bits = Array<Node>(Byte.SIZE_BITS) { bitIndex ->
-        val bit = (byte.toInt() shr (Byte.SIZE_BITS - bitIndex - 1)) and 1
-        Bit(bit > 0)
-    }
-
-    return BitGroup(bits)
-}
-
-fun ByteArray.toBitGroup(): Array<BitGroup> {
-    return Array(size) { get(it).toBitGroup() }
-}
-
-fun BitGroup.toLittleEndianBytes(): Array<BitGroup> {
-    return bits.asSequence()
-        .chunked(Byte.SIZE_BITS)
-        .map { BitGroup(it.toTypedArray()) }
-        .toList()
-        .reversed()
-        .toTypedArray()
-}
-
-fun Array<BitGroup>.littleEndianBytesToLong(): BitGroup {
-    val bytes = this
-
-    val arr = Array(Long.SIZE_BITS) { bitIndex ->
-        val byteIndex = Long.SIZE_BYTES - bitIndex / Byte.SIZE_BITS - 1
-        bytes[byteIndex].bits[bitIndex % Byte.SIZE_BITS]
-    }
-
-    return BitGroup(arr)
-}
-
-fun Array<BitGroup>.toArrayBitSet(): Array<BitSet> {
-    val bitGroups = this
-
-    return bitGroups.flatMap { bitGroup ->
-        bitGroup.bits.map { xor ->
-            require(xor is Xor)
-
-            val bitSet = BitSet(bitGroups.size * Long.SIZE_BITS)
-
-            xor.nodes.forEach { variable ->
-                require(variable is Variable)
-
-                val pos = variable.name.toInt()
-                bitSet[pos] = true
-            }
-
-            bitSet
-        }
-    }.toTypedArray()
-}
-//#endregion

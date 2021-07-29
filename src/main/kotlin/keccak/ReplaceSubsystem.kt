@@ -2,6 +2,7 @@ package keccak
 
 import keccak.util.littleEndianBytesToLong
 import keccak.util.toEquationSystem
+import keccak.util.toNodeGroup
 
 object BitReplacementSubsystem {
     sealed interface ReplaceRule
@@ -15,7 +16,7 @@ object BitReplacementSubsystem {
         replaceRulesInverse: Boolean = false,
         replacePadding: Boolean = false,
         blockSizeBytes: Int,
-    ): List<Array<BitGroup>> {
+    ): List<Array<NodeGroup>> {
         val padding = buildPadding(message.size, blockSizeBytes)
 
         val messageMask = buildMessageMask(message.size, replaceRules, replaceRulesInverse)
@@ -105,12 +106,12 @@ object BitReplacementSubsystem {
         return padding
     }
 
-    private fun ByteArray.setVariables(mask: Array<BooleanArray>): Array<BitGroup> {
+    private fun ByteArray.setVariables(mask: Array<BooleanArray>): Array<NodeGroup> {
         val bytes = this
         var globalBitIndex = 0
 
         return Array(bytes.size) { byteIndex ->
-            val bitGroup = bytes[byteIndex].toBitGroup()
+            val bitGroup = bytes[byteIndex].toNodeGroup()
             var bitIndex = 0
 
             while (bitIndex < bitGroup.bits.size) {
@@ -127,7 +128,7 @@ object BitReplacementSubsystem {
         }
     }
 
-    private fun Array<BitGroup>.blocks(blockSizeBytes: Int): List<Array<BitGroup>> {
+    private fun Array<NodeGroup>.blocks(blockSizeBytes: Int): List<Array<NodeGroup>> {
         return asSequence()
             .chunked(blockSizeBytes)
             .map { block ->

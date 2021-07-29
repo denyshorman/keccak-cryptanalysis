@@ -1,7 +1,6 @@
 package keccak.util
 
-import keccak.EquationSystem
-import keccak.FixedBitSet
+import keccak.*
 
 fun Byte.bit(bitIndex: Int): Boolean {
     return ((this.toInt() shr (Byte.SIZE_BITS - bitIndex - 1)) and 1) > 0
@@ -11,9 +10,9 @@ fun Byte.toBitString(): String {
     return String(CharArray(Byte.SIZE_BITS) { bit(it).toNumChar() })
 }
 
-fun Byte.toFixedBitSet(): FixedBitSet {
+fun Byte.toBitGroup(): BitGroup {
     val byte = this
-    val bits = FixedBitSet(Byte.SIZE_BITS)
+    val bits = BitGroup(Byte.SIZE_BITS)
 
     var i = 0
     while (i < Byte.SIZE_BITS) {
@@ -50,9 +49,9 @@ fun ByteArray.littleEndianBytesToLong(): Long {
     return value
 }
 
-fun ByteArray.toFixedBitSet(): FixedBitSet {
+fun ByteArray.toBitGroup(): BitGroup {
     val bytes = this
-    val bits = FixedBitSet(bytes.size * Byte.SIZE_BITS)
+    val bits = BitGroup(bytes.size * Byte.SIZE_BITS)
 
     var byteIndex = 0
     var bitIndex = 0
@@ -69,4 +68,18 @@ fun ByteArray.toFixedBitSet(): FixedBitSet {
     }
 
     return bits
+}
+
+fun Byte.toNodeGroup(): NodeGroup {
+    val byte = this
+
+    val bits = Array<Node>(Byte.SIZE_BITS) { bitIndex ->
+        Bit(byte.bit(bitIndex))
+    }
+
+    return NodeGroup(bits)
+}
+
+fun ByteArray.toNodeGroup(): Array<NodeGroup> {
+    return Array(size) { get(it).toNodeGroup() }
 }

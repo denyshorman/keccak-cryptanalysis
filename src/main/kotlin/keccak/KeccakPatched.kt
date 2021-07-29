@@ -1,7 +1,7 @@
 package keccak
 
 import keccak.util.littleEndianBytesToLong
-import keccak.util.toFixedBitSet
+import keccak.util.toBitGroup
 import keccak.util.toLittleEndianBytes
 import java.util.*
 
@@ -154,7 +154,7 @@ class KeccakPatched private constructor() {
             eqSystem.xor(
                 b1[x[0]],
                 b1[x[1]],
-                recordConstraint(b1[x[1]].clone(), b1[x[2]].clone(), (b0[x[1]] and b0[x[2]]).toFixedBitSet())
+                recordConstraint(b1[x[1]].clone(), b1[x[2]].clone(), (b0[x[1]] and b0[x[2]]).toBitGroup())
             )
             state1[x[0]] = eqSystem
         }
@@ -186,7 +186,7 @@ class KeccakPatched private constructor() {
     private fun State.recordConstraint(
         leftSystem: EquationSystem,
         rightSystem: EquationSystem,
-        result: FixedBitSet,
+        result: BitGroup,
     ): EquationSystem {
         val system = EquationSystem(Long.SIZE_BITS, allVarsCount)
 
@@ -259,7 +259,7 @@ class KeccakPatched private constructor() {
         val leftSystem: EquationSystem,
         val rightSystem: EquationSystem,
         val resultSystem: EquationSystem,
-        val result: FixedBitSet,
+        val result: BitGroup,
     )
     //#endregion
 
@@ -300,30 +300,30 @@ class KeccakPatched private constructor() {
         )
 
         private val ROUND_CONSTANTS_FIXED_BIT_SET = arrayOf(
-            0x0000000000000001uL.toLong().toFixedBitSet(),
-            0x0000000000008082uL.toLong().toFixedBitSet(),
-            0x800000000000808auL.toLong().toFixedBitSet(),
-            0x8000000080008000uL.toLong().toFixedBitSet(),
-            0x000000000000808buL.toLong().toFixedBitSet(),
-            0x0000000080000001uL.toLong().toFixedBitSet(),
-            0x8000000080008081uL.toLong().toFixedBitSet(),
-            0x8000000000008009uL.toLong().toFixedBitSet(),
-            0x000000000000008auL.toLong().toFixedBitSet(),
-            0x0000000000000088uL.toLong().toFixedBitSet(),
-            0x0000000080008009uL.toLong().toFixedBitSet(),
-            0x000000008000000auL.toLong().toFixedBitSet(),
-            0x000000008000808buL.toLong().toFixedBitSet(),
-            0x800000000000008buL.toLong().toFixedBitSet(),
-            0x8000000000008089uL.toLong().toFixedBitSet(),
-            0x8000000000008003uL.toLong().toFixedBitSet(),
-            0x8000000000008002uL.toLong().toFixedBitSet(),
-            0x8000000000000080uL.toLong().toFixedBitSet(),
-            0x000000000000800auL.toLong().toFixedBitSet(),
-            0x800000008000000auL.toLong().toFixedBitSet(),
-            0x8000000080008081uL.toLong().toFixedBitSet(),
-            0x8000000000008080uL.toLong().toFixedBitSet(),
-            0x0000000080000001uL.toLong().toFixedBitSet(),
-            0x8000000080008008uL.toLong().toFixedBitSet(),
+            0x0000000000000001uL.toLong().toBitGroup(),
+            0x0000000000008082uL.toLong().toBitGroup(),
+            0x800000000000808auL.toLong().toBitGroup(),
+            0x8000000080008000uL.toLong().toBitGroup(),
+            0x000000000000808buL.toLong().toBitGroup(),
+            0x0000000080000001uL.toLong().toBitGroup(),
+            0x8000000080008081uL.toLong().toBitGroup(),
+            0x8000000000008009uL.toLong().toBitGroup(),
+            0x000000000000008auL.toLong().toBitGroup(),
+            0x0000000000000088uL.toLong().toBitGroup(),
+            0x0000000080008009uL.toLong().toBitGroup(),
+            0x000000008000000auL.toLong().toBitGroup(),
+            0x000000008000808buL.toLong().toBitGroup(),
+            0x800000000000008buL.toLong().toBitGroup(),
+            0x8000000000008089uL.toLong().toBitGroup(),
+            0x8000000000008003uL.toLong().toBitGroup(),
+            0x8000000000008002uL.toLong().toBitGroup(),
+            0x8000000000000080uL.toLong().toBitGroup(),
+            0x000000000000800auL.toLong().toBitGroup(),
+            0x800000008000000auL.toLong().toBitGroup(),
+            0x8000000080008081uL.toLong().toBitGroup(),
+            0x8000000000008080uL.toLong().toBitGroup(),
+            0x0000000080000001uL.toLong().toBitGroup(),
+            0x8000000080008008uL.toLong().toBitGroup(),
         )
 
         private val ABSORB_CONSTANTS = arrayOf(

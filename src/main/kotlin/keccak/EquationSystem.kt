@@ -5,8 +5,8 @@ import keccak.util.toNumChar
 class EquationSystem {
     val rows: Int
     val cols: Int
-    val equations: Array<FixedBitSet>
-    val results: FixedBitSet
+    val equations: Array<BitGroup>
+    val results: BitGroup
 
     constructor(
         rows: Int,
@@ -14,11 +14,11 @@ class EquationSystem {
     ) {
         this.rows = rows
         this.cols = cols
-        this.equations = Array(rows) { FixedBitSet(cols) }
-        this.results = FixedBitSet(rows)
+        this.equations = Array(rows) { BitGroup(cols) }
+        this.results = BitGroup(rows)
     }
 
-    private constructor(equations: Array<FixedBitSet>, results: FixedBitSet) {
+    private constructor(equations: Array<BitGroup>, results: BitGroup) {
         this.rows = equations.size
         this.cols = equations.getOrNull(0)?.size ?: 0
         this.equations = equations
@@ -56,7 +56,7 @@ class EquationSystem {
     fun rotateEquationsLeft(count: Int) {
         var roundIndex = 0
         var eqIndex: Int
-        var firstEquation: FixedBitSet
+        var firstEquation: BitGroup
         var firstResultBit: Boolean
         val lastBitIndex = rows - 1
 
@@ -75,7 +75,7 @@ class EquationSystem {
         }
     }
 
-    fun evaluate(vars: FixedBitSet) {
+    fun evaluate(vars: BitGroup) {
         var i = 0
         while (i < rows) {
             equations[i].and(vars)
@@ -87,7 +87,7 @@ class EquationSystem {
         }
     }
 
-    fun partiallyEvaluate(varValues: FixedBitSet, availableVars: FixedBitSet) {
+    fun partiallyEvaluate(varValues: BitGroup, availableVars: BitGroup) {
         val availableVarsInverted = availableVars.clone()
         availableVarsInverted.invert()
 
