@@ -1,13 +1,22 @@
 package keccak.util
 
-import keccak.Bit
-import keccak.BitGroup
-import keccak.Node
-import keccak.NodeGroup
+import keccak.*
 import java.util.*
 
 fun Long.getBit(bitIndex: Int): Boolean {
     return ((this shr (Long.SIZE_BITS - bitIndex - 1)) and 1) > 0
+}
+
+fun Long.setBit(bitIndex: Int, value: Boolean): Long {
+    return if (value) {
+        this or 1L.shl(Long.SIZE_BITS - bitIndex - 1)
+    } else {
+        this and 1L.shl(Long.SIZE_BITS - bitIndex - 1).inv()
+    }
+}
+
+fun Long.getByte(byteIndex: Int): Byte {
+    return (this.shr((Long.SIZE_BYTES - byteIndex - 1) * Byte.SIZE_BITS) and UByte.MAX_VALUE.toLong()).toByte()
 }
 
 fun Long.toLittleEndianBytes(): ByteArray {
@@ -38,6 +47,19 @@ fun Long.toBitGroup(): BitGroup {
     }
 
     return bits
+}
+
+fun Long.toEquationSystem(varsCount: Int): EquationSystem {
+    val long = this
+    val equationSystem = EquationSystem(Long.SIZE_BITS, varsCount)
+
+    var i = 0
+    while (i < Long.SIZE_BITS) {
+        equationSystem.results[i] = long.getBit(i)
+        i++
+    }
+
+    return equationSystem
 }
 
 fun Long.toNodeGroup(): NodeGroup {
