@@ -1,13 +1,23 @@
 package keccak.util
 
 import keccak.*
+import kotlin.experimental.and
+import kotlin.experimental.or
 
-fun Byte.bit(bitIndex: Int): Boolean {
+fun Byte.getBit(bitIndex: Int): Boolean {
     return ((this.toInt() shr (Byte.SIZE_BITS - bitIndex - 1)) and 1) > 0
 }
 
+fun Byte.setBit(bitIndex: Int, value: Boolean): Byte {
+    return if (value) {
+        this or 1.shl(Byte.SIZE_BITS - bitIndex - 1).toByte()
+    } else {
+        this and 1.shl(Byte.SIZE_BITS - bitIndex - 1).inv().toByte()
+    }
+}
+
 fun Byte.toBitString(): String {
-    return String(CharArray(Byte.SIZE_BITS) { bit(it).toNumChar() })
+    return String(CharArray(Byte.SIZE_BITS) { getBit(it).toNumChar() })
 }
 
 fun Byte.toBitGroup(): BitGroup {
@@ -16,7 +26,7 @@ fun Byte.toBitGroup(): BitGroup {
 
     var i = 0
     while (i < Byte.SIZE_BITS) {
-        bits[i] = byte.bit(i)
+        bits[i] = byte.getBit(i)
         i++
     }
 
@@ -29,7 +39,7 @@ fun Byte.toEquationSystem(cols: Int): EquationSystem {
 
     var bitIndex = 0
     while (bitIndex < Byte.SIZE_BITS) {
-        system.results[bitIndex] = byte.bit(bitIndex)
+        system.results[bitIndex] = byte.getBit(bitIndex)
         bitIndex++
     }
 
@@ -60,7 +70,7 @@ fun ByteArray.toBitGroup(): BitGroup {
         val byte = bytes[byteIndex]
         var bitIndexInByte = 0
         while (bitIndexInByte < Byte.SIZE_BITS) {
-            bits[bitIndex] = byte.bit(bitIndexInByte)
+            bits[bitIndex] = byte.getBit(bitIndexInByte)
             bitIndex++
             bitIndexInByte++
         }
@@ -74,7 +84,7 @@ fun Byte.toNodeGroup(): NodeGroup {
     val byte = this
 
     val bits = Array<Node>(Byte.SIZE_BITS) { bitIndex ->
-        Bit(byte.bit(bitIndex))
+        Bit(byte.getBit(bitIndex))
     }
 
     return NodeGroup(bits)

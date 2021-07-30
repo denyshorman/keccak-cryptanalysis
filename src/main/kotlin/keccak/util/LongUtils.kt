@@ -6,7 +6,7 @@ import keccak.Node
 import keccak.NodeGroup
 import java.util.*
 
-fun Long.bit(bitIndex: Int): Boolean {
+fun Long.getBit(bitIndex: Int): Boolean {
     return ((this shr (Long.SIZE_BITS - bitIndex - 1)) and 1) > 0
 }
 
@@ -24,7 +24,7 @@ fun Long.toLittleEndianBytes(): ByteArray {
 }
 
 fun Long.toBitString(): String {
-    return String(CharArray(Long.SIZE_BITS) { bit(it).toNumChar() })
+    return String(CharArray(Long.SIZE_BITS) { getBit(it).toNumChar() })
 }
 
 fun Long.toBitGroup(): BitGroup {
@@ -33,7 +33,7 @@ fun Long.toBitGroup(): BitGroup {
 
     var i = 0
     while (i < Long.SIZE_BITS) {
-        bits[i] = long.bit(i)
+        bits[i] = long.getBit(i)
         i++
     }
 
@@ -44,7 +44,7 @@ fun Long.toNodeGroup(): NodeGroup {
     val long = this
 
     val bits = Array<Node>(Long.SIZE_BITS) { bitIndex ->
-        Bit(long.bit(bitIndex))
+        Bit(long.getBit(bitIndex))
     }
 
     return NodeGroup(bits)

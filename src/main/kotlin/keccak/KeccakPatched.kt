@@ -23,7 +23,7 @@ class KeccakPatched private constructor() {
         val longBlocks = paddedMessage.blocks().longBlocks()
 
         val varsCount = BLOCK_SIZE_BITS + longBlocks.size * 38400
-        val constraintIndex = longBlocks.size * BLOCK_SIZE_BITS
+        val constraintVarIndex = longBlocks.size * BLOCK_SIZE_BITS
 
         val eqSystemBlocks = BitReplacementSubsystem2.getBlocks(
             message,
@@ -38,7 +38,7 @@ class KeccakPatched private constructor() {
 
         val state = State(
             state1 = Array(STATE_SIZE) { EquationSystem(Long.SIZE_BITS, varsCount) },
-            constraintIndex = constraintIndex,
+            constraintVarIndex = constraintVarIndex,
             allVarsCount = varsCount,
         )
 
@@ -192,12 +192,13 @@ class KeccakPatched private constructor() {
 
         var i = 0
         while (i < Long.SIZE_BITS) {
-            system.equations[i].set(constraintIndex)
-            constraintIndex++
+            system.equations[i].set(constraintVarIndex)
+            system.results[i] = result[i]
+            constraintVarIndex++
             i++
         }
 
-        constraints.add(Constraint(leftSystem, rightSystem, system, result))
+        constraints.add(Constraint(leftSystem, rightSystem, system))
 
         return system
     }
@@ -208,7 +209,7 @@ class KeccakPatched private constructor() {
         val state0: LongArray = LongArray(STATE_SIZE) { 0 },
         val state1: Array<EquationSystem>,
         val constraints: LinkedList<Constraint> = LinkedList<Constraint>(),
-        var constraintIndex: Int,
+        var constraintVarIndex: Int,
         val allVarsCount: Int,
     )
 
@@ -259,7 +260,6 @@ class KeccakPatched private constructor() {
         val leftSystem: EquationSystem,
         val rightSystem: EquationSystem,
         val resultSystem: EquationSystem,
-        val result: BitGroup,
     )
     //#endregion
 

@@ -1,7 +1,6 @@
 package keccak.util
 
 import keccak.*
-import java.util.*
 import kotlin.math.min
 
 fun Xor.toBitEquation(varsCount: Int): BitEquation {
@@ -137,4 +136,32 @@ fun calcCombinationIndex(i: Int, j: Int, varsCount: Int): Int {
 
 fun calcCombinationIndex(i: Int, varsCount: Int): Int {
     return (i * (2 * varsCount - i + 1)) / 2
+}
+
+fun toBigGroup(bytes: ByteArray, constraints: List<KeccakPatched.Constraint>): BitGroup {
+    val varsCount = constraints[0].leftSystem.cols
+    val bitGroup = BitGroup(varsCount)
+
+    var bitGroupVarIndex = 0
+    var byteIndex = 0
+    while (byteIndex < bytes.size) {
+        var bitIndex = 0
+        while (bitIndex < Byte.SIZE_BITS) {
+            bitGroup[bitGroupVarIndex] = bytes[byteIndex].getBit(bitIndex)
+            bitGroupVarIndex++
+            bitIndex++
+        }
+        byteIndex++
+    }
+
+    constraints.forEach { constraint ->
+        var i = 0
+        while (i < constraint.resultSystem.rows) {
+            val varIndex = constraint.resultSystem.equations[i].nextSetBit(0)
+            bitGroup[varIndex] = constraint.resultSystem.results[i]
+            i++
+        }
+    }
+
+    return bitGroup
 }

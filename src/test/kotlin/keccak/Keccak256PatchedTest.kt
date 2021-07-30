@@ -1,6 +1,8 @@
 package keccak
 
 import io.kotest.core.spec.style.FunSpec
+import keccak.util.toBigGroup
+import keccak.util.toByte
 import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 import kotlin.random.Random.Default.nextBytes
@@ -169,8 +171,16 @@ class Keccak256PatchedTest : FunSpec({
         val msgBytes = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45)
 
         val expected = Numeric.toHexString(Hash.sha3(msgBytes))
-        val hashResult = KeccakPatched.KECCAK_256.hash(msgBytes, replaceRulesInverse = true, replacePadding = true)
+        val hashResult = KeccakPatched.KECCAK_256.hash(msgBytes, replaceRulesInverse = true, replacePadding = false)
         val actual = Numeric.toHexString(hashResult.bytes.toByteArray())
+
+        val resultBitGroup = toBigGroup(msgBytes, hashResult.constraints)
+
+        hashResult.bytes.forEach { byte ->
+            byte.eqSystem.evaluate(resultBitGroup)
+            val eqSystemByte = byte.eqSystem.toByte()
+            assertEquals(byte.byte, eqSystemByte)
+        }
 
         assertEquals(expected, actual)
     }

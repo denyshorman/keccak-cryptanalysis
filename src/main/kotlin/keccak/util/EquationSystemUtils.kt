@@ -20,6 +20,19 @@ fun EquationSystem.toLittleEndianBytes(): Array<EquationSystem> {
     }
 }
 
+fun EquationSystem.toByte(): Byte {
+    val system = this
+    var byte: Byte = 0
+
+    var bitIndex = 0
+    while (bitIndex < Byte.SIZE_BITS) {
+        byte = byte.setBit(bitIndex, system.results[bitIndex])
+        bitIndex++
+    }
+
+    return byte
+}
+
 fun Array<EquationSystem>.littleEndianBytesToLong(cols: Int): EquationSystem {
     val bytes = this
     val system = EquationSystem(Long.SIZE_BITS, cols)
