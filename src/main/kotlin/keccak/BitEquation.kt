@@ -2,9 +2,22 @@ package keccak
 
 import keccak.util.toNumChar
 
-class BitEquation(val cols: Int) {
-    val bitGroup = BitGroup(cols)
-    var result = false
+class BitEquation {
+    val cols: Int
+    val bitGroup: BitGroup
+    var result: Boolean
+
+    constructor(cols: Int) {
+        this.cols = cols
+        this.bitGroup = BitGroup(cols)
+        this.result = false
+    }
+
+    constructor(bitGroup: BitGroup, result: Boolean = false) {
+        this.cols = bitGroup.size
+        this.bitGroup = bitGroup.clone()
+        this.result = result
+    }
 
     fun setVariable(varIndex: Int) {
         bitGroup[varIndex] = bitGroup[varIndex] xor true
@@ -21,8 +34,8 @@ class BitEquation(val cols: Int) {
         other as BitEquation
 
         if (cols != other.cols) return false
-        if (bitGroup != other.bitGroup) return false
         if (result != other.result) return false
+        if (bitGroup != other.bitGroup) return false
 
         return true
     }

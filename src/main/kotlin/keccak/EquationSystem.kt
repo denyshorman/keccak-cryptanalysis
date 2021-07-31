@@ -25,6 +25,19 @@ class EquationSystem {
         this.results = results
     }
 
+    fun isValid(): Boolean {
+        var i = 0
+        while (i < rows) {
+            if (isInvalid(i)) return false
+            i++
+        }
+        return true
+    }
+
+    fun isValid(eqIndex: Int): Boolean {
+        return !isInvalid(eqIndex)
+    }
+
     fun isInvalid(eqIndex: Int): Boolean {
         return equations[eqIndex].isEmpty() && results[eqIndex]
     }
@@ -50,6 +63,15 @@ class EquationSystem {
             }
             results.xor(systems[i].results)
             i++
+        }
+    }
+
+    fun xor(eqIndex: Int, vararg bitEquations: BitEquation) {
+        var bitEqIndex = 0
+        while (bitEqIndex < bitEquations.size) {
+            equations[eqIndex].xor(bitEquations[bitEqIndex].bitGroup)
+            results.xor(eqIndex, bitEquations[bitEqIndex].result)
+            bitEqIndex++
         }
     }
 
