@@ -154,7 +154,7 @@ class KeccakPatched private constructor() {
             eqSystem.xor(
                 b1[x[0]],
                 b1[x[1]],
-                recordConstraint(b1[x[1]].clone(), b1[x[2]].clone(), (b0[x[1]] and b0[x[2]]).toBitGroup())
+                recordConstraint(b1[x[1]].clone(), b1[x[2]].clone(), (b0[x[1]] and b0[x[2]])),
             )
             state1[x[0]] = eqSystem
         }
@@ -186,19 +186,18 @@ class KeccakPatched private constructor() {
     private fun State.recordConstraint(
         leftSystem: EquationSystem,
         rightSystem: EquationSystem,
-        result: BitGroup,
+        result: Long,
     ): EquationSystem {
         val system = EquationSystem(Long.SIZE_BITS, allVarsCount)
 
         var i = 0
         while (i < Long.SIZE_BITS) {
             system.equations[i].set(constraintVarIndex)
-            system.results[i] = result[i]
             constraintVarIndex++
             i++
         }
 
-        constraints.add(Constraint(leftSystem, rightSystem, system))
+        constraints.add(Constraint(leftSystem, rightSystem, system, result))
 
         return system
     }
@@ -259,7 +258,8 @@ class KeccakPatched private constructor() {
     data class Constraint(
         val leftSystem: EquationSystem,
         val rightSystem: EquationSystem,
-        val resultSystem: EquationSystem,
+        val varSystem: EquationSystem,
+        val result: Long,
     )
     //#endregion
 

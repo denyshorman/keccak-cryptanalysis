@@ -156,9 +156,9 @@ fun toBigGroup(bytes: ByteArray, constraints: List<KeccakPatched.Constraint>): B
 
     constraints.forEach { constraint ->
         var i = 0
-        while (i < constraint.resultSystem.rows) {
-            val varIndex = constraint.resultSystem.equations[i].nextSetBit(0)
-            bitGroup[varIndex] = constraint.resultSystem.results[i]
+        while (i < constraint.varSystem.rows) {
+            val varIndex = constraint.varSystem.equations[i].nextSetBit(0)
+            bitGroup[varIndex] = constraint.result.getBit(i)
             i++
         }
     }
