@@ -32,6 +32,11 @@ class BitEquation {
         xor(bitGroup, result)
     }
 
+    fun xor(eq: BitEquation) {
+        bitGroup.xor(eq.bitGroup)
+        result = result xor eq.result
+    }
+
     fun xor(bitGroup: BitGroup, result: Boolean) {
         this.bitGroup.xor(bitGroup)
         this.result = this.result xor result

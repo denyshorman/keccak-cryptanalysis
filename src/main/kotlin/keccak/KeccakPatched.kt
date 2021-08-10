@@ -9,6 +9,28 @@ import java.util.*
 fun Array<KeccakPatched.CustomByte>.toByteArray(): ByteArray {
     return map { it.byte }.toByteArray()
 }
+
+fun Array<KeccakPatched.CustomByte>.toEquationSystem(): EquationSystem {
+    val rows = size * this[0].eqSystem.rows
+    val cols = this[0].eqSystem.cols
+
+    val system = EquationSystem(rows, cols)
+
+    var eqIndex = 0
+    var byteIndex = 0
+    while (byteIndex < size) {
+        var bitIndex = 0
+        while (bitIndex < this[byteIndex].eqSystem.rows) {
+            system.equations[eqIndex] = this[byteIndex].eqSystem.equations[bitIndex].clone()
+            system.results[eqIndex] = this[byteIndex].eqSystem.results[bitIndex]
+            bitIndex++
+            eqIndex++
+        }
+        byteIndex++
+    }
+
+    return system
+}
 //#endregion
 
 class KeccakPatched private constructor() {

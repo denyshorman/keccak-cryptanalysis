@@ -184,4 +184,16 @@ class Keccak256PatchedTest : FunSpec({
 
         assertEquals(expected, actual)
     }
+
+    test("getRidOfVariables2") {
+        val msgBytes = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45)
+
+        val hashResult = KeccakPatched.KECCAK_256.hash(msgBytes, replaceRulesInverse = true, replacePadding = false)
+
+        val eqSystem = hashResult.bytes.toEquationSystem()
+
+        getRidOfVariables2(eqSystem, 1088)
+
+        println("done")
+    }
 })
