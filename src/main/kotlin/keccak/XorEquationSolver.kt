@@ -222,6 +222,54 @@ fun solveXorEquations(system: EquationSystem) {
     }
 }
 
+fun getRidOfVariables(system: EquationSystem, startIndex: Int) {
+    val residualVars = BitEquation(system.cols)
+    val tmpEq = BitEquation(system.cols)
+    var eqIndex: Int
+    var rEqIndex: Int
+    var varIndex = startIndex
+
+    while (varIndex < system.cols) {
+        eqIndex = 0
+        rEqIndex = -1
+
+        while (eqIndex < system.rows) {
+            if (system.equations[eqIndex][varIndex]) {
+                rEqIndex = if (rEqIndex == -1) {
+                    eqIndex
+                } else {
+                    tmpEq.copy(system.equations[rEqIndex], system.results[rEqIndex])
+
+                    system.xor(rEqIndex, eqIndex)
+                    system.xor(eqIndex, tmpEq)
+
+                    -1
+                }
+            }
+
+            eqIndex++
+        }
+
+        if (rEqIndex != -1) {
+            residualVars.xor(system.equations[rEqIndex], system.results[rEqIndex])
+        }
+
+        varIndex++
+    }
+
+    eqIndex = 0
+
+    while (eqIndex < system.rows) {
+        varIndex = system.equations[eqIndex].nextSetBit(startIndex)
+
+        if (varIndex != -1) {
+            system.xor(varIndex, residualVars)
+        }
+
+        eqIndex++
+    }
+}
+
 fun <T> Array<T>.exchange(i: Int, j: Int) {
     val tmp = this[i]
     this[i] = this[j]

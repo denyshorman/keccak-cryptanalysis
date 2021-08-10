@@ -1,5 +1,6 @@
 package keccak.util
 
+import keccak.BitEquation
 import keccak.EquationSystem
 
 fun EquationSystem.toLittleEndianBytes(): Array<EquationSystem> {
@@ -52,6 +53,12 @@ fun EquationSystem.setVariables() {
         equations[i][i] = true
         i++
     }
+}
+
+fun EquationSystem.toBitEquation(eqIndex: Int): BitEquation {
+    val eq = equations[eqIndex].clone()
+    val res = results[eqIndex]
+    return BitEquation(eq, res)
 }
 
 fun Array<EquationSystem>.toLong(): Long {

@@ -27,6 +27,21 @@ class BitEquation {
         result = result xor value
     }
 
+    fun copy(bitGroup: BitGroup, result: Boolean) {
+        clear()
+        xor(bitGroup, result)
+    }
+
+    fun xor(bitGroup: BitGroup, result: Boolean) {
+        this.bitGroup.xor(bitGroup)
+        this.result = this.result xor result
+    }
+
+    fun clear() {
+        bitGroup.clear()
+        result = false
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
