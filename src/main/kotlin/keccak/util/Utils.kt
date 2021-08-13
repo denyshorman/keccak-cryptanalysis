@@ -3,8 +3,8 @@ package keccak.util
 import keccak.*
 import kotlin.math.min
 
-fun Xor.toBitEquation(varsCount: Int): BitEquation {
-    val eq = BitEquation(varsCount)
+fun Xor.toBitEquation(varsCount: Int): XorEquation {
+    val eq = XorEquation(varsCount)
 
     this.nodes.forEach { node ->
         when (node) {
@@ -22,14 +22,14 @@ fun Xor.toBitEquation(varsCount: Int): BitEquation {
     return eq
 }
 
-fun List<Pair<BitEquation, BitEquation>>.substitute(eqSystem: EquationSystem) {
+fun List<Pair<XorEquation, XorEquation>>.substitute(eqSystem: EquationSystem) {
     forEach {
         it.first.substitute(eqSystem)
         it.second.substitute(eqSystem)
     }
 }
 
-fun BitEquation.substitute(eqSystem: EquationSystem) {
+fun XorEquation.substitute(eqSystem: EquationSystem) {
     var i = 0
     val size = min(eqSystem.rows, eqSystem.cols)
 
@@ -43,7 +43,7 @@ fun BitEquation.substitute(eqSystem: EquationSystem) {
     }
 }
 
-fun List<Pair<BitEquation, BitEquation>>.allSetBits(varsCount: Int): BitGroup {
+fun List<Pair<XorEquation, XorEquation>>.allSetBits(varsCount: Int): BitGroup {
     val mask = BitGroup(varsCount)
 
     forEach {
@@ -54,14 +54,14 @@ fun List<Pair<BitEquation, BitEquation>>.allSetBits(varsCount: Int): BitGroup {
     return mask
 }
 
-fun List<Pair<BitEquation, BitEquation>>.varCountAndOffset(varsCount: Int): Pair<Int, Int> {
+fun List<Pair<XorEquation, XorEquation>>.varCountAndOffset(varsCount: Int): Pair<Int, Int> {
     val mask = allSetBits(varsCount)
     val newVarsCount = mask.setBitsCount()
     val offset = mask.nextSetBit(0)
     return Pair(newVarsCount, offset)
 }
 
-fun List<Pair<BitEquation, BitEquation>>.additionalEqToBitSystem(varsCount: Int, offset: Int): EquationSystem {
+fun List<Pair<XorEquation, XorEquation>>.additionalEqToBitSystem(varsCount: Int, offset: Int): EquationSystem {
     val varCombinationsCount = (varsCount * (varsCount + 1)) / 2
     val system = EquationSystem(size, varCombinationsCount)
 

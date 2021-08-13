@@ -1,7 +1,7 @@
 package keccak.util
 
-import keccak.BitEquation
 import keccak.EquationSystem
+import keccak.XorEquation
 
 fun EquationSystem.toLittleEndianBytes(): Array<EquationSystem> {
     return Array(Long.SIZE_BYTES) { byteIndex ->
@@ -55,10 +55,10 @@ fun EquationSystem.setVariables() {
     }
 }
 
-fun EquationSystem.toBitEquation(eqIndex: Int): BitEquation {
+fun EquationSystem.toBitEquation(eqIndex: Int): XorEquation {
     val eq = equations[eqIndex].clone()
     val res = results[eqIndex]
-    return BitEquation(eq, res)
+    return XorEquation(eq, res)
 }
 
 fun Array<EquationSystem>.toLong(): Long {

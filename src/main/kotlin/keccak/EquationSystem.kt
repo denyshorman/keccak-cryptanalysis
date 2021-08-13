@@ -66,11 +66,11 @@ class EquationSystem {
         }
     }
 
-    fun xor(eqIndex: Int, vararg bitEquations: BitEquation) {
+    fun xor(eqIndex: Int, vararg xorEquations: XorEquation) {
         var bitEqIndex = 0
-        while (bitEqIndex < bitEquations.size) {
-            equations[eqIndex].xor(bitEquations[bitEqIndex].bitGroup)
-            results.xor(eqIndex, bitEquations[bitEqIndex].result)
+        while (bitEqIndex < xorEquations.size) {
+            equations[eqIndex].xor(xorEquations[bitEqIndex].bitGroup)
+            results.xor(eqIndex, xorEquations[bitEqIndex].result)
             bitEqIndex++
         }
     }

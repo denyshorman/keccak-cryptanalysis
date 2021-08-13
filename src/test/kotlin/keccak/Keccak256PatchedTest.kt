@@ -251,7 +251,7 @@ class Keccak256PatchedTest : FunSpec({
             group[3] = true
 
             val actual = mapToEquation(hash, group)
-            val expected = BitEquation(cols)
+            val expected = XorEquation(cols)
             expected.bitGroup[0] = true
             expected.bitGroup[1] = false
             expected.bitGroup[2] = true
@@ -283,7 +283,7 @@ class Keccak256PatchedTest : FunSpec({
             group[3] = true
 
             val actual = mapToEquation(hash, group)
-            val expected = BitEquation(cols)
+            val expected = XorEquation(cols)
             expected.bitGroup[0] = true
             expected.bitGroup[1] = true
             expected.bitGroup[2] = true
@@ -315,7 +315,7 @@ class Keccak256PatchedTest : FunSpec({
             group[3] = true
 
             val actual = mapToEquation(hash, group)
-            val expected = BitEquation(cols)
+            val expected = XorEquation(cols)
             expected.bitGroup[0] = true
             expected.bitGroup[1] = true
             expected.bitGroup[2] = false
@@ -349,7 +349,7 @@ class Keccak256PatchedTest : FunSpec({
             group[3] = true
 
             val actual = mapToEquation(hash, group)
-            val expected = BitEquation(cols)
+            val expected = XorEquation(cols)
             expected.bitGroup[0] = true
             expected.bitGroup[1] = true
             expected.bitGroup[2] = false
@@ -383,7 +383,7 @@ class Keccak256PatchedTest : FunSpec({
             group[3] = true
 
             val actual = mapToEquation(hash, group)
-            val expected = BitEquation(cols)
+            val expected = XorEquation(cols)
             expected.bitGroup[0] = true
             expected.bitGroup[1] = true
             expected.bitGroup[2] = true
@@ -417,7 +417,7 @@ class Keccak256PatchedTest : FunSpec({
             group[3] = true
 
             val actual = mapToEquation(hash, group)
-            val expected = BitEquation(cols)
+            val expected = XorEquation(cols)
             expected.bitGroup[0] = true
             expected.bitGroup[1] = true
             expected.bitGroup[2] = true
@@ -451,7 +451,7 @@ class Keccak256PatchedTest : FunSpec({
             group[3] = true
 
             val actual = mapToEquation(hash, group)
-            val expected = BitEquation(cols)
+            val expected = XorEquation(cols)
             expected.bitGroup[0] = false
             expected.bitGroup[1] = false
             expected.bitGroup[2] = false

@@ -273,7 +273,7 @@ fun getRidOfVariables2(system: EquationSystem, startIndex: Int) {
     var eqIndex: Int
     var foundEqIndex: Int
     var varIndex = startIndex
-    val tmpEq = BitEquation(system.cols)
+    val tmpEq = XorEquation(system.cols)
 
     while (varIndex < system.cols) {
         eqIndex = 0
@@ -316,8 +316,8 @@ fun getRidOfVariables2(system: EquationSystem, startIndex: Int) {
 }
 
 fun getRidOfVariables(system: EquationSystem, startIndex: Int) {
-    val residualVars = BitEquation(system.cols)
-    val tmpEq = BitEquation(system.cols)
+    val residualVars = XorEquation(system.cols)
+    val tmpEq = XorEquation(system.cols)
     var eqIndex: Int
     var rEqIndex: Int
     var varIndex = startIndex

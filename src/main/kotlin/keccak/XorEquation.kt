@@ -2,22 +2,21 @@ package keccak
 
 import keccak.util.toNumChar
 
-class BitEquation {
-    val cols: Int
+class XorEquation {
     val bitGroup: BitGroup
     var result: Boolean
 
     constructor(cols: Int) {
-        this.cols = cols
         this.bitGroup = BitGroup(cols)
         this.result = false
     }
 
     constructor(bitGroup: BitGroup, result: Boolean = false) {
-        this.cols = bitGroup.size
-        this.bitGroup = bitGroup.clone()
+        this.bitGroup = bitGroup
         this.result = result
     }
+
+    val varCount: Int get() = bitGroup.size
 
     fun setVariable(varIndex: Int) {
         bitGroup[varIndex] = bitGroup[varIndex] xor true
@@ -32,7 +31,7 @@ class BitEquation {
         xor(bitGroup, result)
     }
 
-    fun xor(eq: BitEquation) {
+    fun xor(eq: XorEquation) {
         bitGroup.xor(eq.bitGroup)
         result = result xor eq.result
     }
@@ -51,9 +50,8 @@ class BitEquation {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as BitEquation
+        other as XorEquation
 
-        if (cols != other.cols) return false
         if (result != other.result) return false
         if (bitGroup != other.bitGroup) return false
 
@@ -61,10 +59,9 @@ class BitEquation {
     }
 
     override fun hashCode(): Int {
-        var hash = cols
-        hash = 31 * hash + bitGroup.hashCode()
-        hash = 31 * hash + result.hashCode()
-        return hash
+        var result = bitGroup.hashCode()
+        result = 31 * result + result.hashCode()
+        return result
     }
 
     override fun toString(): String {

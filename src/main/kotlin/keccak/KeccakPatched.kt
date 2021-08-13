@@ -37,19 +37,19 @@ fun Array<KeccakPatched.CustomByte>.toEquationSystem(): EquationSystem {
 fun mapToEquation(
     hash: EquationSystem,
     vars: BitGroup,
-): BitEquation {
+): XorEquation {
     val clonedVars = vars.clone()
     var eqIndex = 0
-    val acc = BitEquation(vars.clone(), false)
+    val acc = XorEquation(vars.clone(), false)
 
     while (eqIndex < hash.rows && !clonedVars.isEmpty()) {
         var bitIndex = clonedVars.nextSetBit(0)
-        var eq: BitEquation? = null
+        var eq: XorEquation? = null
 
         while (bitIndex >= 0) {
             if (eq == null) {
                 if (hash.equations[eqIndexGlobal][bitIndex]) {
-                    eq = BitEquation(hash.equations[eqIndexGlobal].clone(), hash.results[eqIndexGlobal])
+                    eq = XorEquation(hash.equations[eqIndexGlobal].clone(), hash.results[eqIndexGlobal])
                     eq.bitGroup[bitIndex] = false
                     clonedVars[bitIndex] = false
                 }
@@ -83,15 +83,15 @@ fun mapToEquation(
     hash: EquationSystem,
     leftGroup: BitGroup,
     rightGroup: BitGroup,
-): BitEquation {
+): XorEquation {
     val a = mapToEquation(hash, leftGroup)
     val b = mapToEquation(hash, rightGroup)
     a.xor(b)
     return a
-    // return BitEquation(leftGroup.clone(), false)
+    // return XorEquation(leftGroup.clone(), false)
 }
 
-fun mapToEquations(hash: EquationSystem, constraint: KeccakPatched.Constraint): Array<BitEquation> {
+fun mapToEquations(hash: EquationSystem, constraint: KeccakPatched.Constraint): Array<XorEquation> {
     return Array(constraint.leftSystem.rows) { i ->
         mapToEquation(
             hash,

@@ -1,7 +1,7 @@
 package keccak.util
 
 import io.kotest.core.spec.style.FunSpec
-import keccak.BitEquation
+import keccak.XorEquation
 import kotlin.test.assertEquals
 
 class UtilsTest : FunSpec({
@@ -31,8 +31,8 @@ class UtilsTest : FunSpec({
         test("1") {
             val varsCount = 3
 
-            val eq0 = BitEquation(varsCount)
-            val eq1 = BitEquation(varsCount)
+            val eq0 = XorEquation(varsCount)
+            val eq1 = XorEquation(varsCount)
 
             eq0.setVariable(0)
             eq0.setVariable(1)
@@ -52,8 +52,8 @@ class UtilsTest : FunSpec({
         test("2") {
             val varsCount = 3
 
-            val eq0 = BitEquation(varsCount)
-            val eq1 = BitEquation(varsCount)
+            val eq0 = XorEquation(varsCount)
+            val eq1 = XorEquation(varsCount)
 
             eq0.setVariable(0)
             eq0.setVariable(1)
