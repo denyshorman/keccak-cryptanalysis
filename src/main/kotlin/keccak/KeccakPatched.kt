@@ -6,6 +6,8 @@ import keccak.util.toLittleEndianBytes
 import java.util.*
 
 //#region General Utils
+var eqIndexGlobal = 0
+
 fun Array<KeccakPatched.CustomByte>.toByteArray(): ByteArray {
     return map { it.byte }.toByteArray()
 }
@@ -27,6 +29,97 @@ fun Array<KeccakPatched.CustomByte>.toEquationSystem(): EquationSystem {
             eqIndex++
         }
         byteIndex++
+    }
+
+    return system
+}
+
+fun mapToEquation(
+    hash: EquationSystem,
+    vars: BitGroup,
+): BitEquation {
+    val clonedVars = vars.clone()
+    var eqIndex = 0
+    val acc = BitEquation(vars.clone(), false)
+
+    while (eqIndex < hash.rows && !clonedVars.isEmpty()) {
+        var bitIndex = clonedVars.nextSetBit(0)
+        var eq: BitEquation? = null
+
+        while (bitIndex >= 0) {
+            if (eq == null) {
+                if (hash.equations[eqIndexGlobal][bitIndex]) {
+                    eq = BitEquation(hash.equations[eqIndexGlobal].clone(), hash.results[eqIndexGlobal])
+                    eq.bitGroup[bitIndex] = false
+                    clonedVars[bitIndex] = false
+                }
+            } else {
+                if (eq.bitGroup[bitIndex]) {
+                    eq.bitGroup[bitIndex] = false
+                    clonedVars[bitIndex] = false
+                }
+            }
+
+            bitIndex = clonedVars.nextSetBit(bitIndex + 1)
+        }
+
+        if (eq != null) {
+            acc.xor(eq)
+        }
+
+        eqIndex++
+        eqIndexGlobal++
+        if (eqIndexGlobal == hash.rows) eqIndexGlobal = 0
+    }
+
+    if (!clonedVars.isEmpty()) {
+        acc.xor(clonedVars, false)
+    }
+
+    return acc
+}
+
+fun mapToEquation(
+    hash: EquationSystem,
+    leftGroup: BitGroup,
+    rightGroup: BitGroup,
+): BitEquation {
+    val a = mapToEquation(hash, leftGroup)
+    val b = mapToEquation(hash, rightGroup)
+    a.xor(b)
+    return a
+    // return BitEquation(leftGroup.clone(), false)
+}
+
+fun mapToEquations(hash: EquationSystem, constraint: KeccakPatched.Constraint): Array<BitEquation> {
+    return Array(constraint.leftSystem.rows) { i ->
+        mapToEquation(
+            hash,
+            constraint.leftSystem.equations[i],
+            constraint.rightSystem.equations[i],
+        )
+    }
+}
+
+fun extendHashEquations(hash: EquationSystem, constraints: List<KeccakPatched.Constraint>): EquationSystem {
+    val rows = hash.cols
+    val cols = hash.cols
+
+    val system = EquationSystem(rows, cols)
+    var eqIndex = 0
+
+    while (eqIndex < hash.rows) {
+        system.equations[eqIndex] = hash.equations[eqIndex].clone()
+        system.results[eqIndex] = hash.results[eqIndex]
+        eqIndex++
+    }
+
+    constraints.forEach { constraint ->
+        mapToEquations(hash, constraint).forEach { eq ->
+            system.equations[eqIndex] = eq.bitGroup
+            system.results[eqIndex] = eq.result
+            eqIndex++
+        }
     }
 
     return system

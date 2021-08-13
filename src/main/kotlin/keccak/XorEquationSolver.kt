@@ -222,6 +222,52 @@ fun solveXorEquations(system: EquationSystem) {
     }
 }
 
+fun solveSquareMatrixXorEquations(system: EquationSystem) {
+    var row = 0
+    var col = system.cols - 1
+
+    while (row < system.rows && col >= 0) {
+        var i = row
+        var found = false
+
+        while (i < system.rows) {
+            if (system.isInvalid(i)) {
+                throw XorEquationSolver.NoSolution(i)
+            }
+
+            if (system.equations[i][col]) {
+                found = true
+                break
+            }
+
+            i++
+        }
+
+        if (found) {
+            if (row != i) {
+                system.exchange(row, i)
+            }
+
+            i = 0
+
+            while (i < system.rows) {
+                if (i != row && system.equations[i][col]) {
+                    system.xor(i, row)
+
+                    if (system.isInvalid(i)) {
+                        throw XorEquationSolver.NoSolution(i)
+                    }
+                }
+
+                i++
+            }
+        }
+
+        row++
+        col--
+    }
+}
+
 fun getRidOfVariables2(system: EquationSystem, startIndex: Int) {
     val random = Random(0x1122334455667788L)
     var eqIndex: Int
