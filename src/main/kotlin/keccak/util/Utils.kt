@@ -138,6 +138,25 @@ fun calcCombinationIndex(i: Int, varsCount: Int): Int {
     return (i * (2 * varsCount - i + 1)) / 2
 }
 
+fun calcCombinationPartialIndex(targetIndex: Int, varsCount: Int): Pair<Int, Int> {
+    var i = 0
+    var j = 0
+    var k = 0
+
+    while (i < varsCount && j < varsCount) {
+        if (targetIndex == k) break
+
+        k++
+        j++
+        if (j == varsCount) {
+            i++
+            j = i
+        }
+    }
+
+    return Pair(i, j)
+}
+
 fun toBigGroup(bytes: ByteArray, constraints: List<KeccakPatched.Constraint>): BitGroup {
     val varsCount = constraints[0].leftSystem.cols
     val bitGroup = BitGroup(varsCount)

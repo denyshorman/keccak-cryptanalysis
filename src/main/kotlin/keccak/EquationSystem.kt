@@ -18,7 +18,7 @@ class EquationSystem {
         this.results = BitGroup(rows)
     }
 
-    private constructor(equations: Array<BitGroup>, results: BitGroup) {
+    constructor(equations: Array<BitGroup>, results: BitGroup) {
         this.rows = equations.size
         this.cols = equations.getOrNull(0)?.size ?: 0
         this.equations = equations
@@ -40,6 +40,14 @@ class EquationSystem {
 
     fun isInvalid(eqIndex: Int): Boolean {
         return equations[eqIndex].isEmpty() && results[eqIndex]
+    }
+
+    fun isPartiallyEmpty(): Boolean {
+        var i = 0
+        while (i < rows) {
+            if (equations[i++].isEmpty()) return true
+        }
+        return false
     }
 
     fun exchange(i: Int, j: Int) {

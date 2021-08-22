@@ -37,6 +37,10 @@ class BitGroup {
         bitSet.clear(bitIndex)
     }
 
+    fun clear(fromIndex: Int, toIndex: Int) {
+        bitSet.clear(fromIndex, toIndex)
+    }
+
     fun xor(set: BitGroup) {
         bitSet.xor(set.bitSet)
     }

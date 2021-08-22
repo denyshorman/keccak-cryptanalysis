@@ -215,6 +215,79 @@ class Keccak256PatchedTest : FunSpec({
         Files.writeString(Paths.get("./build/matrix.txt"), updatedSystem.toString())
     }
 
+    test("extendHashEquations2") {
+        val msgBytes = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100, 99, 98)
+
+        val hashResult = KeccakPatched.KECCAK_256.hash(msgBytes, replaceRulesInverse = true, replacePadding = false)
+
+        val eqSystem = hashResult.bytes.toEquationSystem()
+
+        println("solve 256 equations")
+        solveXorEquations(eqSystem)
+
+        val cols = hashResult.constraints[0].leftSystem.cols
+
+        val parametrizedEquationSystem = ParametrizedEquationSystem(cols, cols)
+        var generalConstraintIndex = 0
+
+        println("patch constrains")
+        hashResult.constraints.forEach { constraint ->
+            var eqIndex = 0
+            while (eqIndex < eqSystem.equations.size) {
+                var constraintIndex = 0
+                while (constraintIndex < constraint.leftSystem.equations.size) {
+                    if (constraint.leftSystem.equations[constraintIndex][eqIndex]) {
+                        constraint.leftSystem.equations[constraintIndex].xor(eqSystem.equations[eqIndex])
+                        constraint.leftSystem.results[constraintIndex] = constraint.leftSystem.results[constraintIndex] xor eqSystem.results[eqIndex]
+                    }
+                    if (constraint.rightSystem.equations[constraintIndex][eqIndex]) {
+                        constraint.rightSystem.equations[constraintIndex].xor(eqSystem.equations[eqIndex])
+                        constraint.rightSystem.results[constraintIndex] = constraint.rightSystem.results[constraintIndex] xor eqSystem.results[eqIndex]
+                    }
+                    constraintIndex++
+                }
+
+                constraintIndex = 0
+                while (constraintIndex < constraint.leftSystem.equations.size) {
+                    constraint.leftSystem.equations[constraintIndex].clear(0, 1088)
+                    constraint.rightSystem.equations[constraintIndex].clear(0, 1088)
+                    constraint.leftSystem.equations[constraintIndex].xor(constraint.rightSystem.equations[constraintIndex])
+                    val varIndex = constraint.varSystem.equations[constraintIndex].nextSetBit(0)
+                    if (constraint.leftSystem.equations[constraintIndex][varIndex]) {
+                        constraint.leftSystem.equations[constraintIndex].clear(varIndex)
+                    } else {
+                        constraint.leftSystem.equations[constraintIndex].set(varIndex)
+                    }
+                    constraintIndex++
+                }
+
+                eqIndex++
+            }
+
+            var constraintIndex = 0
+            while (constraintIndex < constraint.leftSystem.equations.size) {
+                parametrizedEquationSystem.equations[generalConstraintIndex] = constraint.leftSystem.equations[constraintIndex]
+                generalConstraintIndex++
+                constraintIndex++
+            }
+        }
+
+        println("solveParametrizedEquationSystem")
+        solveParametrizedEquationSystem(parametrizedEquationSystem)
+        println("solved")
+
+        val emptyEquations = parametrizedEquationSystem.equations.asSequence().filter { it.isEmpty() }.count() - 1088
+        println(emptyEquations)
+
+        println("dump0")
+        var s = EquationSystem(parametrizedEquationSystem.equations, BitGroup(parametrizedEquationSystem.rows))
+        Files.writeString(Paths.get("./build/matrix0.txt"), s.toString())
+
+        println("dump1")
+        s = EquationSystem(parametrizedEquationSystem.results, BitGroup(parametrizedEquationSystem.rows))
+        Files.writeString(Paths.get("./build/matrix1.txt"), s.toString())
+    }
+
     test("keccak256 some bytes2") {
         val msg0 = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100, 99, 98)
         val msg1 = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
