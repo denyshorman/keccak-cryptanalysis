@@ -1,6 +1,7 @@
 package keccak.util
 
 import keccak.*
+import java.util.*
 import kotlin.experimental.and
 import kotlin.experimental.or
 
@@ -33,9 +34,22 @@ fun Byte.toBitGroup(): BitGroup {
     return bits
 }
 
-fun Byte.toEquationSystem(cols: Int): EquationSystem {
+fun Byte.toBitSet(): BitSet {
     val byte = this
-    val system = EquationSystem(Byte.SIZE_BITS, cols)
+    val bitSet = BitSet(Byte.SIZE_BITS)
+
+    var i = 0
+    while (i < Byte.SIZE_BITS) {
+        bitSet[i] = byte.getBit(i)
+        i++
+    }
+
+    return bitSet
+}
+
+fun Byte.toEquationSystem(cols: Int): XorEquationSystem {
+    val byte = this
+    val system = XorEquationSystem(Byte.SIZE_BITS, cols)
 
     var bitIndex = 0
     while (bitIndex < Byte.SIZE_BITS) {

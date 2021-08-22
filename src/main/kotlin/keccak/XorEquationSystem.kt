@@ -1,12 +1,13 @@
 package keccak
 
-import keccak.util.toNumChar
+import keccak.util.*
+import java.util.*
 
-class EquationSystem {
+class XorEquationSystem {
     val rows: Int
     val cols: Int
-    val equations: Array<BitGroup>
-    val results: BitGroup
+    val equations: Array<BitSet>
+    val results: BitSet
 
     constructor(
         rows: Int,
@@ -14,13 +15,13 @@ class EquationSystem {
     ) {
         this.rows = rows
         this.cols = cols
-        this.equations = Array(rows) { BitGroup(cols) }
-        this.results = BitGroup(rows)
+        this.equations = Array(rows) { BitSet(cols) }
+        this.results = BitSet(rows)
     }
 
-    constructor(equations: Array<BitGroup>, results: BitGroup) {
-        this.rows = equations.size
-        this.cols = equations.getOrNull(0)?.size ?: 0
+    constructor(rows: Int, cols: Int, equations: Array<BitSet>, results: BitSet) {
+        this.rows = rows
+        this.cols = cols
         this.equations = equations
         this.results = results
     }
@@ -60,7 +61,7 @@ class EquationSystem {
         results[i] = results[i] xor results[j]
     }
 
-    fun xor(vararg systems: EquationSystem) {
+    fun xor(vararg systems: XorEquationSystem) {
         var i = 0
         var j: Int
         while (i < systems.size) {
@@ -77,7 +78,7 @@ class EquationSystem {
     fun xor(eqIndex: Int, vararg xorEquations: XorEquation) {
         var bitEqIndex = 0
         while (bitEqIndex < xorEquations.size) {
-            equations[eqIndex].xor(xorEquations[bitEqIndex].bitGroup)
+            equations[eqIndex].xor(xorEquations[bitEqIndex].bitGroup.bitSet)
             results.xor(eqIndex, xorEquations[bitEqIndex].result)
             bitEqIndex++
         }
@@ -86,7 +87,7 @@ class EquationSystem {
     fun rotateEquationsLeft(count: Int) {
         var roundIndex = 0
         var eqIndex: Int
-        var firstEquation: BitGroup
+        var firstEquation: BitSet
         var firstResultBit: Boolean
         val lastBitIndex = rows - 1
 
@@ -105,7 +106,7 @@ class EquationSystem {
         }
     }
 
-    fun evaluate(vars: BitGroup) {
+    fun evaluate(vars: BitSet) {
         var i = 0
         while (i < rows) {
             equations[i].and(vars)
@@ -117,13 +118,13 @@ class EquationSystem {
         }
     }
 
-    fun partiallyEvaluate(varValues: BitGroup, availableVars: BitGroup) {
-        val availableVarsInverted = availableVars.clone()
-        availableVarsInverted.invert()
+    fun partiallyEvaluate(varValues: BitSet, availableVars: BitSet) {
+        val availableVarsInverted = availableVars.clone() as BitSet
+        availableVarsInverted.invert(cols)
 
         var i = 0
         while (i < rows) {
-            val res = equations[i].clone()
+            val res = equations[i].clone() as BitSet
             res.and(varValues)
             res.and(availableVars)
 
@@ -146,17 +147,17 @@ class EquationSystem {
         results.clear()
     }
 
-    fun clone(): EquationSystem {
-        val newEquations = Array(rows) { equations[it].clone() }
-        val newResults = results.clone()
-        return EquationSystem(newEquations, newResults)
+    fun clone(): XorEquationSystem {
+        val newEquations = Array(rows) { equations[it].clone() as BitSet }
+        val newResults = results.clone() as BitSet
+        return XorEquationSystem(rows, cols, newEquations, newResults)
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as EquationSystem
+        other as XorEquationSystem
 
         if (rows != other.rows) return false
         if (cols != other.cols) return false

@@ -5,7 +5,7 @@ import java.util.*
 
 class BitGroup {
     val size: Int
-    private val bitSet: BitSet
+    val bitSet: BitSet
 
     constructor(size: Int) {
         this.size = size

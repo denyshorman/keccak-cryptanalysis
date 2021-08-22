@@ -49,9 +49,9 @@ fun Long.toBitGroup(): BitGroup {
     return bits
 }
 
-fun Long.toEquationSystem(varsCount: Int): EquationSystem {
+fun Long.toEquationSystem(varsCount: Int): XorEquationSystem {
     val long = this
-    val equationSystem = EquationSystem(Long.SIZE_BITS, varsCount)
+    val equationSystem = XorEquationSystem(Long.SIZE_BITS, varsCount)
 
     var i = 0
     while (i < Long.SIZE_BITS) {

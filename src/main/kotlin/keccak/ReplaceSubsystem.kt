@@ -150,7 +150,7 @@ object BitReplacementSubsystem2 {
         replacePadding: Boolean = false,
         blockSizeBytes: Int,
         cols: Int,
-    ): List<Array<EquationSystem>> {
+    ): List<Array<XorEquationSystem>> {
         val padding = buildPadding(message.size, blockSizeBytes)
 
         val messageMask = buildMessageMask(message.size, replaceRules, replaceRulesInverse)
@@ -240,7 +240,7 @@ object BitReplacementSubsystem2 {
         return padding
     }
 
-    private fun ByteArray.setVariables(mask: Array<BooleanArray>, cols: Int): Array<EquationSystem> {
+    private fun ByteArray.setVariables(mask: Array<BooleanArray>, cols: Int): Array<XorEquationSystem> {
         val bytes = this
         var globalBitIndex = 0
 
@@ -262,7 +262,7 @@ object BitReplacementSubsystem2 {
         }
     }
 
-    private fun Array<EquationSystem>.blocks(blockSizeBytes: Int, cols: Int): List<Array<EquationSystem>> {
+    private fun Array<XorEquationSystem>.blocks(blockSizeBytes: Int, cols: Int): List<Array<XorEquationSystem>> {
         return asSequence()
             .chunked(blockSizeBytes)
             .map { block ->

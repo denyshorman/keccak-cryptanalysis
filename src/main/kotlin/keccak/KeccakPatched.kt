@@ -12,18 +12,18 @@ fun Array<KeccakPatched.CustomByte>.toByteArray(): ByteArray {
     return map { it.byte }.toByteArray()
 }
 
-fun Array<KeccakPatched.CustomByte>.toEquationSystem(): EquationSystem {
+fun Array<KeccakPatched.CustomByte>.toEquationSystem(): XorEquationSystem {
     val rows = size * this[0].eqSystem.rows
     val cols = this[0].eqSystem.cols
 
-    val system = EquationSystem(rows, cols)
+    val system = XorEquationSystem(rows, cols)
 
     var eqIndex = 0
     var byteIndex = 0
     while (byteIndex < size) {
         var bitIndex = 0
         while (bitIndex < this[byteIndex].eqSystem.rows) {
-            system.equations[eqIndex] = this[byteIndex].eqSystem.equations[bitIndex].clone()
+            system.equations[eqIndex] = this[byteIndex].eqSystem.equations[bitIndex].clone() as BitSet
             system.results[eqIndex] = this[byteIndex].eqSystem.results[bitIndex]
             bitIndex++
             eqIndex++
@@ -35,7 +35,7 @@ fun Array<KeccakPatched.CustomByte>.toEquationSystem(): EquationSystem {
 }
 
 fun mapToEquation(
-    hash: EquationSystem,
+    hash: XorEquationSystem,
     vars: BitGroup,
 ): XorEquation {
     val clonedVars = vars.clone()
@@ -49,7 +49,7 @@ fun mapToEquation(
         while (bitIndex >= 0) {
             if (eq == null) {
                 if (hash.equations[eqIndexGlobal][bitIndex]) {
-                    eq = XorEquation(hash.equations[eqIndexGlobal].clone(), hash.results[eqIndexGlobal])
+                    eq = XorEquation(hash.cols, hash.equations[eqIndexGlobal].clone() as BitSet, hash.results[eqIndexGlobal])
                     eq.bitGroup[bitIndex] = false
                     clonedVars[bitIndex] = false
                 }
@@ -80,7 +80,7 @@ fun mapToEquation(
 }
 
 fun mapToEquation(
-    hash: EquationSystem,
+    hash: XorEquationSystem,
     leftGroup: BitGroup,
     rightGroup: BitGroup,
 ): XorEquation {
@@ -91,32 +91,32 @@ fun mapToEquation(
     // return XorEquation(leftGroup.clone(), false)
 }
 
-fun mapToEquations(hash: EquationSystem, constraint: KeccakPatched.Constraint): Array<XorEquation> {
+fun mapToEquations(hash: XorEquationSystem, constraint: KeccakPatched.Constraint): Array<XorEquation> {
     return Array(constraint.leftSystem.rows) { i ->
         mapToEquation(
             hash,
-            constraint.leftSystem.equations[i],
-            constraint.rightSystem.equations[i],
+            BitGroup(constraint.leftSystem.cols, constraint.leftSystem.equations[i]),
+            BitGroup(constraint.leftSystem.cols, constraint.rightSystem.equations[i]),
         )
     }
 }
 
-fun extendHashEquations(hash: EquationSystem, constraints: List<KeccakPatched.Constraint>): EquationSystem {
+fun extendHashEquations(hash: XorEquationSystem, constraints: List<KeccakPatched.Constraint>): XorEquationSystem {
     val rows = hash.cols
     val cols = hash.cols
 
-    val system = EquationSystem(rows, cols)
+    val system = XorEquationSystem(rows, cols)
     var eqIndex = 0
 
     while (eqIndex < hash.rows) {
-        system.equations[eqIndex] = hash.equations[eqIndex].clone()
+        system.equations[eqIndex] = hash.equations[eqIndex].clone() as BitSet
         system.results[eqIndex] = hash.results[eqIndex]
         eqIndex++
     }
 
     constraints.forEach { constraint ->
         mapToEquations(hash, constraint).forEach { eq ->
-            system.equations[eqIndex] = eq.bitGroup
+            system.equations[eqIndex] = eq.bitGroup.bitSet
             system.results[eqIndex] = eq.result
             eqIndex++
         }
@@ -152,7 +152,7 @@ class KeccakPatched private constructor() {
         val blocks = longBlocks.zip(eqSystemBlocks) { a, b -> Block(a, b) }
 
         val state = State(
-            state1 = Array(STATE_SIZE) { EquationSystem(Long.SIZE_BITS, varsCount) },
+            state1 = Array(STATE_SIZE) { XorEquationSystem(Long.SIZE_BITS, varsCount) },
             constraintVarIndex = constraintVarIndex,
             allVarsCount = varsCount,
         )
@@ -233,9 +233,9 @@ class KeccakPatched private constructor() {
         val d0 = LongArray(LANE_SIZE) { 0 }
         val b0 = LongArray(STATE_SIZE) { 0 }
 
-        val c1 = Array(LANE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
-        val d1 = Array(LANE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
-        val b1 = Array(STATE_SIZE) { EquationSystem(Long.SIZE_BITS, allVarsCount) }
+        val c1 = Array(LANE_SIZE) { XorEquationSystem(Long.SIZE_BITS, allVarsCount) }
+        val d1 = Array(LANE_SIZE) { XorEquationSystem(Long.SIZE_BITS, allVarsCount) }
+        val b1 = Array(STATE_SIZE) { XorEquationSystem(Long.SIZE_BITS, allVarsCount) }
 
         ROUND_OFFSETS[0].forEach { x ->
             c0[x[0]] = state0[x[1]] xor state0[x[2]] xor state0[x[3]] xor state0[x[4]] xor state0[x[5]]
@@ -265,7 +265,7 @@ class KeccakPatched private constructor() {
         ROUND_OFFSETS[4].forEach { x ->
             state0[x[0]] = b0[x[0]] xor b0[x[1]] xor (b0[x[1]] and b0[x[2]])
 
-            val eqSystem = EquationSystem(Long.SIZE_BITS, allVarsCount)
+            val eqSystem = XorEquationSystem(Long.SIZE_BITS, allVarsCount)
             eqSystem.xor(
                 b1[x[0]],
                 b1[x[1]],
@@ -275,7 +275,7 @@ class KeccakPatched private constructor() {
         }
 
         state0[0] = state0[0] xor ROUND_CONSTANTS[round]
-        state1[0].results.xor(ROUND_CONSTANTS_FIXED_BIT_SET[round])
+        state1[0].results.xor(ROUND_CONSTANTS_FIXED_BIT_SET[round].bitSet)
     }
 
     private fun State.squeeze(): Array<CustomByte> {
@@ -299,11 +299,11 @@ class KeccakPatched private constructor() {
     }
 
     private fun State.recordConstraint(
-        leftSystem: EquationSystem,
-        rightSystem: EquationSystem,
+        leftSystem: XorEquationSystem,
+        rightSystem: XorEquationSystem,
         result: Long,
-    ): EquationSystem {
-        val system = EquationSystem(Long.SIZE_BITS, allVarsCount)
+    ): XorEquationSystem {
+        val system = XorEquationSystem(Long.SIZE_BITS, allVarsCount)
 
         var i = 0
         while (i < Long.SIZE_BITS) {
@@ -321,7 +321,7 @@ class KeccakPatched private constructor() {
     //#region Private Models
     private class State(
         val state0: LongArray = LongArray(STATE_SIZE) { 0 },
-        val state1: Array<EquationSystem>,
+        val state1: Array<XorEquationSystem>,
         val constraints: LinkedList<Constraint> = LinkedList<Constraint>(),
         var constraintVarIndex: Int,
         val allVarsCount: Int,
@@ -329,14 +329,14 @@ class KeccakPatched private constructor() {
 
     private class Block(
         val block0: LongArray,
-        val block1: Array<EquationSystem>,
+        val block1: Array<XorEquationSystem>,
     )
     //#endregion
 
     //#region Public Models
     data class CustomByte(
         val byte: Byte,
-        val eqSystem: EquationSystem,
+        val eqSystem: XorEquationSystem,
     ) {
         override fun toString(): String {
             return "$byte = $eqSystem"
@@ -371,9 +371,9 @@ class KeccakPatched private constructor() {
     }
 
     data class Constraint(
-        val leftSystem: EquationSystem,
-        val rightSystem: EquationSystem,
-        val varSystem: EquationSystem,
+        val leftSystem: XorEquationSystem,
+        val rightSystem: XorEquationSystem,
+        val varSystem: XorEquationSystem,
         val result: Long,
     )
     //#endregion

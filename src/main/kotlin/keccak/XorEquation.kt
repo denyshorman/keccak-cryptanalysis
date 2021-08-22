@@ -1,6 +1,7 @@
 package keccak
 
 import keccak.util.toNumChar
+import java.util.*
 
 class XorEquation {
     val bitGroup: BitGroup
@@ -13,6 +14,11 @@ class XorEquation {
 
     constructor(bitGroup: BitGroup, result: Boolean = false) {
         this.bitGroup = bitGroup
+        this.result = result
+    }
+
+    constructor(size: Int, bitSet: BitSet, result: Boolean = false) {
+        this.bitGroup = BitGroup(size, bitSet)
         this.result = result
     }
 
@@ -31,6 +37,11 @@ class XorEquation {
         xor(bitGroup, result)
     }
 
+    fun copy(bitSet: BitSet, result: Boolean) {
+        clear()
+        xor(bitSet, result)
+    }
+
     fun xor(eq: XorEquation) {
         bitGroup.xor(eq.bitGroup)
         result = result xor eq.result
@@ -38,6 +49,11 @@ class XorEquation {
 
     fun xor(bitGroup: BitGroup, result: Boolean) {
         this.bitGroup.xor(bitGroup)
+        this.result = this.result xor result
+    }
+
+    fun xor(bitSet: BitSet, result: Boolean) {
+        this.bitGroup.xor(bitSet)
         this.result = this.result xor result
     }
 

@@ -1,5 +1,6 @@
 package keccak
 
+import keccak.util.exchange
 import java.util.*
 
 object GeneralEquationSolver {

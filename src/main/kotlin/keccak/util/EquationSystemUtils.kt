@@ -1,11 +1,12 @@
 package keccak.util
 
-import keccak.EquationSystem
+import keccak.XorEquationSystem
 import keccak.XorEquation
+import java.util.*
 
-fun EquationSystem.toLittleEndianBytes(): Array<EquationSystem> {
+fun XorEquationSystem.toLittleEndianBytes(): Array<XorEquationSystem> {
     return Array(Long.SIZE_BYTES) { byteIndex ->
-        val system = EquationSystem(Byte.SIZE_BITS, cols)
+        val system = XorEquationSystem(Byte.SIZE_BITS, cols)
 
         var i = Long.SIZE_BITS - (byteIndex + 1) * Byte.SIZE_BITS
         val limit = i + Byte.SIZE_BITS
@@ -21,7 +22,7 @@ fun EquationSystem.toLittleEndianBytes(): Array<EquationSystem> {
     }
 }
 
-fun EquationSystem.toByte(): Byte {
+fun XorEquationSystem.toByte(): Byte {
     val system = this
     var byte: Byte = 0
 
@@ -34,7 +35,7 @@ fun EquationSystem.toByte(): Byte {
     return byte
 }
 
-fun EquationSystem.toLong(): Long {
+fun XorEquationSystem.toLong(): Long {
     val system = this
     var long = 0L
 
@@ -47,7 +48,7 @@ fun EquationSystem.toLong(): Long {
     return long
 }
 
-fun EquationSystem.setVariables() {
+fun XorEquationSystem.setVariables() {
     var i = 0
     while (i < rows && i < cols) {
         equations[i][i] = true
@@ -55,13 +56,13 @@ fun EquationSystem.setVariables() {
     }
 }
 
-fun EquationSystem.toBitEquation(eqIndex: Int): XorEquation {
-    val eq = equations[eqIndex].clone()
+fun XorEquationSystem.toBitEquation(eqIndex: Int): XorEquation {
+    val eq = equations[eqIndex].clone() as BitSet
     val res = results[eqIndex]
-    return XorEquation(eq, res)
+    return XorEquation(cols, eq, res)
 }
 
-fun Array<EquationSystem>.toLong(): Long {
+fun Array<XorEquationSystem>.toLong(): Long {
     val bytes = this
     var value = 0L
 
@@ -80,9 +81,9 @@ fun Array<EquationSystem>.toLong(): Long {
     return value
 }
 
-fun Array<EquationSystem>.littleEndianBytesToLong(cols: Int): EquationSystem {
+fun Array<XorEquationSystem>.littleEndianBytesToLong(cols: Int): XorEquationSystem {
     val bytes = this
-    val system = EquationSystem(Long.SIZE_BITS, cols)
+    val system = XorEquationSystem(Long.SIZE_BITS, cols)
 
     var bitIndex = 0
     while (bitIndex < Long.SIZE_BITS) {

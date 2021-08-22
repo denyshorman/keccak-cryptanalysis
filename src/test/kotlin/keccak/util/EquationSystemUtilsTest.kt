@@ -1,7 +1,7 @@
 package keccak.util
 
 import io.kotest.core.spec.style.FunSpec
-import keccak.EquationSystem
+import keccak.XorEquationSystem
 import kotlin.test.assertEquals
 
 class EquationSystemUtilsTest : FunSpec({
@@ -23,12 +23,12 @@ class EquationSystemUtilsTest : FunSpec({
         test("1") {
             val long = 0xAABBCCDD11223344uL.toLong()
             val longBitGroup = long.toBitGroup()
-            val system = EquationSystem(1, Long.SIZE_BITS)
+            val system = XorEquationSystem(1, Long.SIZE_BITS)
             system.setVariables()
             val bytes = system.toLittleEndianBytes()
             var i = 0
             while (i < bytes.size) {
-                bytes[i].evaluate(longBitGroup)
+                bytes[i].evaluate(longBitGroup.bitSet)
                 assertEquals(bytes[i].toByte(), long.getByte(i))
                 i++
             }
@@ -47,7 +47,7 @@ class EquationSystemUtilsTest : FunSpec({
     }
 
     test("setVariables") {
-        val eq = EquationSystem(3, 3)
+        val eq = XorEquationSystem(3, 3)
         eq.setVariables()
         assertEquals("100", eq.equations[0].toString())
         assertEquals("010", eq.equations[1].toString())

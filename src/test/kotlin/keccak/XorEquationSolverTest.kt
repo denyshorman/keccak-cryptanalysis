@@ -1,6 +1,7 @@
 package keccak
 
 import io.kotest.core.spec.style.FunSpec
+import keccak.util.bitSet
 import org.junit.jupiter.api.assertThrows
 import java.util.*
 import kotlin.random.Random
@@ -16,9 +17,11 @@ class XorEquationSolverTest : FunSpec({
             bitSet(1, 0, 1, 1),
         )
 
-        XorEquationSolver.solve(equations, variables, equations.size)
+        val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        println(equationsToString(equations, variables, equations.size))
+        solveXorEquations(system)
+
+        println(system)
     }
 
     test("EquationSolver4") {
@@ -31,9 +34,11 @@ class XorEquationSolverTest : FunSpec({
             bitSet(1, 0, 0, 1),
         )
 
-        XorEquationSolver.solve(equations, variables, equations.size)
+        val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        println(equationsToString(equations, variables, equations.size))
+        solveXorEquations(system)
+
+        println(system)
     }
 
     test("EquationSolver5") {
@@ -45,9 +50,11 @@ class XorEquationSolverTest : FunSpec({
             bitSet(0, 1, 1),
         )
 
-        XorEquationSolver.solve(equations, variables, equations.size)
+        val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        println(equationsToString(equations, variables, equations.size))
+        solveXorEquations(system)
+
+        println(system)
     }
 
     test("EquationSolver6") {
@@ -60,9 +67,11 @@ class XorEquationSolverTest : FunSpec({
             bitSet(0, 0, 0, 0),
         )
 
-        XorEquationSolver.solve(equations, variables, equations.size)
+        val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        println(equationsToString(equations, variables, equations.size))
+        solveXorEquations(system)
+
+        println(system)
     }
 
     test("RandomEquationSolver7") {
@@ -76,14 +85,16 @@ class XorEquationSolverTest : FunSpec({
                 bitSet(Random.nextInt(2), Random.nextInt(2), Random.nextInt(2), Random.nextInt(2)),
             )
 
+            val system = XorEquationSystem(equations.size, equations.size, equations, variables)
+
             println("-----------------------------")
             try {
-                println(matrixToString(equations, variables, equations.size))
-                XorEquationSolver.solve(equations, variables, equations.size)
-            } catch (e: XorEquationSolver.NoSolution) {
+                println(system)
+                solveXorEquations(system)
+            } catch (e: NoSolution) {
                 println("no solution")
             } finally {
-                println(matrixToString(equations, variables, equations.size))
+                println(system)
             }
 
             Thread.sleep(800)
@@ -109,14 +120,16 @@ class XorEquationSolverTest : FunSpec({
                 xxx
             }
 
+            val system = XorEquationSystem(eqCount, varCount, equations, variables)
+
             println("-----------------------------")
             try {
-                println(matrixToString(equations, variables, varCount))
-                XorEquationSolver.solve(equations, variables, varCount)
-            } catch (e: XorEquationSolver.NoSolution) {
+                println(system)
+                solveXorEquations(system)
+            } catch (e: NoSolution) {
                 println("no solution")
             } finally {
-                println(matrixToString(equations, variables, varCount))
+                println(system)
             }
 
             Thread.sleep(800)
@@ -133,14 +146,16 @@ class XorEquationSolverTest : FunSpec({
             bitSet(0, 0, 1, 1),
         )
 
-        println(matrixToString(equations, variables, equations.size))
+        val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        assertThrows<XorEquationSolver.NoSolution> {
-            XorEquationSolver.solve(equations, variables, equations.size)
+        println(system)
+
+        assertThrows<NoSolution> {
+            solveXorEquations(system)
         }
 
         println("no solution")
-        println(matrixToString(equations, variables, equations.size))
+        println(system)
     }
 
     test("EquationSolver9") {
@@ -155,10 +170,11 @@ class XorEquationSolverTest : FunSpec({
             bitSet(1, 0, 0, 1, 1, 1, 1),
             bitSet(1, 0, 0, 1, 1, 0, 0),
         )
+        val system = XorEquationSystem(equations.size, varCount, equations, variables)
 
-        println(matrixToString(equations, variables, varCount))
-        XorEquationSolver.solve(equations, variables, varCount)
-        println(matrixToString(equations, variables, varCount))
+        println(system)
+        solveXorEquations(system)
+        println(system)
     }
 
     test("test equation vars extension hypothesis - not confirmed") {
@@ -166,7 +182,7 @@ class XorEquationSolverTest : FunSpec({
         val cols = 4
 
         while (true) {
-            val system = EquationSystem(rows, cols)
+            val system = XorEquationSystem(rows, cols)
 
             //#region Init system
             var i = 0
@@ -189,7 +205,7 @@ class XorEquationSolverTest : FunSpec({
 
             if (!clonedSystem.isPartiallyEmpty()) continue
 
-            val extendedSystem = EquationSystem(rows, rows)
+            val extendedSystem = XorEquationSystem(rows, rows)
 
             val generatedVars = Array(cols) {
                 val group = BitGroup(rows)
@@ -206,7 +222,7 @@ class XorEquationSolverTest : FunSpec({
             while (i < extendedSystem.rows) {
                 var k = system.equations[i].nextSetBit(0)
                 while (k >= 0) {
-                    extendedSystem.equations[i].xor(generatedVars[k])
+                    extendedSystem.equations[i].xor(generatedVars[k].bitSet)
                     k = system.equations[i].nextSetBit(k + 1)
                 }
                 i++
@@ -224,7 +240,7 @@ class XorEquationSolverTest : FunSpec({
     }
 
     test("test some xor eq") {
-        val eqSystem = EquationSystem(9, 9)
+        val eqSystem = XorEquationSystem(9, 9)
         eqSystem.equations[0][0] = true
         eqSystem.equations[0][1] = true
         eqSystem.equations[0][2] = true
@@ -333,7 +349,7 @@ class XorEquationSolverTest : FunSpec({
     }
 
     test("test some xor eq2") {
-        val eqSystem = EquationSystem(12, 12)
+        val eqSystem = XorEquationSystem(12, 12)
         
         //#region assign
         eqSystem.equations[0][0] = true

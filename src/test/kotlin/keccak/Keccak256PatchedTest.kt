@@ -7,6 +7,7 @@ import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.*
 import kotlin.random.Random.Default.nextBytes
 import kotlin.test.assertEquals
 
@@ -179,7 +180,7 @@ class Keccak256PatchedTest : FunSpec({
         val resultBitGroup = toBigGroup(msgBytes, hashResult.constraints)
 
         hashResult.bytes.forEach { byte ->
-            byte.eqSystem.evaluate(resultBitGroup)
+            byte.eqSystem.evaluate(resultBitGroup.bitSet)
             val eqSystemByte = byte.eqSystem.toByte()
             assertEquals(byte.byte, eqSystemByte)
         }
@@ -280,11 +281,21 @@ class Keccak256PatchedTest : FunSpec({
         println(emptyEquations)
 
         println("dump0")
-        var s = EquationSystem(parametrizedEquationSystem.equations, BitGroup(parametrizedEquationSystem.rows))
+        var s = XorEquationSystem(
+            parametrizedEquationSystem.rows,
+            parametrizedEquationSystem.rows,
+            parametrizedEquationSystem.equations,
+            BitSet(parametrizedEquationSystem.rows),
+        )
         Files.writeString(Paths.get("./build/matrix0.txt"), s.toString())
 
         println("dump1")
-        s = EquationSystem(parametrizedEquationSystem.results, BitGroup(parametrizedEquationSystem.rows))
+        s = XorEquationSystem(
+            parametrizedEquationSystem.rows,
+            parametrizedEquationSystem.rows,
+            parametrizedEquationSystem.results,
+            BitSet(parametrizedEquationSystem.rows),
+        )
         Files.writeString(Paths.get("./build/matrix1.txt"), s.toString())
     }
 
@@ -304,7 +315,7 @@ class Keccak256PatchedTest : FunSpec({
             val rows = 2
             val cols = 4
 
-            val hash = EquationSystem(rows, cols)
+            val hash = XorEquationSystem(rows, cols)
             hash.equations[0][0] = true
             hash.equations[0][1] = false
             hash.equations[0][2] = true
@@ -338,7 +349,7 @@ class Keccak256PatchedTest : FunSpec({
             val rows = 2
             val cols = 4
 
-            val hash = EquationSystem(rows, cols)
+            val hash = XorEquationSystem(rows, cols)
             hash.equations[0][0] = true
             hash.equations[0][1] = false
             hash.equations[0][2] = true
@@ -370,7 +381,7 @@ class Keccak256PatchedTest : FunSpec({
             val rows = 2
             val cols = 4
 
-            val hash = EquationSystem(rows, cols)
+            val hash = XorEquationSystem(rows, cols)
             hash.equations[0][0] = false
             hash.equations[0][1] = true
             hash.equations[0][2] = true
@@ -402,7 +413,7 @@ class Keccak256PatchedTest : FunSpec({
             val rows = 2
             val cols = 4
 
-            val hash = EquationSystem(rows, cols)
+            val hash = XorEquationSystem(rows, cols)
             hash.equations[0][0] = false
             hash.equations[0][1] = true
             hash.equations[0][2] = true
@@ -436,7 +447,7 @@ class Keccak256PatchedTest : FunSpec({
             val rows = 2
             val cols = 4
 
-            val hash = EquationSystem(rows, cols)
+            val hash = XorEquationSystem(rows, cols)
             hash.equations[0][0] = true
             hash.equations[0][1] = true
             hash.equations[0][2] = false
@@ -470,7 +481,7 @@ class Keccak256PatchedTest : FunSpec({
             val rows = 2
             val cols = 4
 
-            val hash = EquationSystem(rows, cols)
+            val hash = XorEquationSystem(rows, cols)
             hash.equations[0][0] = true
             hash.equations[0][1] = true
             hash.equations[0][2] = false
@@ -504,7 +515,7 @@ class Keccak256PatchedTest : FunSpec({
             val rows = 2
             val cols = 4
 
-            val hash = EquationSystem(rows, cols)
+            val hash = XorEquationSystem(rows, cols)
             hash.equations[0][0] = false
             hash.equations[0][1] = true
             hash.equations[0][2] = true

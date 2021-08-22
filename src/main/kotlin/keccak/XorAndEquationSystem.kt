@@ -1,5 +1,7 @@
 package keccak
 
+import keccak.util.exchange
+
 class XorAndEquationSystem {
     val rows: Int
     val cols: Int

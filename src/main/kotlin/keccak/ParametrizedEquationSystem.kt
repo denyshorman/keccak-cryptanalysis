@@ -1,12 +1,14 @@
 package keccak
 
+import keccak.util.exchange
 import keccak.util.toNumChar
+import java.util.*
 
 class ParametrizedEquationSystem {
     val rows: Int
     val cols: Int
-    val equations: Array<BitGroup>
-    val results: Array<BitGroup>
+    val equations: Array<BitSet>
+    val results: Array<BitSet>
 
     constructor(
         rows: Int,
@@ -14,17 +16,17 @@ class ParametrizedEquationSystem {
     ) {
         this.rows = rows
         this.cols = cols
-        this.equations = Array(rows) { BitGroup(cols) }
+        this.equations = Array(rows) { BitSet(cols) }
         this.results = Array(rows) { i ->
-            val group = BitGroup(rows)
+            val group = BitSet(rows)
             group[i] = true
             group
         }
     }
 
-    private constructor(equations: Array<BitGroup>, results: Array<BitGroup>) {
-        this.rows = equations.size
-        this.cols = equations.getOrNull(0)?.size ?: 0
+    private constructor(rows: Int, cols: Int, equations: Array<BitSet>, results: Array<BitSet>) {
+        this.rows = rows
+        this.cols = cols
         this.equations = equations
         this.results = results
     }

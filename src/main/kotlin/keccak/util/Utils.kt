@@ -22,14 +22,14 @@ fun Xor.toBitEquation(varsCount: Int): XorEquation {
     return eq
 }
 
-fun List<Pair<XorEquation, XorEquation>>.substitute(eqSystem: EquationSystem) {
+fun List<Pair<XorEquation, XorEquation>>.substitute(eqSystem: XorEquationSystem) {
     forEach {
         it.first.substitute(eqSystem)
         it.second.substitute(eqSystem)
     }
 }
 
-fun XorEquation.substitute(eqSystem: EquationSystem) {
+fun XorEquation.substitute(eqSystem: XorEquationSystem) {
     var i = 0
     val size = min(eqSystem.rows, eqSystem.cols)
 
@@ -61,9 +61,9 @@ fun List<Pair<XorEquation, XorEquation>>.varCountAndOffset(varsCount: Int): Pair
     return Pair(newVarsCount, offset)
 }
 
-fun List<Pair<XorEquation, XorEquation>>.additionalEqToBitSystem(varsCount: Int, offset: Int): EquationSystem {
+fun List<Pair<XorEquation, XorEquation>>.additionalEqToBitSystem(varsCount: Int, offset: Int): XorEquationSystem {
     val varCombinationsCount = (varsCount * (varsCount + 1)) / 2
-    val system = EquationSystem(size, varCombinationsCount)
+    val system = XorEquationSystem(size, varCombinationsCount)
 
     forEachIndexed { eqIndex, eq ->
         var leftSetBitIndex = eq.first.bitGroup.nextSetBit(0)
@@ -183,4 +183,10 @@ fun toBigGroup(bytes: ByteArray, constraints: List<KeccakPatched.Constraint>): B
     }
 
     return bitGroup
+}
+
+fun <T> Array<T>.exchange(i: Int, j: Int) {
+    val tmp = this[i]
+    this[i] = this[j]
+    this[j] = tmp
 }
