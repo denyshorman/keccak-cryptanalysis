@@ -5,7 +5,12 @@ import keccak.util.setBitsCount
 import java.util.*
 import kotlin.math.min
 
-data class NoSolution(val eqIndex: Int) : Throwable(null, null, false, false)
+data class NoSolution(val eqIndex: Int) : Throwable(
+    "No solution for the system. Failed at equation $eqIndex",
+    null,
+    false,
+    false
+)
 
 class SolutionsFinder(val equationSystem: XorEquationSystem) {
     val mask = BitSet(equationSystem.cols)

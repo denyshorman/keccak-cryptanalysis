@@ -20,11 +20,46 @@ class AndEquationSystem {
         this.rightXorResults = BitSet(rows)
     }
 
+    constructor(
+        rows: Int,
+        cols: Int,
+        equations: Array<Equation>,
+        andOpLeftResults: BitSet,
+        andOpRightResults: BitSet,
+        rightXorResults: BitSet,
+    ) {
+        this.rows = rows
+        this.cols = cols
+        this.equations = equations
+        this.andOpLeftResults = andOpLeftResults
+        this.andOpRightResults = andOpRightResults
+        this.rightXorResults = rightXorResults
+    }
+
     data class Equation(
         val andOpLeft: BitSet,
         val andOpRight: BitSet,
         val rightXor: BitSet,
-    )
+    ) {
+        fun clone(): Equation {
+            return Equation(
+                andOpLeft.clone() as BitSet,
+                andOpRight.clone() as BitSet,
+                rightXor.clone() as BitSet,
+            )
+        }
+    }
+
+    fun clone(): AndEquationSystem {
+        return AndEquationSystem(
+            rows,
+            cols,
+            Array(rows) {equations[it].clone()},
+            andOpLeftResults.clone() as BitSet,
+            andOpRightResults.clone() as BitSet,
+            rightXorResults.clone() as BitSet,
+        )
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
