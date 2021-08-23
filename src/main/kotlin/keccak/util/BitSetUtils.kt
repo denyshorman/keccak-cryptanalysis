@@ -20,6 +20,10 @@ fun BitSet.invert(size: Int) {
     flip(0, size)
 }
 
+fun BitSet.toString(size: Int): String {
+    return String(CharArray(size) { this[it].toNumChar() })
+}
+
 fun bitSet(vararg values: Boolean): BitSet {
     val set = BitSet(values.size)
     values.forEachIndexed { index, value ->

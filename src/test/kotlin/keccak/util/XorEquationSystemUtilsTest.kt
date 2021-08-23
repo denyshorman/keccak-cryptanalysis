@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.FunSpec
 import keccak.XorEquationSystem
 import kotlin.test.assertEquals
 
-class EquationSystemUtilsTest : FunSpec({
+class XorEquationSystemUtilsTest : FunSpec({
     context("toLittleEndianBytes") {
         test("1") {
             val long = 0xAABBCCDD11223344uL.toLong().toEquationSystem(Long.SIZE_BITS)

@@ -64,7 +64,7 @@ class SolutionsFinder(val equationSystem: XorEquationSystem) {
     }
 }
 
-fun solveXorEquations(system: XorEquationSystem) {
+fun solveXorEquationSystem(system: XorEquationSystem) {
     var row = 0
     var col = 0
 

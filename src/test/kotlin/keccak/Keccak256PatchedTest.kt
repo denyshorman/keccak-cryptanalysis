@@ -210,7 +210,7 @@ class Keccak256PatchedTest : FunSpec({
         println("getting updated system")
         val updatedSystem = extendHashEquations(eqSystem, hashResult.constraints)
         println("solving system")
-        solveXorEquations(updatedSystem)
+        solveXorEquationSystem(updatedSystem)
         // solveSquareMatrixXorEquations(updatedSystem)
         println("solved")
         Files.writeString(Paths.get("./build/matrix.txt"), updatedSystem.toString())
@@ -224,7 +224,7 @@ class Keccak256PatchedTest : FunSpec({
         val eqSystem = hashResult.bytes.toEquationSystem()
 
         println("solve 256 equations")
-        solveXorEquations(eqSystem)
+        solveXorEquationSystem(eqSystem)
 
         val cols = hashResult.constraints[0].leftSystem.cols
 

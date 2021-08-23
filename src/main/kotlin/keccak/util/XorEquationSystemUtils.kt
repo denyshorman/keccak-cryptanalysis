@@ -1,7 +1,7 @@
 package keccak.util
 
-import keccak.XorEquationSystem
 import keccak.XorEquation
+import keccak.XorEquationSystem
 import java.util.*
 
 fun XorEquationSystem.toLittleEndianBytes(): Array<XorEquationSystem> {
