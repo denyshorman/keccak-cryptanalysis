@@ -62,6 +62,17 @@ fun XorEquationSystem.toBitEquation(eqIndex: Int): XorEquation {
     return XorEquation(cols, eq, res)
 }
 
+fun XorEquationSystem.substitute(with: XorEquationSystem) {
+    var eqIndex = 0
+    while (eqIndex < rows) {
+        if (with.equations[eqIndex][eqIndex] && equations[eqIndex][eqIndex]) {
+            equations[eqIndex].xor(with.equations[eqIndex])
+            results[eqIndex] = results[eqIndex] xor with.results[eqIndex]
+        }
+        eqIndex++
+    }
+}
+
 fun Array<XorEquationSystem>.toLong(): Long {
     val bytes = this
     var value = 0L

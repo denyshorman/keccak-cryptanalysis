@@ -1,13 +1,9 @@
 package keccak
 
-import keccak.util.littleEndianBytesToLong
-import keccak.util.toBitGroup
-import keccak.util.toLittleEndianBytes
+import keccak.util.*
 import java.util.*
 
 //#region General Utils
-var eqIndexGlobal = 0
-
 fun Array<KeccakPatched.CustomByte>.toByteArray(): ByteArray {
     return map { it.byte }.toByteArray()
 }
@@ -34,95 +30,76 @@ fun Array<KeccakPatched.CustomByte>.toEquationSystem(): XorEquationSystem {
     return system
 }
 
-fun mapToEquation(
+fun prepareAndEquationSystem(
     hash: XorEquationSystem,
-    vars: BitGroup,
-): XorEquation {
-    val clonedVars = vars.clone()
-    var eqIndex = 0
-    val acc = XorEquation(vars.clone(), false)
+    constraints: List<KeccakPatched.Constraint>,
+    constantVarsStartIndex: Int,
+): AndEquationSystem {
+    //#region Prerequisite: hash equations must be prepared
+    //#endregion
 
-    while (eqIndex < hash.rows && !clonedVars.isEmpty()) {
-        var bitIndex = clonedVars.nextSetBit(0)
-        var eq: XorEquation? = null
-
-        while (bitIndex >= 0) {
-            if (eq == null) {
-                if (hash.equations[eqIndexGlobal][bitIndex]) {
-                    eq = XorEquation(hash.cols, hash.equations[eqIndexGlobal].clone() as BitSet, hash.results[eqIndexGlobal])
-                    eq.bitGroup[bitIndex] = false
-                    clonedVars[bitIndex] = false
-                }
-            } else {
-                if (eq.bitGroup[bitIndex]) {
-                    eq.bitGroup[bitIndex] = false
-                    clonedVars[bitIndex] = false
-                }
-            }
-
-            bitIndex = clonedVars.nextSetBit(bitIndex + 1)
+    //#region Get rid of main variables in constraint list
+    var hashEqIndex = 0
+    while (hashEqIndex < hash.rows) {
+        constraints.forEach { constraint ->
+            constraint.leftSystem.substitute(hash)
+            constraint.rightSystem.substitute(hash)
         }
-
-        if (eq != null) {
-            acc.xor(eq)
-        }
-
-        eqIndex++
-        eqIndexGlobal++
-        if (eqIndexGlobal == hash.rows) eqIndexGlobal = 0
+        hashEqIndex++
     }
+    //#endregion
 
-    if (!clonedVars.isEmpty()) {
-        acc.xor(clonedVars, false)
+    //#region Collect only used constrains
+    //#region Calculate mask
+    val usedConstraintVarsMask = BitSet(hash.cols)
+    hashEqIndex = 0
+    while (hashEqIndex < hash.rows) {
+        val clonedEq = hash.equations[hashEqIndex].clone() as BitSet
+        clonedEq.clear(0, constantVarsStartIndex + 1)
+        usedConstraintVarsMask.or(clonedEq)
+        hashEqIndex++
     }
+    //#endregion
 
-    return acc
-}
+    //#region Calc used vars
+    val usedConstraintVarsCount = usedConstraintVarsMask.setBitsCount()
+    //#endregion
 
-fun mapToEquation(
-    hash: XorEquationSystem,
-    leftGroup: BitGroup,
-    rightGroup: BitGroup,
-): XorEquation {
-    val a = mapToEquation(hash, leftGroup)
-    val b = mapToEquation(hash, rightGroup)
-    a.xor(b)
-    return a
-    // return XorEquation(leftGroup.clone(), false)
-}
+    //#region Allocate memory for andEquationSystem
+    val andEquationSystem = AndEquationSystem(usedConstraintVarsCount, usedConstraintVarsCount)
+    //#endregion
 
-fun mapToEquations(hash: XorEquationSystem, constraint: KeccakPatched.Constraint): Array<XorEquation> {
-    return Array(constraint.leftSystem.rows) { i ->
-        mapToEquation(
-            hash,
-            BitGroup(constraint.leftSystem.cols, constraint.leftSystem.equations[i]),
-            BitGroup(constraint.leftSystem.cols, constraint.rightSystem.equations[i]),
-        )
-    }
-}
-
-fun extendHashEquations(hash: XorEquationSystem, constraints: List<KeccakPatched.Constraint>): XorEquationSystem {
-    val rows = hash.cols
-    val cols = hash.cols
-
-    val system = XorEquationSystem(rows, cols)
-    var eqIndex = 0
-
-    while (eqIndex < hash.rows) {
-        system.equations[eqIndex] = hash.equations[eqIndex].clone() as BitSet
-        system.results[eqIndex] = hash.results[eqIndex]
-        eqIndex++
-    }
+    //#region Populate andEquationSystem
+    val constantVarsOffset = usedConstraintVarsMask.nextSetBit(0)
+    var andEqIndex = 0
 
     constraints.forEach { constraint ->
-        mapToEquations(hash, constraint).forEach { eq ->
-            system.equations[eqIndex] = eq.bitGroup.bitSet
-            system.results[eqIndex] = eq.result
-            eqIndex++
+        var constraintEqIndex = 0
+        while (constraintEqIndex < constraint.varSystem.rows) {
+            val constraintEqVarIndex = constraint.varSystem.equations[constraintEqIndex].nextSetBit(0)
+            if (usedConstraintVarsMask[constraintEqVarIndex]) {
+                // TODO: Use offset
+                // TODO: Compact vars
+                andEquationSystem.equations[andEqIndex].andOpLeft.xor(constraint.leftSystem.equations[constraintEqIndex])
+                andEquationSystem.equations[andEqIndex].andOpRight.xor(constraint.rightSystem.equations[constraintEqIndex])
+                andEquationSystem.equations[andEqIndex].rightXor.xor(constraint.varSystem.equations[constraintEqIndex])
+
+                andEquationSystem.andOpLeftResults[andEqIndex] =
+                    andEquationSystem.andOpLeftResults[andEqIndex] xor constraint.leftSystem.results[constraintEqIndex]
+                andEquationSystem.andOpRightResults[andEqIndex] =
+                    andEquationSystem.andOpRightResults[andEqIndex] xor constraint.rightSystem.results[constraintEqIndex]
+                andEquationSystem.rightXorResults[andEqIndex] =
+                    andEquationSystem.rightXorResults[andEqIndex] xor constraint.varSystem.results[constraintEqIndex]
+
+                andEqIndex++
+            }
+            constraintEqIndex++
         }
     }
+    //#endregion
+    //#endregion
 
-    return system
+    return andEquationSystem
 }
 //#endregion
 
