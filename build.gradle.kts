@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.5.20"
+    kotlin("jvm") version "1.5.30"
     application
 }
 
@@ -10,16 +10,16 @@ repositories {
     mavenCentral()
 }
 
-val kotestVersion = "4.6.0"
+val kotestVersion = "4.6.2"
 
 dependencies {
-    implementation("org.web3j:core:4.8.4")
+    implementation("org.web3j:core:5.0.0")
 
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-json:$kotestVersion")
-    testImplementation("io.mockk:mockk:1.11.0")
+    testImplementation("io.mockk:mockk:1.12.0")
 }
 
 tasks {
