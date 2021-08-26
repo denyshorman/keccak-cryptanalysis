@@ -196,7 +196,7 @@ class Keccak256PatchedTest : FunSpec({
         val eqSystem = hashResult.bytes.toEquationSystem()
 
         println("solve 256 equations")
-        solveXorEquationSystem(eqSystem)
+        eqSystem.solve()
 
         val cols = hashResult.constraints[0].leftSystem.cols
 

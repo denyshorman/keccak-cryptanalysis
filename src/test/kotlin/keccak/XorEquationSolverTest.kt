@@ -1,8 +1,8 @@
 package keccak
 
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.booleans.shouldBeFalse
 import keccak.util.bitSet
-import org.junit.jupiter.api.assertThrows
 import java.util.*
 import kotlin.random.Random
 
@@ -19,7 +19,7 @@ class XorEquationSolverTest : FunSpec({
 
         val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        solveXorEquationSystem(system)
+        system.solve()
 
         println(system)
     }
@@ -36,7 +36,7 @@ class XorEquationSolverTest : FunSpec({
 
         val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        solveXorEquationSystem(system)
+        system.solve()
 
         println(system)
     }
@@ -52,7 +52,7 @@ class XorEquationSolverTest : FunSpec({
 
         val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        solveXorEquationSystem(system)
+        system.solve()
 
         println(system)
     }
@@ -69,7 +69,7 @@ class XorEquationSolverTest : FunSpec({
 
         val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
-        solveXorEquationSystem(system)
+        system.solve()
 
         println(system)
     }
@@ -88,12 +88,13 @@ class XorEquationSolverTest : FunSpec({
             val system = XorEquationSystem(equations.size, equations.size, equations, variables)
 
             println("-----------------------------")
-            try {
-                println(system)
-                solveXorEquationSystem(system)
-            } catch (e: NoSolution) {
+            println(system)
+
+            val solved = system.solve()
+
+            if (!solved) {
                 println("no solution")
-            } finally {
+            } else {
                 println(system)
             }
 
@@ -123,12 +124,13 @@ class XorEquationSolverTest : FunSpec({
             val system = XorEquationSystem(eqCount, varCount, equations, variables)
 
             println("-----------------------------")
-            try {
-                println(system)
-                solveXorEquationSystem(system)
-            } catch (e: NoSolution) {
+            println(system)
+
+            val solved = system.solve()
+
+            if (!solved) {
                 println("no solution")
-            } finally {
+            } else {
                 println(system)
             }
 
@@ -150,9 +152,8 @@ class XorEquationSolverTest : FunSpec({
 
         println(system)
 
-        assertThrows<NoSolution> {
-            solveXorEquationSystem(system)
-        }
+        val solved = system.solve()
+        solved.shouldBeFalse()
 
         println("no solution")
         println(system)
@@ -173,7 +174,7 @@ class XorEquationSolverTest : FunSpec({
         val system = XorEquationSystem(equations.size, varCount, equations, variables)
 
         println(system)
-        solveXorEquationSystem(system)
+        system.solve()
         println(system)
     }
 
@@ -201,7 +202,7 @@ class XorEquationSolverTest : FunSpec({
 
             val clonedSystem = system.clone()
 
-            solveXorEquationSystem(clonedSystem)
+            clonedSystem.solve()
 
             if (!clonedSystem.isPartiallyEmpty()) continue
 
@@ -229,7 +230,7 @@ class XorEquationSolverTest : FunSpec({
             }
             //#endregion
 
-            solveXorEquationSystem(extendedSystem)
+            extendedSystem.solve()
 
             if (extendedSystem.isPartiallyEmpty()) continue
 

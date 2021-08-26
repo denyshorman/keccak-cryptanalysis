@@ -1,6 +1,7 @@
 package keccak
 
 import keccak.util.toString
+import keccak.util.toXorEquationSystem
 import java.util.*
 
 class AndEquationSystem {
@@ -48,6 +49,11 @@ class AndEquationSystem {
                 rightXor.clone() as BitSet,
             )
         }
+    }
+
+    fun solve(): Boolean {
+        val xorEqSystem = toXorEquationSystem()
+        return xorEqSystem.solve()
     }
 
     fun clone(): AndEquationSystem {

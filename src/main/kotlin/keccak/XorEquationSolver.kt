@@ -3,14 +3,6 @@ package keccak
 import keccak.util.pow
 import keccak.util.setBitsCount
 import java.util.*
-import kotlin.math.min
-
-data class NoSolution(val eqIndex: Int) : Throwable(
-    "No solution for the system. Failed at equation $eqIndex",
-    null,
-    false,
-    false
-)
 
 class SolutionsFinder(val equationSystem: XorEquationSystem) {
     val mask = BitSet(equationSystem.cols)
@@ -66,79 +58,5 @@ class SolutionsFinder(val equationSystem: XorEquationSystem) {
                 break
             }
         }
-    }
-}
-
-fun solveXorEquationSystem(system: XorEquationSystem) {
-    var row = 0
-    var col = 0
-
-    while (row < system.rows && col < system.cols) {
-        var i = row
-        var found = false
-
-        while (i < system.rows) {
-            if (system.isInvalid(i)) {
-                throw NoSolution(i)
-            }
-
-            if (system.equations[i][col]) {
-                found = true
-                break
-            }
-
-            i++
-        }
-
-        if (found) {
-            if (row != i) {
-                system.exchange(row, i)
-            }
-
-            i = row + 1
-
-            while (i < system.rows) {
-                if (system.equations[i][col]) {
-                    system.xor(i, row)
-
-                    if (system.isInvalid(i)) {
-                        throw NoSolution(i)
-                    }
-                }
-
-                i++
-            }
-        }
-
-        row++
-        col++
-    }
-
-    row = min(system.rows, system.cols) - 1
-    col = row
-
-    while (row >= 0 && col >= 0) {
-        if (system.equations[row].isEmpty) {
-            if (system.results[row]) {
-                throw NoSolution(row)
-            }
-        } else {
-            var i = row - 1
-
-            while (i >= 0) {
-                if (system.equations[i][col]) {
-                    system.xor(i, row)
-
-                    if (system.isInvalid(i)) {
-                        throw NoSolution(i)
-                    }
-                }
-
-                i--
-            }
-        }
-
-        row--
-        col--
     }
 }

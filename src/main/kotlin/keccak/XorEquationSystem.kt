@@ -2,6 +2,7 @@ package keccak
 
 import keccak.util.*
 import java.util.*
+import kotlin.math.min
 
 class XorEquationSystem {
     val rows: Int
@@ -104,6 +105,82 @@ class XorEquationSystem {
             results[lastBitIndex] = firstResultBit
             roundIndex++
         }
+    }
+
+    fun solve(): Boolean {
+        var row = 0
+        var col = 0
+
+        while (row < rows && col < cols) {
+            var i = row
+            var found = false
+
+            while (i < rows) {
+                if (isInvalid(i)) {
+                    return false
+                }
+
+                if (equations[i][col]) {
+                    found = true
+                    break
+                }
+
+                i++
+            }
+
+            if (found) {
+                if (row != i) {
+                    exchange(row, i)
+                }
+
+                i = row + 1
+
+                while (i < rows) {
+                    if (equations[i][col]) {
+                        xor(i, row)
+
+                        if (isInvalid(i)) {
+                            return false
+                        }
+                    }
+
+                    i++
+                }
+            }
+
+            row++
+            col++
+        }
+
+        row = min(rows, cols) - 1
+        col = row
+
+        while (row >= 0 && col >= 0) {
+            if (equations[row].isEmpty) {
+                if (results[row]) {
+                    return false
+                }
+            } else {
+                var i = row - 1
+
+                while (i >= 0) {
+                    if (equations[i][col]) {
+                        xor(i, row)
+
+                        if (isInvalid(i)) {
+                            return false
+                        }
+                    }
+
+                    i--
+                }
+            }
+
+            row--
+            col--
+        }
+
+        return true
     }
 
     fun evaluate(vars: BitSet) {

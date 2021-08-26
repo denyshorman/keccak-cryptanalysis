@@ -29,13 +29,13 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system converted to xor")
             println(xorEqSystem)
 
-            try {
-                solveXorEquationSystem(xorEqSystem)
-            } catch (e: NoSolution) {
+            val solved = xorEqSystem.solve()
+
+            if (!solved) {
                 println()
                 println("Partially solved system")
                 println(xorEqSystem)
-                fail(e.message)
+                fail("No solution")
             }
 
             println()
@@ -66,7 +66,7 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system converted to xor")
             println(xorEqSystem)
 
-            solveXorEquationSystem(xorEqSystem)
+            xorEqSystem.solve()
 
             println()
             println("Equation system solution")
@@ -96,7 +96,7 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system converted to xor")
             println(xorEqSystem)
 
-            solveXorEquationSystem(xorEqSystem)
+            xorEqSystem.solve()
 
             println()
             println("Equation system solution")
@@ -127,7 +127,7 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system converted to xor")
             println(xorEqSystem)
 
-            solveXorEquationSystem(xorEqSystem)
+            xorEqSystem.solve()
 
             println()
             println("Equation system solution")
@@ -158,7 +158,7 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system converted to xor")
             println(xorEqSystem)
 
-            solveXorEquationSystem(xorEqSystem)
+            xorEqSystem.solve()
 
             println()
             println("Equation system solution")
@@ -189,7 +189,7 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system converted to xor")
             println(xorEqSystem)
 
-            solveXorEquationSystem(xorEqSystem)
+            xorEqSystem.solve()
 
             println()
             println("Equation system solution")
@@ -211,7 +211,7 @@ class AndEquationSystemTest : FunSpec({
                 val xorEqSystem = andEqSystem.toXorEquationSystem()
                 val xorEqSystemInitial = xorEqSystem.clone()
 
-                solveXorEquationSystem(xorEqSystem)
+                xorEqSystem.solve()
 
                 var j = cols
                 var found = false
@@ -251,12 +251,12 @@ class AndEquationSystemTest : FunSpec({
             while (true) {
                 val rows = 20
                 val cols = 20
-                val (solution, andEqSystem) = randomAndEquationSystem(rows, cols)
+                val (_, andEqSystem) = randomAndEquationSystem(rows, cols)
 
                 val xorEqSystem = andEqSystem.toXorEquationSystem()
                 // val xorEqSystemInitial = xorEqSystem.clone()
 
-                solveXorEquationSystem(xorEqSystem)
+                xorEqSystem.solve()
 
                 var j = cols
                 var zeroCounter = 0
