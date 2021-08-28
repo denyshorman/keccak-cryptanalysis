@@ -30,13 +30,11 @@ fun BitSet.randomize(size: Int, random: Random = Random) {
     }
 }
 
-fun BitSet.evaluate(varsCount: Int, values: BitSet): Boolean {
+fun BitSet.evaluate(varsCount: Int, vars: BitSet): Boolean {
     var result = false
     var i = 0
     while (i < varsCount) {
-        if (this[i] && values[i]) {
-            result = result xor true
-        }
+        if (this[i] && vars[i]) result = !result
         i++
     }
     return result
@@ -46,32 +44,42 @@ fun BitSet.toString(size: Int): String {
     return String(CharArray(size) { this[it].toNumChar() })
 }
 
-fun bitSet(vararg values: Boolean): BitSet {
-    val set = BitSet(values.size)
-    values.forEachIndexed { index, value ->
-        set[index] = value
+fun bitSet(vararg bits: Boolean): BitSet {
+    val bitSet = BitSet(bits.size)
+    var i = 0
+    while (i < bits.size) {
+        if (bits[i]) bitSet.set(i)
+        i++
     }
-    return set
+    return bitSet
 }
 
-fun bitSet(vararg values: Int): BitSet {
-    val set = BitSet(values.size)
-    values.forEachIndexed { index, value ->
-        set[index] = value == 1
+fun bitSet(vararg bits: Int): BitSet {
+    val bitSet = BitSet(bits.size)
+    var i = 0
+    while (i < bits.size) {
+        if (bits[i] == 1) bitSet.set(i)
+        i++
     }
-    return set
+    return bitSet
+}
+
+fun bitSet(bits: String): BitSet {
+    val bitSet = BitSet(bits.length)
+    var i = 0
+    while (i < bits.length) {
+        if (bits[i].toBoolean()) bitSet.set(i)
+        i++
+    }
+    return bitSet
 }
 
 fun randomBitSet(size: Int, random: Random = Random): BitSet {
     val bitSet = BitSet(size)
-
     var i = 0
     while (i < size) {
-        if (random.nextBoolean()) {
-            bitSet.set(i)
-        }
+        if (random.nextBoolean()) bitSet.set(i)
         i++
     }
-
     return bitSet
 }
