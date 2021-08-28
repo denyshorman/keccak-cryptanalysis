@@ -4,6 +4,32 @@ import keccak.XorEquation
 import keccak.XorEquationSystem
 import java.util.*
 
+private val XorEquationPattern = "^([01]+)\\|([01])$".toRegex()
+
+fun XorEquationSystem(rows: Int, cols: Int, vararg equations: String): XorEquationSystem {
+    val system = XorEquationSystem(rows, cols)
+
+    var i = 0
+    while (i < equations.size) {
+        val eq = equations[i]
+
+        val matched = XorEquationPattern.matchEntire(eq) ?: throw RuntimeException("Equation is not correct")
+
+        val (l, r) = matched.destructured
+
+        var j = 0
+        while (j < l.length) {
+            system.equations[i][j] = l[j].toBoolean()
+            system.results[i] = r.toBoolean()
+            j++
+        }
+
+        i++
+    }
+
+    return system
+}
+
 fun XorEquationSystem.toLittleEndianBytes(): Array<XorEquationSystem> {
     return Array(Long.SIZE_BYTES) { byteIndex ->
         val system = XorEquationSystem(Byte.SIZE_BITS, cols)
