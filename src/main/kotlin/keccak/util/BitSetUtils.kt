@@ -30,12 +30,12 @@ fun BitSet.randomize(size: Int, random: Random = Random) {
     }
 }
 
-fun BitSet.evaluate(varsCount: Int, vars: BitSet): Boolean {
+fun BitSet.evaluate(vars: BitSet): Boolean {
     var result = false
-    var i = 0
-    while (i < varsCount) {
-        if (this[i] && vars[i]) result = !result
-        i++
+    var i = vars.nextSetBit(0)
+    while (i >= 0) {
+        if (this[i]) result = !result
+        i = vars.nextSetBit(i + 1)
     }
     return result
 }

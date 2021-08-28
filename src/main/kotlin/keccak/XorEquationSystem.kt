@@ -27,6 +27,17 @@ class XorEquationSystem {
         this.results = results
     }
 
+    fun isValid(vars: BitSet): Boolean {
+        var i = 0
+        while (i < rows) {
+            if (equations[i].evaluate(vars) != results[i]) {
+                return false
+            }
+            i++
+        }
+        return true
+    }
+
     fun isValid(): Boolean {
         var i = 0
         while (i < rows) {
@@ -283,8 +294,8 @@ class XorEquationSystem {
     inner class SolutionIterator {
         val mask = BitSet(this@XorEquationSystem.cols)
         val iterator = BitSet(this@XorEquationSystem.cols)
-        val solution = BitSet(this@XorEquationSystem.rows)
-        var solutionIndex = -1
+        val solution = BitSet(this@XorEquationSystem.cols)
+        var solutionIndex = -1L
         val solutionsCount: Long
 
         init {
@@ -308,7 +319,7 @@ class XorEquationSystem {
                     }
                 } else {
                     var result = this@XorEquationSystem.results[eqIndex]
-                    var bitIndex = iterator.nextSetBit(0)
+                    var bitIndex = iterator.nextSetBit(eqIndex + 1)
                     while (bitIndex >= 0) {
                         if (this@XorEquationSystem.equations[eqIndex][bitIndex]) {
                             result = !result
@@ -318,6 +329,14 @@ class XorEquationSystem {
                     solution[eqIndex] = result
                 }
                 eqIndex++
+            }
+
+            if (cols > rows) {
+                var bitIndex = iterator.nextSetBit(rows)
+                while (bitIndex >= 0) {
+                    solution[bitIndex] = true
+                    bitIndex = iterator.nextSetBit(bitIndex + 1)
+                }
             }
 
             solutionIndex++
