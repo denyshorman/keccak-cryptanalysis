@@ -38,33 +38,21 @@ fun AndEquationSystem(rows: Int, cols: Int, vararg equations: String): AndEquati
 }
 
 fun AndEquationSystem.toXorEquationSystem(): XorEquationSystem {
-    val xorEquations = rows * 3
-    val xorEquationsVars = cols + rows * 2
-    val xorEquationSystem = XorEquationSystem(xorEquations, xorEquationsVars)
+    val xorEquationSystem = XorEquationSystem(rows, cols)
 
-    var andEqIndex = 0
-    var xorEqIndex = 0
-    var addVarIndex = cols
+    var i = 0
+    while (i < rows) {
+        xorEquationSystem.equations[i].xor(equations[i].andOpLeft)
+        xorEquationSystem.equations[i].xor(equations[i].andOpRight)
+        xorEquationSystem.equations[i].xor(equations[i].rightXor)
 
-    while (andEqIndex < rows) {
-        xorEquationSystem.equations[xorEqIndex].xor(equations[andEqIndex].andOpLeft)
-        xorEquationSystem.equations[xorEqIndex].set(addVarIndex)
-        xorEquationSystem.results[xorEqIndex] = xorEquationSystem.results[xorEqIndex] xor andOpLeftResults[andEqIndex]
-        xorEqIndex++
+        xorEquationSystem.results[i] = xorEquationSystem.results[i]
+            .xor(andOpLeftResults[i])
+            .xor(andOpRightResults[i])
+            .xor(rightXorResults[i])
+            .xor(true)
 
-        xorEquationSystem.equations[xorEqIndex].xor(equations[andEqIndex].andOpRight)
-        xorEquationSystem.equations[xorEqIndex].set(addVarIndex + 1)
-        xorEquationSystem.results[xorEqIndex] = xorEquationSystem.results[xorEqIndex] xor andOpRightResults[andEqIndex]
-        xorEqIndex++
-
-        xorEquationSystem.equations[xorEqIndex].xor(equations[andEqIndex].rightXor)
-        xorEquationSystem.equations[xorEqIndex].set(addVarIndex)
-        xorEquationSystem.equations[xorEqIndex].set(addVarIndex + 1)
-        xorEquationSystem.results[xorEqIndex] = xorEquationSystem.results[xorEqIndex] xor rightXorResults[andEqIndex] xor true
-
-        addVarIndex += 2
-        xorEqIndex++
-        andEqIndex++
+        i++
     }
 
     return xorEquationSystem
@@ -91,15 +79,15 @@ fun randomAndEquationSystem(
             system.andOpRightResults[i] = random.nextBoolean()
             system.rightXorResults[i] = false
 
-            val x0 = system.equations[i].andOpLeft.evaluate(cols, solution) xor system.andOpLeftResults[i]
-            val x1 = system.equations[i].andOpRight.evaluate(cols, solution) xor system.andOpRightResults[i]
-            val x2 = system.equations[i].rightXor.evaluate(cols, solution) xor system.rightXorResults[i]
-
             if (system.equations[i].andOpLeft.isEmpty || system.equations[i].andOpRight.isEmpty || system.equations[i].rightXor.isEmpty) {
                 continue
             }
 
-            if (x0 && x1 == x2) {
+            val x0 = system.equations[i].andOpLeft.evaluate(solution) xor system.andOpLeftResults[i]
+            val x1 = system.equations[i].andOpRight.evaluate(solution) xor system.andOpRightResults[i]
+            val x2 = system.equations[i].rightXor.evaluate(solution) xor system.rightXorResults[i]
+
+            if ((x0 && x1) == x2) {
                 break
             }
         }

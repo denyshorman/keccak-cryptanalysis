@@ -1,5 +1,6 @@
 package keccak
 
+import keccak.util.evaluate
 import keccak.util.toString
 import keccak.util.toXorEquationSystem
 import java.util.*
@@ -51,6 +52,19 @@ class AndEquationSystem {
         }
     }
 
+    fun isValid(solution: BitSet): Boolean {
+        var i = 0
+        while (i < rows) {
+            val l = equations[i].andOpLeft.evaluate(solution) xor andOpLeftResults[i]
+            val r = equations[i].andOpRight.evaluate(solution) xor andOpRightResults[i]
+            val lr = equations[i].rightXor.evaluate(solution) xor rightXorResults[i]
+            if ((l && r) != lr) return false
+
+            i++
+        }
+        return true
+    }
+
     fun solve(): Boolean {
         val xorEqSystem = toXorEquationSystem()
         return xorEqSystem.solve()
@@ -60,7 +74,7 @@ class AndEquationSystem {
         return AndEquationSystem(
             rows,
             cols,
-            Array(rows) {equations[it].clone()},
+            Array(rows) { equations[it].clone() },
             andOpLeftResults.clone() as BitSet,
             andOpRightResults.clone() as BitSet,
             rightXorResults.clone() as BitSet,

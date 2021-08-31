@@ -1,11 +1,11 @@
 package keccak
 
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import keccak.util.AndEquationSystem
 import keccak.util.randomAndEquationSystem
 import keccak.util.toString
 import keccak.util.toXorEquationSystem
-import kotlin.test.assertEquals
 import kotlin.test.fail
 
 class AndEquationSystemTest : FunSpec({
@@ -42,10 +42,19 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system solution")
             println(xorEqSystem)
 
-            assertEquals(false, xorEqSystem.results[0])
-            assertEquals(true, xorEqSystem.results[1])
-            assertEquals(false, xorEqSystem.results[2])
-            assertEquals(true, xorEqSystem.results[3])
+            var validSolutions = 0
+            val solIt = xorEqSystem.solutionIterator()
+            while (solIt.hasNext()) {
+                solIt.next()
+                if (andEqSystem.isValid(solIt.solution)) {
+                    validSolutions++
+                }
+            }
+
+            println()
+            println("Valid solutions: $validSolutions")
+
+            validSolutions.shouldBeGreaterThan(0)
         }
 
         test("2") {
@@ -72,12 +81,22 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system solution")
             println(xorEqSystem)
 
-            assertEquals(false, xorEqSystem.results[0])
-            assertEquals(true, xorEqSystem.results[1])
-            assertEquals(false, xorEqSystem.results[2])
+            var validSolutions = 0
+            val solIt = xorEqSystem.solutionIterator()
+            while (solIt.hasNext()) {
+                solIt.next()
+                if (andEqSystem.isValid(solIt.solution)) {
+                    validSolutions++
+                }
+            }
+
+            println()
+            println("Valid solutions: $validSolutions")
+
+            validSolutions.shouldBeGreaterThan(0)
         }
 
-        test("3_two_solutions") {
+        test("3") {
             val andEqSystem = AndEquationSystem(
                 rows = 4, cols = 4,
                 "(0010|1)(0111|0) = 1000|0",
@@ -102,10 +121,19 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system solution")
             println(xorEqSystem)
 
-            assertEquals(true, xorEqSystem.results[0])
-            assertEquals(true, xorEqSystem.results[1])
-            assertEquals(false, xorEqSystem.results[2])
-            assertEquals(false, xorEqSystem.results[3])
+            var validSolutions = 0
+            val solIt = xorEqSystem.solutionIterator()
+            while (solIt.hasNext()) {
+                solIt.next()
+                if (andEqSystem.isValid(solIt.solution)) {
+                    validSolutions++
+                }
+            }
+
+            println()
+            println("Valid solutions: $validSolutions")
+
+            validSolutions.shouldBeGreaterThan(0)
         }
 
         test("4") {
@@ -133,10 +161,19 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system solution")
             println(xorEqSystem)
 
-            assertEquals(true, xorEqSystem.results[0])
-            assertEquals(true, xorEqSystem.results[1])
-            assertEquals(false, xorEqSystem.results[2])
-            assertEquals(true, xorEqSystem.results[3])
+            var validSolutions = 0
+            val solIt = xorEqSystem.solutionIterator()
+            while (solIt.hasNext()) {
+                solIt.next()
+                if (andEqSystem.isValid(solIt.solution)) {
+                    validSolutions++
+                }
+            }
+
+            println()
+            println("Valid solutions: $validSolutions")
+
+            validSolutions.shouldBeGreaterThan(0)
         }
 
         test("5_two_solutions") {
@@ -164,15 +201,24 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system solution")
             println(xorEqSystem)
 
-            assertEquals(true, xorEqSystem.results[0])
-            assertEquals(false, xorEqSystem.results[1])
-            assertEquals(false, xorEqSystem.results[2])
-            assertEquals(false, xorEqSystem.results[3])
+            var validSolutions = 0
+            val solIt = xorEqSystem.solutionIterator()
+            while (solIt.hasNext()) {
+                solIt.next()
+                if (andEqSystem.isValid(solIt.solution)) {
+                    validSolutions++
+                }
+            }
+
+            println()
+            println("Valid solutions: $validSolutions")
+
+            validSolutions.shouldBeGreaterThan(0)
         }
 
         test("random") {
-            val rows = 20
-            val cols = 20
+            val rows = 200
+            val cols = 200
             val (solution, andEqSystem) = randomAndEquationSystem(rows, cols)
 
             println()
@@ -195,10 +241,55 @@ class AndEquationSystemTest : FunSpec({
             println("Equation system solution")
             println(xorEqSystem)
 
-            var i = 0
-            while (i < rows) {
-                assertEquals(solution[i], xorEqSystem.results[i])
-                i++
+            val solutionsIter = xorEqSystem.solutionIterator()
+
+            var validSolutions = 0
+            while (solutionsIter.hasNext()) {
+                solutionsIter.next()
+                val validSolution = andEqSystem.isValid(solutionsIter.solution)
+
+                if (validSolution) {
+                    validSolutions++
+                }
+            }
+
+            println()
+            println("Valid solutions: $validSolutions")
+        }
+
+        test("random while") {
+            while (true) {
+                val rows = 200
+                val cols = 200
+                val (solution, andEqSystem) = randomAndEquationSystem(rows, cols)
+
+                if (!andEqSystem.isValid(solution)) {
+                    println("real solution is not valid")
+                    break
+                }
+
+                val xorEqSystem = andEqSystem.toXorEquationSystem()
+
+                xorEqSystem.solve()
+
+                val solutionsIter = xorEqSystem.solutionIterator()
+
+                var validSolutions = 0
+                while (solutionsIter.hasNext()) {
+                    solutionsIter.next()
+                    val validSolution = andEqSystem.isValid(solutionsIter.solution)
+
+
+                    if (validSolution) {
+                        validSolutions++
+                    }
+                }
+
+                if (validSolutions == 0) continue else {
+                    println()
+                    println("Valid solutions: $validSolutions")
+                    break
+                }
             }
         }
 
@@ -247,45 +338,81 @@ class AndEquationSystemTest : FunSpec({
             }
         }
 
-        xtest("random zero eqs count") {
+        test("random zero eqs count") {
+            val map = HashMap<Int, Long>()
+            val solutions = HashMap<Int, Long>()
+            var counter = 0L
+
             while (true) {
-                val rows = 20
-                val cols = 20
-                val (_, andEqSystem) = randomAndEquationSystem(rows, cols)
+                val rows = 200
+                val cols = 200
+                val (solution, andEqSystem) = randomAndEquationSystem(rows, cols)
 
                 val xorEqSystem = andEqSystem.toXorEquationSystem()
-                // val xorEqSystemInitial = xorEqSystem.clone()
+                //val xorEqSystemInitial = xorEqSystem.clone()
 
-                xorEqSystem.solve()
+                val solved = xorEqSystem.solve()
+                if (!solved) {
+                    map[-1] = map.getOrDefault(-1, 0) + 1
+                    continue
+                }
 
-                var j = cols
+                var j = 0
                 var zeroCounter = 0
-                while (j < rows * 2) {
+                while (j < rows) {
                     if (xorEqSystem.equations[j].isEmpty) {
                         zeroCounter++
                     }
                     j++
                 }
 
-                if (zeroCounter > 1) println(zeroCounter)
+                val solIt = xorEqSystem.solutionIterator()
+                var solutionCounter = 0
+                while (solIt.hasNext()) {
+                    solIt.next()
+                    val valid = andEqSystem.isValid(solIt.solution)
+                    if (valid) {
+                        solutionCounter++
+                    }
+                }
+                solutions[zeroCounter] = solutions.getOrDefault(zeroCounter, 0) + solutionCounter
 
-                /*println()
-                println("Equation system")
-                println(andEqSystem)
+                /*if (zeroCounter == 0) {
+                    println()
+                    println("Equation system")
+                    println(andEqSystem)
 
-                println()
-                println("Solution")
-                println(solution.toString(cols))
+                    println()
+                    println("Solution")
+                    println(solution.toString(cols))
 
-                println()
-                println("Equation system converted to xor")
-                println(xorEqSystemInitial)
+                    println()
+                    println("Equation system converted to xor")
+                    println(xorEqSystemInitial)
 
-                println()
-                println("Equation system solution")
-                println(xorEqSystem)
+                    println()
+                    println("Equation system solution")
+                    println(xorEqSystem)
 
-                break*/
+                    break
+                }*/
+
+                map[zeroCounter] = map.getOrDefault(zeroCounter, 0) + 1
+
+                if (counter % 1000 == 0L) {
+                    map.forEach { (t, u) ->
+                        println("$t = $u")
+                    }
+                    println("---------")
+                    solutions.forEach { (t, u) ->
+                        println("$t = $u")
+                    }
+                    println("---------")
+                }
+
+                counter++
+
+                continue
             }
         }
     }
