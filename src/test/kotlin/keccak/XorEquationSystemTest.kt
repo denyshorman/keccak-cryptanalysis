@@ -205,19 +205,19 @@ class XorEquationSystemTest : FunSpec({
             val solIter = system.solutionIterator()
 
             solIter.solution.toString(system.cols).shouldBe("0000")
-            solIter.mask.toString(system.cols).shouldBe("0000")
-            solIter.iterator.toString(system.cols).shouldBe("0000")
-            solIter.solutionsCount.shouldBe(1)
-            solIter.solutionIndex.shouldBe(-1)
+            solIter.iterator.mask.toString(system.cols).shouldBe("0000")
+            solIter.iterator.combination.toString(system.cols).shouldBe("0000")
+            solIter.iterator.solutionsCount.shouldBe(1)
+            solIter.iterator.solutionIndex.shouldBe(-1)
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("1010")
-            solIter.mask.toString(system.cols).shouldBe("0000")
-            solIter.iterator.toString(system.cols).shouldBe("0000")
-            solIter.solutionsCount.shouldBe(1)
-            solIter.solutionIndex.shouldBe(0)
+            solIter.iterator.mask.toString(system.cols).shouldBe("0000")
+            solIter.iterator.combination.toString(system.cols).shouldBe("0000")
+            solIter.iterator.solutionsCount.shouldBe(1)
+            solIter.iterator.solutionIndex.shouldBe(0)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeFalse()
@@ -234,25 +234,25 @@ class XorEquationSystemTest : FunSpec({
             val solIter = system.solutionIterator()
 
             solIter.solution.toString(system.cols).shouldBe("0000")
-            solIter.mask.toString(system.cols).shouldBe("0001")
-            solIter.iterator.toString(system.cols).shouldBe("0000")
-            solIter.solutionsCount.shouldBe(2)
-            solIter.solutionIndex.shouldBe(-1)
+            solIter.iterator.mask.toString(system.cols).shouldBe("0001")
+            solIter.iterator.combination.toString(system.cols).shouldBe("0000")
+            solIter.iterator.solutionsCount.shouldBe(2)
+            solIter.iterator.solutionIndex.shouldBe(-1)
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("1010")
-            solIter.iterator.toString(system.cols).shouldBe("0001")
-            solIter.solutionIndex.shouldBe(0)
+            solIter.iterator.combination.toString(system.cols).shouldBe("0001")
+            solIter.iterator.solutionIndex.shouldBe(0)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("0111")
-            solIter.iterator.toString(system.cols).shouldBe("0000")
-            solIter.solutionIndex.shouldBe(1)
+            solIter.iterator.combination.toString(system.cols).shouldBe("0000")
+            solIter.iterator.solutionIndex.shouldBe(1)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeFalse()
@@ -275,137 +275,137 @@ class XorEquationSystemTest : FunSpec({
             val solIter = system.solutionIterator()
 
             solIter.solution.toString(system.cols).shouldBe("000000000000")
-            solIter.mask.toString(system.cols).shouldBe("000010010011")
-            solIter.iterator.toString(system.cols).shouldBe("000000000000")
-            solIter.solutionsCount.shouldBe(16)
-            solIter.solutionIndex.shouldBe(-1)
+            solIter.iterator.mask.toString(system.cols).shouldBe("000010010011")
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000000000")
+            solIter.iterator.solutionsCount.shouldBe(16)
+            solIter.iterator.solutionIndex.shouldBe(-1)
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("101101100100")
-            solIter.iterator.toString(system.cols).shouldBe("000000000001")
-            solIter.solutionIndex.shouldBe(0)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000000001")
+            solIter.iterator.solutionIndex.shouldBe(0)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("011100001001")
-            solIter.iterator.toString(system.cols).shouldBe("000000000010")
-            solIter.solutionIndex.shouldBe(1)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000000010")
+            solIter.iterator.solutionIndex.shouldBe(1)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("000001101110")
-            solIter.iterator.toString(system.cols).shouldBe("000000000011")
-            solIter.solutionIndex.shouldBe(2)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000000011")
+            solIter.iterator.solutionIndex.shouldBe(2)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("110000000011")
-            solIter.iterator.toString(system.cols).shouldBe("000000010000")
-            solIter.solutionIndex.shouldBe(3)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000010000")
+            solIter.iterator.solutionIndex.shouldBe(3)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("111000110100")
-            solIter.iterator.toString(system.cols).shouldBe("000000010001")
-            solIter.solutionIndex.shouldBe(4)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000010001")
+            solIter.iterator.solutionIndex.shouldBe(4)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("001001011001")
-            solIter.iterator.toString(system.cols).shouldBe("000000010010")
-            solIter.solutionIndex.shouldBe(5)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000010010")
+            solIter.iterator.solutionIndex.shouldBe(5)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("010100111110")
-            solIter.iterator.toString(system.cols).shouldBe("000000010011")
-            solIter.solutionIndex.shouldBe(6)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000010011")
+            solIter.iterator.solutionIndex.shouldBe(6)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("100101010011")
-            solIter.iterator.toString(system.cols).shouldBe("000010000000")
-            solIter.solutionIndex.shouldBe(7)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000010000000")
+            solIter.iterator.solutionIndex.shouldBe(7)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("111011100100")
-            solIter.iterator.toString(system.cols).shouldBe("000010000001")
-            solIter.solutionIndex.shouldBe(8)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000010000001")
+            solIter.iterator.solutionIndex.shouldBe(8)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("001010001001")
-            solIter.iterator.toString(system.cols).shouldBe("000010000010")
-            solIter.solutionIndex.shouldBe(9)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000010000010")
+            solIter.iterator.solutionIndex.shouldBe(9)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("010111101110")
-            solIter.iterator.toString(system.cols).shouldBe("000010000011")
-            solIter.solutionIndex.shouldBe(10)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000010000011")
+            solIter.iterator.solutionIndex.shouldBe(10)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("100110000011")
-            solIter.iterator.toString(system.cols).shouldBe("000010010000")
-            solIter.solutionIndex.shouldBe(11)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000010010000")
+            solIter.iterator.solutionIndex.shouldBe(11)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("101110110100")
-            solIter.iterator.toString(system.cols).shouldBe("000010010001")
-            solIter.solutionIndex.shouldBe(12)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000010010001")
+            solIter.iterator.solutionIndex.shouldBe(12)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("011111011001")
-            solIter.iterator.toString(system.cols).shouldBe("000010010010")
-            solIter.solutionIndex.shouldBe(13)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000010010010")
+            solIter.iterator.solutionIndex.shouldBe(13)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("000010111110")
-            solIter.iterator.toString(system.cols).shouldBe("000010010011")
-            solIter.solutionIndex.shouldBe(14)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000010010011")
+            solIter.iterator.solutionIndex.shouldBe(14)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeTrue()
             solIter.next()
 
             solIter.solution.toString(system.cols).shouldBe("110011010011")
-            solIter.iterator.toString(system.cols).shouldBe("000000000000")
-            solIter.solutionIndex.shouldBe(15)
+            solIter.iterator.combination.toString(system.cols).shouldBe("000000000000")
+            solIter.iterator.solutionIndex.shouldBe(15)
             system.isValid(solIter.solution).shouldBeTrue()
 
             solIter.hasNext().shouldBeFalse()

@@ -292,19 +292,15 @@ class XorEquationSystem {
 
     //#region Inner classes
     inner class SolutionIterator {
-        val mask = BitSet(this@XorEquationSystem.cols)
-        val iterator = BitSet(this@XorEquationSystem.cols)
         val solution = BitSet(this@XorEquationSystem.cols)
-        var solutionIndex = -1L
-        val solutionsCount: Long
+        val iterator: CombinationIterator
 
         init {
-            initMask()
-            solutionsCount = pow(2, mask.setBitsCount())
+            iterator = CombinationIterator(this@XorEquationSystem.cols, calcMask())
         }
 
         fun hasNext(): Boolean {
-            return solutionIndex + 1 < solutionsCount
+            return iterator.hasNext()
         }
 
         fun next() {
@@ -314,17 +310,17 @@ class XorEquationSystem {
             var eqIndex = 0
             while (eqIndex < this@XorEquationSystem.rows) {
                 if (this@XorEquationSystem.equations[eqIndex].isEmpty) {
-                    if (iterator[eqIndex]) {
+                    if (iterator.combination[eqIndex]) {
                         solution[eqIndex] = true
                     }
                 } else {
                     var result = this@XorEquationSystem.results[eqIndex]
-                    var bitIndex = iterator.nextSetBit(eqIndex + 1)
+                    var bitIndex = iterator.combination.nextSetBit(eqIndex + 1)
                     while (bitIndex >= 0) {
                         if (this@XorEquationSystem.equations[eqIndex][bitIndex]) {
                             result = !result
                         }
-                        bitIndex = iterator.nextSetBit(bitIndex + 1)
+                        bitIndex = iterator.combination.nextSetBit(bitIndex + 1)
                     }
                     solution[eqIndex] = result
                 }
@@ -332,38 +328,27 @@ class XorEquationSystem {
             }
 
             if (cols > rows) {
-                var bitIndex = iterator.nextSetBit(rows)
+                var bitIndex = iterator.combination.nextSetBit(rows)
                 while (bitIndex >= 0) {
                     solution[bitIndex] = true
-                    bitIndex = iterator.nextSetBit(bitIndex + 1)
+                    bitIndex = iterator.combination.nextSetBit(bitIndex + 1)
                 }
             }
 
-            solutionIndex++
-            iteratorIncrement()
+            iterator.next()
         }
 
-        private fun initMask() {
+        private fun calcMask(): BitSet {
+            val mask = BitSet(this@XorEquationSystem.cols)
+
             var i = this@XorEquationSystem.rows - 1
             while (i >= 0) {
                 mask.or(this@XorEquationSystem.equations[i])
                 mask.clear(i)
                 i--
             }
-        }
 
-        private fun iteratorIncrement() {
-            var i = mask.previousSetBit(this@XorEquationSystem.cols - 1)
-
-            while (i >= 0) {
-                if (iterator[i]) {
-                    iterator.clear(i)
-                    i = mask.previousSetBit(i - 1)
-                } else {
-                    iterator.set(i)
-                    break
-                }
-            }
+            return mask
         }
     }
     //#endregion
