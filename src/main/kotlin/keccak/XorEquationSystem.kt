@@ -1,11 +1,12 @@
 package keccak
 
 import keccak.util.*
+import mu.KotlinLogging
 import java.util.*
 import kotlin.math.min
 
 class XorEquationSystem {
-    val rows: Int
+    val rows: Int get() = equations.size
     val cols: Int
     val equations: Array<BitSet>
     val results: BitSet
@@ -14,14 +15,12 @@ class XorEquationSystem {
         rows: Int,
         cols: Int,
     ) {
-        this.rows = rows
         this.cols = cols
         this.equations = Array(rows) { BitSet(cols) }
         this.results = BitSet(rows)
     }
 
     constructor(rows: Int, cols: Int, equations: Array<BitSet>, results: BitSet) {
-        this.rows = rows
         this.cols = cols
         this.equations = equations
         this.results = results
@@ -52,13 +51,13 @@ class XorEquationSystem {
     }
 
     fun isInvalid(eqIndex: Int): Boolean {
-        return equations[eqIndex].isEmpty() && results[eqIndex]
+        return equations[eqIndex].isEmpty && results[eqIndex]
     }
 
     fun isPartiallyEmpty(): Boolean {
         var i = 0
         while (i < rows) {
-            if (equations[i++].isEmpty()) return true
+            if (equations[i++].isEmpty) return true
         }
         return false
     }
@@ -118,7 +117,19 @@ class XorEquationSystem {
         }
     }
 
-    fun solve(): Boolean {
+    fun solve(
+        skipValidation: Boolean = false,
+        logProgress: Boolean = false,
+        progressStep: Int = 1024,
+    ): Boolean {
+        if (logProgress) {
+            if (!isPow2(progressStep)) {
+                throw IllegalArgumentException("progressStep must be a power of 2")
+            }
+
+            logger.info("Starting forward processing")
+        }
+
         var row = 0
         var col = 0
 
@@ -127,10 +138,129 @@ class XorEquationSystem {
             var found = false
 
             while (i < rows) {
-                if (isInvalid(i)) {
-                    return false
+                if (equations[i].isEmpty) {
+                    if (!skipValidation && results[i]) {
+                        return false
+                    }
+                } else {
+                    if (equations[i][col]) {
+                        found = true
+                        break
+                    }
                 }
 
+                i++
+            }
+
+            if (found) {
+                if (row != i) {
+                    exchange(row, i)
+                }
+
+                i = row + 1
+
+                while (i < rows) {
+                    if (!equations[i].isEmpty && equations[i][col]) {
+                        xor(i, row)
+
+                        if (!skipValidation && isInvalid(i)) {
+                            return false
+                        }
+                    }
+
+                    i++
+                }
+
+                row++
+
+                if (logProgress && modPow2(row, progressStep) == 0) {
+                    logger.info("Processed $row rows")
+                }
+            }
+
+            col++
+        }
+
+        if (logProgress) {
+            logger.info("Forward processing has been completed with $row rows processed. Starting backward processing")
+        }
+
+        row = rows - 1
+
+        while (row >= 0) {
+            if (equations[row].isEmpty) {
+                if (!skipValidation && results[row]) {
+                    return false
+                }
+            } else {
+                var i = row - 1
+                col = equations[row].nextSetBit(0)
+
+                while (i >= 0) {
+                    if (equations[i][col]) {
+                        xor(i, row)
+
+                        if (!skipValidation && isInvalid(i)) {
+                            return false
+                        }
+                    }
+
+                    i--
+                }
+            }
+
+            row--
+
+            if (logProgress && modPow2(row, progressStep) == 0) {
+                logger.info("Processed ${2 * rows - row} rows")
+            }
+        }
+
+        return true
+    }
+
+    fun hasSolution(): Boolean {
+        //#region Find equation that is equal to one and put it to top
+        var row = 0
+
+        while (row < rows) {
+            if (results[row]) {
+                if (row != 0) {
+                    results.exchange(0, row)
+                }
+                break
+            }
+            row++
+        }
+        //#endregion
+
+        //#region If the system does not have equations equal to 1, then the system has solutions
+        if (row == rows) {
+            return true
+        }
+        //#endregion
+
+        //#region Eliminate other equations equal to 1
+        row = 1
+
+        while (row < rows) {
+            if (results[row]) {
+                equations[row].xor(equations[0])
+                results[row] = false
+            }
+            row++
+        }
+        //#endregion
+
+        //#region Simplify equations equal to 0
+        row = 1
+        var col = 0
+
+        while (row < rows && col < cols) {
+            var i = row
+            var found = false
+
+            while (i < rows) {
                 if (equations[i][col]) {
                     found = true
                     break
@@ -149,10 +279,6 @@ class XorEquationSystem {
                 while (i < rows) {
                     if (equations[i][col]) {
                         xor(i, row)
-
-                        if (isInvalid(i)) {
-                            return false
-                        }
                     }
 
                     i++
@@ -167,31 +293,32 @@ class XorEquationSystem {
         col = row
 
         while (row >= 0 && col >= 0) {
-            if (equations[row].isEmpty) {
-                if (results[row]) {
-                    return false
+            var i = row - 1
+
+            while (i > 0) {
+                if (equations[i][col]) {
+                    xor(i, row)
                 }
-            } else {
-                var i = row - 1
 
-                while (i >= 0) {
-                    if (equations[i][col]) {
-                        xor(i, row)
-
-                        if (isInvalid(i)) {
-                            return false
-                        }
-                    }
-
-                    i--
-                }
+                i--
             }
 
             row--
             col--
         }
+        //#endregion
 
-        return true
+        //#region Substitute main equation
+        row = 1
+        while (row < rows) {
+            if (equations[0][row - 1] && equations[row][row - 1]) {
+                equations[0].xor(equations[row])
+            }
+            row++
+        }
+        //#endregion
+
+        return !equations[0].isEmpty
     }
 
     fun evaluate(vars: BitSet) {
@@ -352,4 +479,8 @@ class XorEquationSystem {
         }
     }
     //#endregion
+
+    companion object {
+        private val logger = KotlinLogging.logger {}
+    }
 }
