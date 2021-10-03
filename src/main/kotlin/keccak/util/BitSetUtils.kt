@@ -13,6 +13,16 @@ fun BitSet.setBitsCount(): Int {
     return cardinality()
 }
 
+fun BitSet.nextSetBitDefault(fromIndex: Int, defaultIfNotFound: Int): Int {
+    val bitIndex = nextSetBit(fromIndex)
+
+    return if (bitIndex == -1) {
+        defaultIfNotFound
+    } else {
+        bitIndex
+    }
+}
+
 fun BitSet.xor(bitIndex: Int, value: Boolean) {
     this[bitIndex] = this[bitIndex] xor value
 }

@@ -121,6 +121,8 @@ class XorEquationSystem {
         skipValidation: Boolean = false,
         logProgress: Boolean = false,
         progressStep: Int = 1024,
+        rowsMask: BitSet? = null,
+        colsMask: BitSet? = null,
     ): Boolean {
         if (logProgress) {
             if (!isPow2(progressStep)) {
@@ -130,8 +132,8 @@ class XorEquationSystem {
             logger.info("Starting forward processing")
         }
 
-        var row = 0
-        var col = 0
+        var row = rowsMask?.nextSetBitDefault(0, rows) ?: 0
+        var col = colsMask?.nextSetBitDefault(0, cols) ?: 0
 
         while (row < rows && col < cols) {
             var i = row
@@ -149,7 +151,7 @@ class XorEquationSystem {
                     }
                 }
 
-                i++
+                i = rowsMask?.nextSetBitDefault(i + 1, rows) ?: (i + 1)
             }
 
             if (found) {
@@ -157,7 +159,7 @@ class XorEquationSystem {
                     exchange(row, i)
                 }
 
-                i = row + 1
+                i = rowsMask?.nextSetBitDefault(row + 1, rows) ?: (row + 1)
 
                 while (i < rows) {
                     if (!equations[i].isEmpty && equations[i][col]) {
@@ -168,24 +170,24 @@ class XorEquationSystem {
                         }
                     }
 
-                    i++
+                    i = rowsMask?.nextSetBitDefault(i + 1, rows) ?: (i + 1)
                 }
 
-                row++
+                row = rowsMask?.nextSetBitDefault(row + 1, rows) ?: (row + 1)
 
                 if (logProgress && modPow2(row, progressStep) == 0) {
                     logger.info("Processed $row rows")
                 }
             }
 
-            col++
+            col = colsMask?.nextSetBitDefault(col + 1, cols) ?: (col + 1)
         }
 
         if (logProgress) {
             logger.info("Forward processing has been completed with $row rows processed. Starting backward processing")
         }
 
-        row = rows - 1
+        row = rowsMask?.previousSetBit(rows - 1) ?: (rows - 1)
 
         while (row >= 0) {
             if (equations[row].isEmpty) {
@@ -193,23 +195,37 @@ class XorEquationSystem {
                     return false
                 }
             } else {
-                var i = row - 1
-                col = equations[row].nextSetBit(0)
+                var i = rowsMask?.previousSetBit(row - 1) ?: (row - 1)
 
-                while (i >= 0) {
-                    if (equations[i][col]) {
-                        xor(i, row)
-
-                        if (!skipValidation && isInvalid(i)) {
-                            return false
-                        }
+                if (i >= 0) {
+                    if (colsMask == null) {
+                        col = equations[row].nextSetBit(0)
+                    } else {
+                        col = 0
+                        do {
+                            col = colsMask.nextSetBit(col)
+                            if (col == -1) break
+                            col = equations[row].nextSetBit(col)
+                        } while (col >= 0 && !colsMask[col])
                     }
 
-                    i--
+                    if (col >= 0) {
+                        while (i >= 0) {
+                            if (equations[i][col]) {
+                                xor(i, row)
+
+                                if (!skipValidation && isInvalid(i)) {
+                                    return false
+                                }
+                            }
+
+                            i = rowsMask?.previousSetBit(i - 1) ?: (i - 1)
+                        }
+                    }
                 }
             }
 
-            row--
+            row = rowsMask?.previousSetBit(row - 1) ?: (row - 1)
 
             if (logProgress && modPow2(row, progressStep) == 0) {
                 logger.info("Processed ${2 * rows - row} rows")
