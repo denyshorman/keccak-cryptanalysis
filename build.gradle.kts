@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.5.30"
+    kotlin("jvm") version "1.5.31"
     application
 }
 
@@ -10,10 +10,13 @@ repositories {
     mavenCentral()
 }
 
-val kotestVersion = "4.6.2"
+val kotestVersion = "4.6.3"
 
 dependencies {
     implementation("org.web3j:core:5.0.0")
+    implementation("io.github.microutils:kotlin-logging-jvm:2.0.11")
+    implementation("ch.qos.logback:logback-classic:1.2.6")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
 
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
@@ -25,7 +28,7 @@ dependencies {
 tasks {
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().all {
         with(kotlinOptions) {
-            jvmTarget = "15"
+            jvmTarget = "16"
 
             freeCompilerArgs = freeCompilerArgs + listOf(
                 "-Xjsr305=strict",
