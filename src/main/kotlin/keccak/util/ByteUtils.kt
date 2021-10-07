@@ -73,6 +73,27 @@ fun ByteArray.littleEndianBytesToLong(): Long {
     return value
 }
 
+fun ByteArray.toBitSet(): BitSet {
+    val bytes = this
+    val bits = BitSet(bytes.size * Byte.SIZE_BITS)
+
+    var byteIndex = 0
+    var bitIndex = 0
+
+    while (byteIndex < bytes.size) {
+        val byte = bytes[byteIndex]
+        var bitIndexInByte = 0
+        while (bitIndexInByte < Byte.SIZE_BITS) {
+            bits[bitIndex] = byte.getBit(bitIndexInByte)
+            bitIndex++
+            bitIndexInByte++
+        }
+        byteIndex++
+    }
+
+    return bits
+}
+
 fun ByteArray.toBitGroup(): BitGroup {
     val bytes = this
     val bits = BitGroup(bytes.size * Byte.SIZE_BITS)

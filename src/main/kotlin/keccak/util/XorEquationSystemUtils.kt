@@ -109,18 +109,6 @@ fun XorEquationSystem.toBitEquation(eqIndex: Int): XorEquation {
     return XorEquation(cols, eq, res)
 }
 
-// TODO: Test this method
-fun XorEquationSystem.substitute(with: XorEquationSystem) {
-    var eqIndex = 0
-    while (eqIndex < rows) {
-        if (with.equations[eqIndex][eqIndex] && equations[eqIndex][eqIndex]) {
-            equations[eqIndex].xor(with.equations[eqIndex])
-            results[eqIndex] = results[eqIndex] xor with.results[eqIndex]
-        }
-        eqIndex++
-    }
-}
-
 fun XorEquationSystem.toNodeEquationSystem(): NodeEquationSystem {
     val variables = Array(cols) { Variable("x${it + 1}") }
 
@@ -227,6 +215,29 @@ fun Array<XorEquationSystem>.littleEndianBytesToLong(cols: Int): XorEquationSyst
     }
 
     return system
+}
+
+fun Array<XorEquationSystem>.merge(): XorEquationSystem {
+    val rows = sumOf { it.rows }
+    val cols = maxOf { it.cols }
+
+    val mergeSystem = XorEquationSystem(rows, cols)
+
+    var mergedEqIndex = 0
+    var systemIndex = 0
+
+    while (systemIndex < size) {
+        var systemEqIndex = 0
+        while (systemEqIndex < this[systemIndex].rows) {
+            mergeSystem.equations[mergedEqIndex] = this[systemIndex].equations[systemEqIndex].clone() as BitSet
+            mergeSystem.results[mergedEqIndex] = this[systemIndex].results[systemEqIndex]
+            systemEqIndex++
+            mergedEqIndex++
+        }
+        systemIndex++
+    }
+
+    return mergeSystem
 }
 
 fun randomXorEquationSystem(rows: Int, cols: Int, random: Random = Random): XorEquationSystem {

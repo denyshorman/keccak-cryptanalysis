@@ -38,9 +38,9 @@ class AndEquationSystem {
     }
 
     data class Equation(
-        val andOpLeft: BitSet,
-        val andOpRight: BitSet,
-        val rightXor: BitSet,
+        var andOpLeft: BitSet,
+        var andOpRight: BitSet,
+        var rightXor: BitSet,
     ) {
         fun clone(): Equation {
             return Equation(

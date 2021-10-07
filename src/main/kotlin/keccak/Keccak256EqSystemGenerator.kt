@@ -3,306 +3,54 @@ package keccak
 import keccak.util.*
 import java.util.*
 
-//#region General Utils
-fun Array<KeccakPatched.CustomByte>.toByteArray(): ByteArray {
-    return map { it.byte }.toByteArray()
-}
-
-fun Array<KeccakPatched.CustomByte>.toEquationSystem(): XorEquationSystem {
-    val rows = size * this[0].eqSystem.rows
-    val cols = this[0].eqSystem.cols
-
-    val system = XorEquationSystem(rows, cols)
-
-    var eqIndex = 0
-    var byteIndex = 0
-    while (byteIndex < size) {
-        var bitIndex = 0
-        while (bitIndex < this[byteIndex].eqSystem.rows) {
-            system.equations[eqIndex] = this[byteIndex].eqSystem.equations[bitIndex].clone() as BitSet
-            system.results[eqIndex] = this[byteIndex].eqSystem.results[bitIndex]
-            bitIndex++
-            eqIndex++
-        }
-        byteIndex++
-    }
-
-    return system
-}
-
-fun prepareXorEquationSystem(
-    hash: XorEquationSystem,
-    constraints: List<KeccakPatched.Constraint>,
-    constantVarsStartIndex: Int,
-): XorAndEquationSystem {
-    //#region Prerequisite: hash equations must be prepared
-    //hash.solve()
-    //#endregion
-
-    val constraintVarsCount = hash.cols - constantVarsStartIndex
-    val rows = constraintVarsCount * 2
-    val cols = constraintVarsCount * 3 + constantVarsStartIndex
-
-    val xorSystem = XorEquationSystem(rows, cols)
-    val andSystem = AndEquationSystem(constraintVarsCount, cols)
-
-    var xorEqIndex = 0
-    var andEqIndex = 0
-
-    for (constraint in constraints) {
-        var i = 0
-        while (i < constraint.leftSystem.rows) {
-            var j = 0
-            var varExists = false
-            val constraintVarIndex = constraint.varSystem.equations[i].nextSetBit(constantVarsStartIndex)
-
-            while (j < hash.rows) {
-                if (!varExists && hash.equations[j][constraintVarIndex]) {
-                    varExists = true
-                }
-
-                val idx = hash.equations[j].nextSetBit(0)
-
-                if (idx != -1 && idx < constantVarsStartIndex) {
-                    if (constraint.leftSystem.equations[i][idx]) {
-                        constraint.leftSystem.equations[i].xor(hash.equations[j])
-                        constraint.leftSystem.results[i] = constraint.leftSystem.results[i] xor hash.results[j]
-                    }
-
-                    if (constraint.rightSystem.equations[i][idx]) {
-                        constraint.rightSystem.equations[i].xor(hash.equations[j])
-                        constraint.rightSystem.results[i] = constraint.rightSystem.results[i] xor hash.results[j]
-                    }
-                }
-
-                j++
-            }
-
-            if (varExists) {
-                val newVarIndexLeft = constantVarsStartIndex + constraintVarsCount + xorEqIndex
-                andSystem.equations[andEqIndex].andOpLeft.set(newVarIndexLeft)
-                xorSystem.equations[xorEqIndex].xor(constraint.leftSystem.equations[i])
-                xorSystem.equations[xorEqIndex].clear(0, constantVarsStartIndex)
-                xorSystem.equations[xorEqIndex].set(newVarIndexLeft)
-                xorSystem.results[xorEqIndex] = constraint.leftSystem.results[i]
-
-                xorEqIndex++
-
-                val newVarIndexRight = constantVarsStartIndex + constraintVarsCount + xorEqIndex
-                andSystem.equations[andEqIndex].andOpRight.set(newVarIndexRight)
-                xorSystem.equations[xorEqIndex].xor(constraint.rightSystem.equations[i])
-                xorSystem.equations[xorEqIndex].clear(0, constantVarsStartIndex)
-                xorSystem.equations[xorEqIndex].set(newVarIndexRight)
-                xorSystem.results[xorEqIndex] = constraint.rightSystem.results[i]
-
-                andSystem.equations[andEqIndex].rightXor.set(constraintVarIndex)
-
-                xorEqIndex++
-                andEqIndex++
-            }
-
-            i++
-        }
-    }
-
-    return XorAndEquationSystem(xorSystem, andSystem)
-}
-
-fun prepareAndEquationSystemWithLeftSideOnly(
-    hash: XorEquationSystem,
-    constraints: List<KeccakPatched.Constraint>,
-    constantVarsStartIndex: Int,
-): XorEquationSystem {
-    //#region Prerequisite: hash equations must be prepared
-    //hash.solve()
-    //#endregion
-
-    val constraintVarsCount = hash.cols - constantVarsStartIndex
-    val rows = constraintVarsCount
-    val cols = constraintVarsCount * 2 + constantVarsStartIndex
-
-    val system = XorEquationSystem(rows, cols)
-
-    var eqIndex = 0
-
-    for (constraint in constraints) {
-        var i = 0
-        while (i < constraint.leftSystem.rows) {
-            var j = 0
-            var varExists = false
-            val system0 = constraint.leftSystem
-
-            while (j < hash.rows) {
-                if (!varExists) {
-                    val constraintVarIndex = constraint.varSystem.equations[i].nextSetBit(constantVarsStartIndex)
-
-                    if (hash.equations[j][constraintVarIndex]) {
-                        varExists = true
-                    }
-                }
-
-                val idx = hash.equations[j].nextSetBit(0)
-
-                if (idx != -1 && idx < constantVarsStartIndex) {
-                    if (system0.equations[i][idx]) {
-                        system0.equations[i].xor(hash.equations[j])
-                        system0.results[i] = system0.results[i] xor hash.results[j]
-                    }
-                }
-
-                j++
-            }
-
-            if (varExists) {
-                system.equations[eqIndex].xor(system0.equations[i])
-                system.equations[eqIndex].clear(0, constantVarsStartIndex)
-                system.equations[eqIndex].set(constantVarsStartIndex + constraintVarsCount + eqIndex)
-                system.results[eqIndex] = system0.results[i]
-
-                eqIndex++
-            }
-
-            i++
-        }
-    }
-
-    return system
-}
-
-fun prepareAndEquationSystemDeprecated(
-    hash: XorEquationSystem,
-    constraints: List<KeccakPatched.Constraint>,
-    constantVarsStartIndex: Int,
-): AndEquationSystem {
-    //#region Prerequisite: hash equations must be prepared
-    //#endregion
-
-    //#region Get rid of main variables in constraint list
-    var hashEqIndex = 0
-    while (hashEqIndex < hash.rows) {
-        for (constraint in constraints) {
-            constraint.leftSystem.substitute(hash)
-            constraint.rightSystem.substitute(hash)
-        }
-        hashEqIndex++
-    }
-    //#endregion
-
-    //#region Collect only used constrains
-    //#region Calculate mask
-    val usedConstraintVarsMask = BitSet(hash.cols)
-    hashEqIndex = 0
-    while (hashEqIndex < hash.rows) {
-        val clonedEq = hash.equations[hashEqIndex].clone() as BitSet
-        clonedEq.clear(0, constantVarsStartIndex)
-        usedConstraintVarsMask.or(clonedEq)
-        hashEqIndex++
-    }
-    //#endregion
-
-    //#region Calc used vars
-    val usedConstraintVarsCount = usedConstraintVarsMask.setBitsCount()
-    //#endregion
-
-    //#region Allocate memory for equation system
-    val andEquationSystem = AndEquationSystem(usedConstraintVarsCount, usedConstraintVarsCount)
-    //#endregion
-
-    //#region Populate equation system
-    val constantVarsOffset = usedConstraintVarsMask.nextSetBit(0)
-    var andEqIndex = 0
-
-    for (constraint in constraints) {
-        var constraintEqIndex = 0
-        while (constraintEqIndex < constraint.varSystem.rows) {
-            val constraintEqVarIndex = constraint.varSystem.equations[constraintEqIndex].nextSetBit(0)
-            if (usedConstraintVarsMask[constraintEqVarIndex]) {
-                // TODO: Use offset
-                // TODO: Compact vars
-                andEquationSystem.equations[andEqIndex].andOpLeft.xor(constraint.leftSystem.equations[constraintEqIndex])
-                andEquationSystem.equations[andEqIndex].andOpRight.xor(constraint.rightSystem.equations[constraintEqIndex])
-                andEquationSystem.equations[andEqIndex].rightXor.xor(constraint.varSystem.equations[constraintEqIndex])
-
-                andEquationSystem.andOpLeftResults[andEqIndex] =
-                    andEquationSystem.andOpLeftResults[andEqIndex] xor constraint.leftSystem.results[constraintEqIndex]
-                andEquationSystem.andOpRightResults[andEqIndex] =
-                    andEquationSystem.andOpRightResults[andEqIndex] xor constraint.rightSystem.results[constraintEqIndex]
-                andEquationSystem.rightXorResults[andEqIndex] =
-                    andEquationSystem.rightXorResults[andEqIndex] xor constraint.varSystem.results[constraintEqIndex]
-
-                andEqIndex++
-            }
-            constraintEqIndex++
-        }
-    }
-    //#endregion
-    //#endregion
-
-    return andEquationSystem
-}
-//#endregion
-
-class KeccakPatched private constructor() {
+class Keccak256EqSystemGenerator private constructor() {
     //#region Public API
     fun hash(
         message: ByteArray,
-        replaceRules: List<BitReplacementSubsystem.ReplaceRule> = emptyList(),
+        replaceRules: List<ReplaceRule> = emptyList(),
         replaceRulesInverse: Boolean = true,
         replacePadding: Boolean = true,
     ): Result {
-        val paddedMessage = message.pad()
+        val paddedMessage = byteArrayOf(*message, *buildPadding(message.size))
         val longBlocks = paddedMessage.blocks().longBlocks()
 
-        val varsCount = BLOCK_SIZE_BITS + longBlocks.size * 38400
+        val constraintsCount = longBlocks.size * CONSTRAINT_VARS_PER_BLOCK
         val constraintVarIndex = longBlocks.size * BLOCK_SIZE_BITS
+        val allVarsCount = constraintVarIndex + constraintsCount
 
-        val eqSystemBlocks = BitReplacementSubsystem2.getBlocks(
-            message,
+        val eqSystemBlocks = message.blocks(
             replaceRules,
             replaceRulesInverse,
             replacePadding,
-            BLOCK_SIZE_BYTES,
-            varsCount,
+            allVarsCount,
         )
 
         val blocks = longBlocks.zip(eqSystemBlocks) { a, b -> Block(a, b) }
 
         val state = State(
-            state1 = Array(STATE_SIZE) { XorEquationSystem(Long.SIZE_BITS, varsCount) },
+            state1 = Array(STATE_SIZE) { XorEquationSystem(Long.SIZE_BITS, allVarsCount) },
             constraintVarIndex = constraintVarIndex,
-            allVarsCount = varsCount,
+            constraintsCount = constraintsCount,
+            allVarsCount = allVarsCount,
         )
 
-        val bytes = state.run {
+        val (xorEquationSystem, hash) = state.run {
+            populateMessageVariables(paddedMessage)
             absorb(blocks)
             squeeze()
         }
 
-        return Result(bytes, state.constraints)
+        val xorAndEquationSystem = XorAndEquationSystem(xorEquationSystem, state.andEqSystem)
+
+        return Result(
+            xorAndEquationSystem,
+            state.varValues,
+            hash,
+        )
     }
     //#endregion
 
     //#region Implementation
-    private fun ByteArray.pad(): ByteArray {
-        val message = this
-        val paddingSize = BLOCK_SIZE_BYTES - message.size % BLOCK_SIZE_BYTES
-        val padding = mutableListOf<Byte>()
-
-        if (paddingSize == 1) {
-            padding.add(0x81.toByte())
-        } else if (paddingSize >= 2) {
-            padding.add(0x01)
-
-            repeat(paddingSize - 2) {
-                padding.add(0x00)
-            }
-
-            padding.add(0x80.toByte())
-        }
-
-        return message + padding
-    }
-
     private fun ByteArray.blocks(): List<ByteArray> {
         return asSequence()
             .chunked(BLOCK_SIZE_BYTES)
@@ -321,6 +69,137 @@ class KeccakPatched private constructor() {
                     .toLongArray()
             }
             .toList()
+    }
+
+    private fun Array<XorEquationSystem>.blocks(cols: Int): List<Array<XorEquationSystem>> {
+        return asSequence()
+            .chunked(BLOCK_SIZE_BYTES)
+            .map { block ->
+                block.asSequence()
+                    .chunked(Long.SIZE_BYTES)
+                    .map { it.toTypedArray().littleEndianBytesToLong(cols) }
+                    .toList()
+                    .toTypedArray()
+            }
+            .toList()
+    }
+
+    private fun ByteArray.blocks(
+        replaceRules: List<ReplaceRule> = emptyList(),
+        replaceRulesInverse: Boolean = false,
+        replacePadding: Boolean = false,
+        cols: Int,
+    ): List<Array<XorEquationSystem>> {
+        val message = this
+        val padding = buildPadding(message.size)
+
+        val messageMask = buildMessageMask(message.size, replaceRules, replaceRulesInverse)
+        val paddingMask = buildPaddingMask(padding.size, replacePadding)
+
+        val paddedMessage = byteArrayOf(*message, *padding)
+        val paddedMessageMask = arrayOf(*messageMask, *paddingMask)
+
+        val preparedMessage = paddedMessage.setVariables(paddedMessageMask, cols)
+
+        return preparedMessage.blocks(cols)
+    }
+
+    private fun buildPadding(messageSize: Int): ByteArray {
+        val paddingSize = BLOCK_SIZE_BYTES - messageSize % BLOCK_SIZE_BYTES
+        val padding = ByteArray(paddingSize) { 0 }
+
+        if (paddingSize == 1) {
+            padding[0] = 0x81.toByte()
+        } else if (paddingSize >= 2) {
+            padding[0] = 0x01.toByte()
+
+            var i = 1
+            val j = paddingSize - 2
+
+            while (i < j) {
+                padding[i++] = 0x00
+            }
+
+            padding[paddingSize - 1] = 0x80.toByte()
+        }
+
+        return padding
+    }
+
+    private fun buildMessageMask(
+        messageSize: Int,
+        replaceRules: List<ReplaceRule>,
+        replaceRulesInverse: Boolean,
+    ): Array<BooleanArray> {
+        val mask = Array(messageSize) { BooleanArray(Byte.SIZE_BITS) { false } }
+
+        replaceRules.forEach { rule ->
+            when (rule) {
+                is ByteRule -> {
+                    val byte = mask[rule.index]
+                    var i = 0
+                    while (i < byte.size) {
+                        byte[i++] = true
+                    }
+                }
+                is ByteRangeRule -> {
+                    var i = rule.fromIndex
+                    while (i <= rule.toIndex) {
+                        val byte = mask[i++]
+                        var j = 0
+                        while (j < byte.size) {
+                            byte[j++] = true
+                        }
+                    }
+                }
+                is BitRule -> {
+                    mask[rule.byteIndex][rule.bitIndex] = true
+                }
+            }
+        }
+
+        if (replaceRulesInverse) {
+            var i = 0
+            while (i < mask.size) {
+                val byte = mask[i++]
+                var j = 0
+                while (j < byte.size) {
+                    byte[j] = byte[j].not()
+                    j++
+                }
+            }
+        }
+
+        return mask
+    }
+
+    private fun buildPaddingMask(
+        paddingSize: Int,
+        replacePadding: Boolean,
+    ): Array<BooleanArray> {
+        return Array(paddingSize) { BooleanArray(Byte.SIZE_BITS) { replacePadding } }
+    }
+
+    private fun ByteArray.setVariables(mask: Array<BooleanArray>, cols: Int): Array<XorEquationSystem> {
+        val bytes = this
+        var globalBitIndex = 0
+
+        return Array(bytes.size) { byteIndex ->
+            val eqSystem = bytes[byteIndex].toEquationSystem(cols)
+            var bitIndex = 0
+
+            while (bitIndex < eqSystem.rows) {
+                if (mask[byteIndex][bitIndex]) {
+                    eqSystem.equations[bitIndex][globalBitIndex] = true
+                    eqSystem.results[bitIndex] = false
+                }
+
+                bitIndex++
+                globalBitIndex++
+            }
+
+            eqSystem
+        }
     }
 
     private fun State.absorb(blocks: List<Block>) {
@@ -385,7 +264,7 @@ class KeccakPatched private constructor() {
             eqSystem.xor(
                 b1[x[0]],
                 b1[x[1]],
-                recordConstraint(b1[x[1]].clone(), b1[x[2]].clone(), (b0[x[1]] and b0[x[2]])),
+                recordConstraint(b1[x[1]], b1[x[2]], (b0[x[1]] and b0[x[2]])),
             )
             state1[x[0]] = eqSystem
         }
@@ -394,7 +273,7 @@ class KeccakPatched private constructor() {
         state1[0].results.xor(ROUND_CONSTANTS_FIXED_BIT_SET[round].bitSet)
     }
 
-    private fun State.squeeze(): Array<CustomByte> {
+    private fun State.squeeze(): Pair<XorEquationSystem, ByteArray> {
         val hashEqSystem = arrayOf(
             *state1[0].toLittleEndianBytes(),
             *state1[5].toLittleEndianBytes(),
@@ -409,9 +288,19 @@ class KeccakPatched private constructor() {
             *state0[15].toLittleEndianBytes(),
         )
 
-        return Array(OUTPUT_SIZE_BYTES) { i ->
-            CustomByte(hashBytes[i], hashEqSystem[i])
+        var byteIndex = 0
+        while (byteIndex < hashBytes.size) {
+            var bitIndex = 0
+            while (bitIndex < Byte.SIZE_BITS) {
+                if (hashBytes[byteIndex].getBit(bitIndex)) {
+                    hashEqSystem[byteIndex].results.flip(bitIndex)
+                }
+                bitIndex++
+            }
+            byteIndex++
         }
+
+        return Pair(hashEqSystem.merge(), hashBytes)
     }
 
     private fun State.recordConstraint(
@@ -423,14 +312,42 @@ class KeccakPatched private constructor() {
 
         var i = 0
         while (i < Long.SIZE_BITS) {
+            val andSystemEqIndex = constraintVarIndex - messageCount
+
+            andEqSystem.equations[andSystemEqIndex].andOpLeft = leftSystem.equations[i].clone() as BitSet
+            andEqSystem.equations[andSystemEqIndex].andOpRight = rightSystem.equations[i].clone() as BitSet
+            andEqSystem.equations[andSystemEqIndex].rightXor.set(constraintVarIndex)
+
+            andEqSystem.andOpLeftResults[andSystemEqIndex] = leftSystem.results[i]
+            andEqSystem.andOpRightResults[andSystemEqIndex] = rightSystem.results[i]
+
             system.equations[i].set(constraintVarIndex)
+
+            if (result.getBit(i)) {
+                varValues.set(constraintVarIndex)
+            }
+
             constraintVarIndex++
             i++
         }
 
-        constraints.add(Constraint(leftSystem, rightSystem, system, result))
-
         return system
+    }
+
+    private fun State.populateMessageVariables(paddedMessage: ByteArray) {
+        var generalVarIndex = 0
+        var byteIndex = 0
+        while (byteIndex < paddedMessage.size) {
+            var bitIndex = 0
+            while (bitIndex < Byte.SIZE_BITS) {
+                if (paddedMessage[byteIndex].getBit(bitIndex)) {
+                    varValues.set(generalVarIndex)
+                }
+                bitIndex++
+                generalVarIndex++
+            }
+            byteIndex++
+        }
     }
     //#endregion
 
@@ -438,10 +355,14 @@ class KeccakPatched private constructor() {
     private class State(
         val state0: LongArray = LongArray(STATE_SIZE) { 0 },
         val state1: Array<XorEquationSystem>,
-        val constraints: LinkedList<Constraint> = LinkedList<Constraint>(),
         var constraintVarIndex: Int,
+        val constraintsCount: Int,
         val allVarsCount: Int,
-    )
+    ) {
+        val messageCount = allVarsCount - constraintsCount
+        val varValues = BitSet(allVarsCount)
+        val andEqSystem = AndEquationSystem(constraintsCount, allVarsCount)
+    }
 
     private class Block(
         val block0: LongArray,
@@ -450,48 +371,16 @@ class KeccakPatched private constructor() {
     //#endregion
 
     //#region Public Models
-    data class CustomByte(
-        val byte: Byte,
-        val eqSystem: XorEquationSystem,
-    ) {
-        override fun toString(): String {
-            return "$byte = $eqSystem"
-        }
-    }
-
-    data class Result(
-        val bytes: Array<CustomByte>,
-        val constraints: List<Constraint>,
-    ) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Result
-
-            if (!bytes.contentEquals(other.bytes)) return false
-            if (constraints != other.constraints) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = bytes.contentHashCode()
-            result = 31 * result + constraints.hashCode()
-            return result
-        }
-
-        override fun toString(): String {
-            return "Result(bytes=${bytes.contentToString()}, constraints=$constraints)"
-        }
-    }
-
-    data class Constraint(
-        val leftSystem: XorEquationSystem,
-        val rightSystem: XorEquationSystem,
-        val varSystem: XorEquationSystem,
-        val result: Long,
+    class Result(
+        val equationSystem: XorAndEquationSystem,
+        val varValues: BitSet,
+        val hash: ByteArray,
     )
+
+    sealed interface ReplaceRule
+    data class ByteRule(val index: Int) : ReplaceRule
+    data class ByteRangeRule(val fromIndex: Int, val toIndex: Int) : ReplaceRule
+    data class BitRule(val byteIndex: Int, val bitIndex: Int) : ReplaceRule
     //#endregion
 
     companion object {
@@ -501,7 +390,7 @@ class KeccakPatched private constructor() {
         private const val STATE_SIZE = LANE_SIZE * LANE_SIZE
         private const val BLOCK_SIZE_BYTES = 136
         private const val BLOCK_SIZE_BITS = BLOCK_SIZE_BYTES * Byte.SIZE_BITS
-        private const val OUTPUT_SIZE_BYTES = 32
+        private const val CONSTRAINT_VARS_PER_BLOCK = 38400
 
         private val ROUND_CONSTANTS = longArrayOf(
             0x0000000000000001uL.toLong(),
@@ -677,7 +566,7 @@ class KeccakPatched private constructor() {
         //#endregion
 
         //#region Keccak Implementations
-        val KECCAK_256 = KeccakPatched()
+        val INSTANCE = Keccak256EqSystemGenerator()
         //#endregion
     }
 }

@@ -26,10 +26,10 @@ class XorEquationSystem {
         this.results = results
     }
 
-    fun isValid(vars: BitSet): Boolean {
+    fun isValid(solution: BitSet): Boolean {
         var i = 0
         while (i < rows) {
-            if (equations[i].evaluate(vars) != results[i]) {
+            if (equations[i].evaluate(solution) != results[i]) {
                 return false
             }
             i++
