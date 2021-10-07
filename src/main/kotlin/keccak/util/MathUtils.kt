@@ -9,3 +9,9 @@ fun pow(a: Int, b: Int): Long {
     }
     return count
 }
+
+fun isPow2(n: Int): Boolean = ((n - 1) and n) == 0
+
+fun modPow2(n: Int, p2: Int): Int = n and (p2 - 1)
+
+fun modFast(n: Int, b: Int): Int = if (isPow2(b)) modPow2(n, b) else n % b

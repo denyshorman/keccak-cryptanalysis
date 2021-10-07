@@ -1,6 +1,7 @@
 package keccak
 
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import kotlin.test.assertEquals
 
 class NodesTest : FunSpec({
@@ -50,6 +51,56 @@ class NodesTest : FunSpec({
                 println(input)
                 println(flattenedInput)
                 assertEquals(expected, flattenedInput)
+            }
+        }
+
+        context("groupBy") {
+            test("1") {
+                val node = Bit(true)
+                val grouped = node.groupBy("x")
+                grouped.shouldBe(node)
+            }
+
+            test("2") {
+                val node = Bit(true) xor "a"
+                val grouped = node.groupBy("x")
+                grouped.shouldBe(node)
+            }
+
+            test("3") {
+                val node = Bit(true) xor "a" xor "x1"
+                val grouped = node.groupBy("x")
+                grouped.shouldBe(node)
+            }
+
+            test("4") {
+                val node = Bit(true) xor "a" xor "x1" xor "x2"
+                val grouped = node.groupBy("x")
+                grouped.shouldBe(node)
+            }
+
+            test("5") {
+                val node = Bit(true) xor "a" xor ("a" and "x1") xor ("b" and "x1")
+                val grouped = node.groupBy("x")
+                grouped.shouldBe(Bit(true) xor "a" xor ("x1" and ("a" xor "b")))
+            }
+
+            test("6") {
+                val node = ("a" and "x1") xor ("b" and "x1") xor ("a" and "c" and "x1" and "x2") xor ("d" and "x1" and "x2")
+                val grouped = node.groupBy("x")
+                grouped.shouldBe(("x1" and ("a" xor "b")) xor ("x1" and "x2" and (("a" and "c") xor "d")))
+            }
+        }
+
+        context("groups") {
+            test("1") {
+                val node = ("x1" and ("a" xor "b")) xor ("x1" and "x2" and (("a" and "c") xor "d"))
+                val groups = node.groups("x")
+
+                groups.shouldBe(mapOf(
+                    Pair("x1".toVar(), ("a" xor "b")),
+                    Pair("x1" and "x2", (("a" and "c") xor "d")),
+                ))
             }
         }
     }

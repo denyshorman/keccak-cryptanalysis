@@ -30,7 +30,146 @@ fun Array<KeccakPatched.CustomByte>.toEquationSystem(): XorEquationSystem {
     return system
 }
 
-fun prepareAndEquationSystem(
+fun prepareXorEquationSystem(
+    hash: XorEquationSystem,
+    constraints: List<KeccakPatched.Constraint>,
+    constantVarsStartIndex: Int,
+): XorAndEquationSystem {
+    //#region Prerequisite: hash equations must be prepared
+    //hash.solve()
+    //#endregion
+
+    val constraintVarsCount = hash.cols - constantVarsStartIndex
+    val rows = constraintVarsCount * 2
+    val cols = constraintVarsCount * 3 + constantVarsStartIndex
+
+    val xorSystem = XorEquationSystem(rows, cols)
+    val andSystem = AndEquationSystem(constraintVarsCount, cols)
+
+    var xorEqIndex = 0
+    var andEqIndex = 0
+
+    for (constraint in constraints) {
+        var i = 0
+        while (i < constraint.leftSystem.rows) {
+            var j = 0
+            var varExists = false
+            val constraintVarIndex = constraint.varSystem.equations[i].nextSetBit(constantVarsStartIndex)
+
+            while (j < hash.rows) {
+                if (!varExists && hash.equations[j][constraintVarIndex]) {
+                    varExists = true
+                }
+
+                val idx = hash.equations[j].nextSetBit(0)
+
+                if (idx != -1 && idx < constantVarsStartIndex) {
+                    if (constraint.leftSystem.equations[i][idx]) {
+                        constraint.leftSystem.equations[i].xor(hash.equations[j])
+                        constraint.leftSystem.results[i] = constraint.leftSystem.results[i] xor hash.results[j]
+                    }
+
+                    if (constraint.rightSystem.equations[i][idx]) {
+                        constraint.rightSystem.equations[i].xor(hash.equations[j])
+                        constraint.rightSystem.results[i] = constraint.rightSystem.results[i] xor hash.results[j]
+                    }
+                }
+
+                j++
+            }
+
+            if (varExists) {
+                val newVarIndexLeft = constantVarsStartIndex + constraintVarsCount + xorEqIndex
+                andSystem.equations[andEqIndex].andOpLeft.set(newVarIndexLeft)
+                xorSystem.equations[xorEqIndex].xor(constraint.leftSystem.equations[i])
+                xorSystem.equations[xorEqIndex].clear(0, constantVarsStartIndex)
+                xorSystem.equations[xorEqIndex].set(newVarIndexLeft)
+                xorSystem.results[xorEqIndex] = constraint.leftSystem.results[i]
+
+                xorEqIndex++
+
+                val newVarIndexRight = constantVarsStartIndex + constraintVarsCount + xorEqIndex
+                andSystem.equations[andEqIndex].andOpRight.set(newVarIndexRight)
+                xorSystem.equations[xorEqIndex].xor(constraint.rightSystem.equations[i])
+                xorSystem.equations[xorEqIndex].clear(0, constantVarsStartIndex)
+                xorSystem.equations[xorEqIndex].set(newVarIndexRight)
+                xorSystem.results[xorEqIndex] = constraint.rightSystem.results[i]
+
+                andSystem.equations[andEqIndex].rightXor.set(constraintVarIndex)
+
+                xorEqIndex++
+                andEqIndex++
+            }
+
+            i++
+        }
+    }
+
+    return XorAndEquationSystem(xorSystem, andSystem)
+}
+
+fun prepareAndEquationSystemWithLeftSideOnly(
+    hash: XorEquationSystem,
+    constraints: List<KeccakPatched.Constraint>,
+    constantVarsStartIndex: Int,
+): XorEquationSystem {
+    //#region Prerequisite: hash equations must be prepared
+    //hash.solve()
+    //#endregion
+
+    val constraintVarsCount = hash.cols - constantVarsStartIndex
+    val rows = constraintVarsCount
+    val cols = constraintVarsCount * 2 + constantVarsStartIndex
+
+    val system = XorEquationSystem(rows, cols)
+
+    var eqIndex = 0
+
+    for (constraint in constraints) {
+        var i = 0
+        while (i < constraint.leftSystem.rows) {
+            var j = 0
+            var varExists = false
+            val system0 = constraint.leftSystem
+
+            while (j < hash.rows) {
+                if (!varExists) {
+                    val constraintVarIndex = constraint.varSystem.equations[i].nextSetBit(constantVarsStartIndex)
+
+                    if (hash.equations[j][constraintVarIndex]) {
+                        varExists = true
+                    }
+                }
+
+                val idx = hash.equations[j].nextSetBit(0)
+
+                if (idx != -1 && idx < constantVarsStartIndex) {
+                    if (system0.equations[i][idx]) {
+                        system0.equations[i].xor(hash.equations[j])
+                        system0.results[i] = system0.results[i] xor hash.results[j]
+                    }
+                }
+
+                j++
+            }
+
+            if (varExists) {
+                system.equations[eqIndex].xor(system0.equations[i])
+                system.equations[eqIndex].clear(0, constantVarsStartIndex)
+                system.equations[eqIndex].set(constantVarsStartIndex + constraintVarsCount + eqIndex)
+                system.results[eqIndex] = system0.results[i]
+
+                eqIndex++
+            }
+
+            i++
+        }
+    }
+
+    return system
+}
+
+fun prepareAndEquationSystemDeprecated(
     hash: XorEquationSystem,
     constraints: List<KeccakPatched.Constraint>,
     constantVarsStartIndex: Int,
@@ -41,7 +180,7 @@ fun prepareAndEquationSystem(
     //#region Get rid of main variables in constraint list
     var hashEqIndex = 0
     while (hashEqIndex < hash.rows) {
-        constraints.forEach { constraint ->
+        for (constraint in constraints) {
             constraint.leftSystem.substitute(hash)
             constraint.rightSystem.substitute(hash)
         }
@@ -55,7 +194,7 @@ fun prepareAndEquationSystem(
     hashEqIndex = 0
     while (hashEqIndex < hash.rows) {
         val clonedEq = hash.equations[hashEqIndex].clone() as BitSet
-        clonedEq.clear(0, constantVarsStartIndex + 1)
+        clonedEq.clear(0, constantVarsStartIndex)
         usedConstraintVarsMask.or(clonedEq)
         hashEqIndex++
     }
@@ -65,15 +204,15 @@ fun prepareAndEquationSystem(
     val usedConstraintVarsCount = usedConstraintVarsMask.setBitsCount()
     //#endregion
 
-    //#region Allocate memory for andEquationSystem
+    //#region Allocate memory for equation system
     val andEquationSystem = AndEquationSystem(usedConstraintVarsCount, usedConstraintVarsCount)
     //#endregion
 
-    //#region Populate andEquationSystem
+    //#region Populate equation system
     val constantVarsOffset = usedConstraintVarsMask.nextSetBit(0)
     var andEqIndex = 0
 
-    constraints.forEach { constraint ->
+    for (constraint in constraints) {
         var constraintEqIndex = 0
         while (constraintEqIndex < constraint.varSystem.rows) {
             val constraintEqVarIndex = constraint.varSystem.equations[constraintEqIndex].nextSetBit(0)

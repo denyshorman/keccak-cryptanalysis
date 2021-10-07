@@ -2,8 +2,10 @@ package keccak
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
 import keccak.util.AndEquationSystem
 import keccak.util.randomAndEquationSystem
+import keccak.util.set
 import keccak.util.toString
 import keccak.util.toXorEquationSystem
 import kotlin.test.fail
@@ -414,6 +416,26 @@ class AndEquationSystemTest : FunSpec({
 
                 continue
             }
+        }
+    }
+
+    context("set") {
+        test("1") {
+            val system = AndEquationSystem(1, 5)
+            system.set(0, "(v0)*(v1 + 1) = 1 + v2", true)
+            system.toString().shouldBe("(10000|0)(01000|1) = 00100|1")
+        }
+
+        test("2") {
+            val system = AndEquationSystem(1, 5)
+            system.set(0, "(v0 + v3 + 1)*(v1 + 1 + 1) = 1 + v2", true)
+            system.toString().shouldBe("(10010|1)(01000|0) = 00100|1")
+        }
+
+        test("3") {
+            val system = AndEquationSystem(1, 5)
+            system.set(0, "(10010|1)(01000|0) = 00100|1", false)
+            system.toString().shouldBe("(10010|1)(01000|0) = 00100|1")
         }
     }
 })

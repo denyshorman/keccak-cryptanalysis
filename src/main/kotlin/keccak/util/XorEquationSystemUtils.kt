@@ -1,8 +1,11 @@
 package keccak.util
 
-import keccak.XorEquation
+import keccak.*
 import keccak.XorEquationSystem
+import java.io.File
 import java.util.*
+import kotlin.math.min
+import kotlin.random.Random
 
 private val XorEquationPattern = "^([01]+)\\|([01])$".toRegex()
 
@@ -28,6 +31,24 @@ fun XorEquationSystem(rows: Int, cols: Int, vararg equations: String): XorEquati
     }
 
     return system
+}
+
+fun XorEquationSystem.set(eqIndex: Int, equation: String, humanReadable: Boolean) {
+    if (humanReadable) {
+        TODO()
+    } else {
+        var bitIndex = 0
+        while (bitIndex < cols) {
+            if (equation[bitIndex] == '1') {
+                equations[eqIndex].set(bitIndex)
+            }
+            bitIndex++
+        }
+
+        if (equation[equation.length - 1] == '1') {
+            results.set(eqIndex)
+        }
+    }
 }
 
 fun XorEquationSystem.toLittleEndianBytes(): Array<XorEquationSystem> {
@@ -88,6 +109,7 @@ fun XorEquationSystem.toBitEquation(eqIndex: Int): XorEquation {
     return XorEquation(cols, eq, res)
 }
 
+// TODO: Test this method
 fun XorEquationSystem.substitute(with: XorEquationSystem) {
     var eqIndex = 0
     while (eqIndex < rows) {
@@ -96,6 +118,79 @@ fun XorEquationSystem.substitute(with: XorEquationSystem) {
             results[eqIndex] = results[eqIndex] xor with.results[eqIndex]
         }
         eqIndex++
+    }
+}
+
+fun XorEquationSystem.toNodeEquationSystem(): NodeEquationSystem {
+    val variables = Array(cols) { Variable("x${it + 1}") }
+
+    val equations = Array(rows) { eqIndex ->
+        val left = LinkedList<Node>()
+
+        var bitIndex = equations[eqIndex].nextSetBit(0)
+        while (bitIndex >= 0) {
+            left.add(Variable("x${bitIndex + 1}"))
+            bitIndex = equations[eqIndex].nextSetBit(bitIndex + 1)
+        }
+
+        NodeEquation(Xor(left), Bit(results[eqIndex]))
+    }
+
+    return NodeEquationSystem(equations, variables)
+}
+
+fun XorEquationSystem.toFile(
+    file: File,
+    eqStartIndex: Int = 0,
+    eqCount: Int = rows,
+    humanReadable: Boolean = false,
+) {
+    file.outputStream().writer(Charsets.US_ASCII).use { writer ->
+        var eqIndex = eqStartIndex
+        val limit = min(eqIndex + eqCount, rows)
+
+        if (humanReadable) {
+            while (eqIndex < limit) {
+                var bitIndex = 0
+                val variables = LinkedList<String>()
+
+                while (bitIndex < cols) {
+                    if (equations[eqIndex][bitIndex]) {
+                        variables.add("x$bitIndex")
+                    }
+                    bitIndex++
+                }
+
+                val res = results[eqIndex]
+
+                if (variables.isNotEmpty()) {
+                    val equation = variables.joinToString(" + ", postfix = " = ${res.toNumChar()}")
+                    writer.appendLine(equation)
+                } else {
+                    if (res) {
+                        writer.appendLine("0 = 1")
+                    }
+                }
+
+                eqIndex++
+            }
+        } else {
+            while (eqIndex < limit) {
+                var bitIndex = 0
+                while (bitIndex < cols) {
+                    writer.append(equations[eqIndex][bitIndex].toNumChar())
+                    bitIndex++
+                }
+                writer.append('|')
+                writer.append(results[eqIndex].toNumChar())
+
+                eqIndex++
+
+                if (eqIndex != limit) {
+                    writer.append('\n')
+                }
+            }
+        }
     }
 }
 
@@ -131,5 +226,20 @@ fun Array<XorEquationSystem>.littleEndianBytesToLong(cols: Int): XorEquationSyst
         bitIndex++
     }
 
+    return system
+}
+
+fun randomXorEquationSystem(rows: Int, cols: Int, random: Random = Random): XorEquationSystem {
+    val system = XorEquationSystem(rows, cols)
+    var row = 0
+    while (row < rows) {
+        var col = 0
+        while (col < cols) {
+            system.equations[row][col] = random.nextBoolean()
+            col++
+        }
+        system.results[row] = random.nextBoolean()
+        row++
+    }
     return system
 }

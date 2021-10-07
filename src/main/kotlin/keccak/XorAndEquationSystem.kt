@@ -1,56 +1,48 @@
 package keccak
 
-import keccak.util.exchange
+import keccak.util.modPow2
+import mu.KotlinLogging
 
-class XorAndEquationSystem {
-    val rows: Int
-    val cols: Int
-    val equations: Array<XorAndEquation>
-    val results: BitGroup
+class XorAndEquationSystem(
+    val xorSystem: XorEquationSystem,
+    val andSystem: AndEquationSystem,
+) {
+    fun substituteAndSystem() {
+        var xorEqIndex = 0
+        while (xorEqIndex < xorSystem.rows) {
+            if (!xorSystem.equations[xorEqIndex].isEmpty) {
+                val firstBitIndex = xorSystem.equations[xorEqIndex].nextSetBit(0)
 
-    constructor(rows: Int, cols: Int) {
-        this.rows = rows
-        this.cols = cols
-        this.equations = Array(rows) { XorAndEquation() }
-        this.results = BitGroup(rows)
+                var andEqIndex = 0
+                while (andEqIndex < andSystem.rows) {
+                    if (andSystem.equations[andEqIndex].andOpLeft[firstBitIndex]) {
+                        andSystem.equations[andEqIndex].andOpLeft.xor(xorSystem.equations[xorEqIndex])
+                        andSystem.andOpLeftResults[andEqIndex] = andSystem.andOpLeftResults[andEqIndex] xor xorSystem.results[xorEqIndex]
+                    }
+
+                    if (andSystem.equations[andEqIndex].andOpRight[firstBitIndex]) {
+                        andSystem.equations[andEqIndex].andOpRight.xor(xorSystem.equations[xorEqIndex])
+                        andSystem.andOpRightResults[andEqIndex] = andSystem.andOpRightResults[andEqIndex] xor xorSystem.results[xorEqIndex]
+                    }
+
+                    if (andSystem.equations[andEqIndex].rightXor[firstBitIndex]) {
+                        andSystem.equations[andEqIndex].rightXor.xor(xorSystem.equations[xorEqIndex])
+                        andSystem.rightXorResults[andEqIndex] = andSystem.rightXorResults[andEqIndex] xor xorSystem.results[xorEqIndex]
+                    }
+
+                    andEqIndex++
+                }
+            }
+
+            xorEqIndex++
+
+            if (modPow2(xorEqIndex, 4096) == 0) {
+                logger.info("Processed $xorEqIndex rows")
+            }
+        }
     }
 
-    private constructor(equations: Array<XorAndEquation>, results: BitGroup) {
-        this.rows = equations.size
-        this.cols = equations.getOrNull(0)?.varCount ?: 0
-        this.equations = equations
-        this.results = results
-    }
-
-    fun exchange(i: Int, j: Int) {
-        equations.exchange(i, j)
-        results.exchange(i, j)
-    }
-
-    fun xor(i: Int, j: Int) {
-        equations[i].xor(equations[j])
-        results[i] = results[i] xor results[j]
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as XorAndEquationSystem
-
-        if (rows != other.rows) return false
-        if (cols != other.cols) return false
-        if (results != other.results) return false
-        if (!equations.contentEquals(other.equations)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = rows
-        result = 31 * result + cols
-        result = 31 * result + equations.contentHashCode()
-        result = 31 * result + results.hashCode()
-        return result
+    companion object {
+        private val logger = KotlinLogging.logger {}
     }
 }

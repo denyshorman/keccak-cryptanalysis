@@ -3,6 +3,18 @@ package keccak.util
 import java.util.*
 import kotlin.random.Random
 
+fun BitSet(bits: String): BitSet {
+    val bitSet = BitSet(bits.length)
+    var i = 0
+    while (i < bits.length) {
+        if (bits[i].toBoolean()) {
+            bitSet.set(i)
+        }
+        i++
+    }
+    return bitSet
+}
+
 fun BitSet.exchange(i: Int, j: Int) {
     val tmp = this[i]
     this[i] = this[j]
@@ -52,6 +64,33 @@ fun BitSet.evaluate(vars: BitSet): Boolean {
 
 fun BitSet.toString(size: Int): String {
     return String(CharArray(size) { this[it].toNumChar() })
+}
+
+fun BitSet.toXorString(
+    varCount: Int,
+    freeBit: Boolean = false,
+    varPrefix: String = "x",
+    defaultIfEmpty: String = "0",
+): String {
+    if (isEmpty) {
+        return if (freeBit) freeBit.toNumChar().toString() else defaultIfEmpty
+    }
+
+    var bitIndex = 0
+    val vars = LinkedList<String>()
+
+    while (bitIndex < varCount) {
+        if (this[bitIndex]) {
+            vars.add("$varPrefix$bitIndex")
+        }
+        bitIndex++
+    }
+
+    if (freeBit) {
+        vars.add(freeBit.toNumChar().toString())
+    }
+
+    return vars.joinToString(separator = " + ")
 }
 
 fun bitSet(vararg bits: Boolean): BitSet {

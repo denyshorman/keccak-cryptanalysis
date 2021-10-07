@@ -193,6 +193,17 @@ class And : Node {
 
 //#region Extensions
 
+operator fun Node.contains(other: Node) = this.contains(other)
+
+operator fun Node.plus(other: Node) = Xor(this, other)
+operator fun Node.times(other: Node) = And(this, other)
+operator fun String.plus(other: Node) = Xor(Variable(this), other)
+operator fun String.times(other: Node) = And(Variable(this), other)
+operator fun Node.plus(other: String) = Xor(this, Variable(other))
+operator fun Node.times(other: String) = And(this, Variable(other))
+operator fun String.plus(other: String) = Xor(Variable(this), Variable(other))
+operator fun String.times(other: String) = And(Variable(this), Variable(other))
+
 infix fun Node.xor(other: Node) = Xor(this, other)
 infix fun Node.and(other: Node) = And(this, other)
 infix fun String.xor(other: Node) = Xor(Variable(this), other)
@@ -226,8 +237,12 @@ fun Node.flatten(): Node {
             val variables = LinkedList<Variable>()
             val xors = LinkedList<Xor>()
 
-            this.nodes.forEach { node ->
+            for (node in nodes) {
                 when (node) {
+                    is Bit -> if (!node.value) {
+                        variables.clear()
+                        break
+                    }
                     is Variable -> variables.add(node)
                     is Xor -> {
                         when (val flattenedNode = node.flatten().simplify()) {
@@ -277,6 +292,137 @@ fun Node.flatten(): Node {
         is Xor -> {
             val flattenNodes = this.nodes.asSequence().map { it.flatten().simplify() }
             Xor(flattenNodes).simplify()
+        }
+    }
+}
+
+fun Node.groupBy(varPrefix: String): Node {
+    return when (this) {
+        is Bit, is Variable, is And -> this
+        is Xor -> {
+            val groups = HashMap<Set<Variable>, LinkedList<Node>>()
+            val others = LinkedList<Node>()
+
+            for (xorTerm in nodes) {
+                val group = LinkedList<Variable>()
+                val other = LinkedList<Node>()
+
+                when (xorTerm) {
+                    is Bit -> {
+                        others.add(xorTerm)
+                    }
+                    is Variable -> {
+                        if (xorTerm.name.startsWith(varPrefix)) {
+                            group.add(xorTerm)
+                        } else {
+                            others.add(xorTerm)
+                        }
+                    }
+                    is Xor -> {
+                        throw IllegalStateException("Xor can't be in Xor")
+                    }
+                    is And -> {
+                        for (andTerm in xorTerm.nodes) {
+                            when (andTerm) {
+                                is Bit -> {
+                                    other.add(andTerm)
+                                }
+                                is Variable -> {
+                                    if (andTerm.name.startsWith(varPrefix)) {
+                                        group.add(andTerm)
+                                    } else {
+                                        other.add(andTerm)
+                                    }
+                                }
+                                is And -> {
+                                    throw IllegalStateException("And can't be inside And")
+                                }
+                                is Xor -> {
+                                    other.add(andTerm)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (group.isNotEmpty()) {
+                    groups.compute(group.toSet()) { _, oldValues ->
+                        val newValues = oldValues ?: LinkedList<Node>()
+                        if (other.isNotEmpty()) {
+                            newValues.add(And(other).simplify())
+                        } else {
+                            newValues.add(Bit(true))
+                        }
+                        newValues
+                    }
+                } else if (other.isNotEmpty()) {
+                    others.add(And(other).simplify())
+                }
+            }
+
+            val xorTerms = LinkedList<Node>()
+
+            groups.forEach { (group, terms) ->
+                val and = And(group.asSequence() + Xor(terms).simplify()).simplify()
+                xorTerms.add(and)
+            }
+
+            xorTerms.addAll(others)
+
+            Xor(xorTerms).simplify()
+        }
+    }
+}
+
+fun Node.groups(varPrefix: String): Map<Node, Node> {
+    return when (this) {
+        is Bit -> emptyMap()
+        is Variable -> if (name.startsWith(varPrefix)) {
+            mapOf(Pair(this, Bit(true)))
+        } else {
+            emptyMap()
+        }
+        is And -> {
+            val matched = LinkedList<Node>()
+            val notMatched = LinkedList<Node>()
+
+            for (node in nodes) {
+                when (node) {
+                    is Bit -> notMatched.add(node)
+                    is Variable -> if (node.name.startsWith(varPrefix)) {
+                        matched.add(node)
+                    } else {
+                        notMatched.add(node)
+                    }
+                    is And -> throw IllegalStateException("And can't be inside And")
+                    is Xor -> notMatched.add(node)
+                }
+            }
+
+            if (matched.isEmpty()) {
+                emptyMap()
+            } else {
+                val v = if (notMatched.isEmpty()) {
+                    Bit(true)
+                } else {
+                    And(notMatched)
+                }
+
+                mapOf(Pair(And(matched).simplify(), v.simplify()))
+            }
+        }
+        is Xor -> {
+            val groupValues = HashMap<Node, Node>()
+
+            for (node in nodes) {
+                val nodeGroups = node.groups(varPrefix)
+
+                for (nodeGroup in nodeGroups) {
+                    groupValues[nodeGroup.key] = nodeGroup.value
+                }
+            }
+
+            groupValues
         }
     }
 }

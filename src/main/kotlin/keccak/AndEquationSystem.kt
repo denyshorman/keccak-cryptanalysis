@@ -2,7 +2,6 @@ package keccak
 
 import keccak.util.evaluate
 import keccak.util.toString
-import keccak.util.toXorEquationSystem
 import java.util.*
 
 class AndEquationSystem {
@@ -66,8 +65,7 @@ class AndEquationSystem {
     }
 
     fun solve(): Boolean {
-        val xorEqSystem = toXorEquationSystem()
-        return xorEqSystem.solve()
+        TODO("Not implemented")
     }
 
     fun clone(): AndEquationSystem {

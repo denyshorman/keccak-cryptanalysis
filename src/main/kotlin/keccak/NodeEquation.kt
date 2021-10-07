@@ -1,92 +1,18 @@
 package keccak
 
-import keccak.util.exchange
 import java.util.*
 
-object GeneralEquationSolver {
-    fun solve(equations: Array<Equation>, variables: Array<Variable>) {
-        bottom(equations, variables)
-        top(equations, variables)
-    }
-
-    private fun bottom(equations: Array<Equation>, variables: Array<Variable>) {
-        var rowId = 0
-        var varId = 0
-
-        while (rowId < equations.size && varId < variables.size) {
-            var i = rowId
-            var found = false
-
-            while (i < equations.size) {
-                if (equations[i].contains(variables[varId])) {
-                    found = true
-                    break
-                }
-
-                i++
-            }
-
-            if (found) {
-                if (rowId != i) {
-                    equations.exchange(rowId, i)
-                }
-
-                equations[rowId] = equations[rowId].extract(variables[varId])
-
-                if (equations[rowId].contains(variables[varId])) {
-                    i = rowId + 1
-
-                    while (i < equations.size) {
-                        if (equations[i].contains(variables[varId])) {
-                            equations[i] = equations[i].substitute(equations[rowId], variables[varId])
-                        }
-
-                        i++
-                    }
-                }
-            }
-
-            rowId++
-            varId++
-        }
-    }
-
-    private fun top(equations: Array<Equation>, variables: Array<Variable>) {
-        var rowId = equations.size - 1
-        var varId = equations.size - 1
-
-        while (rowId >= 0 && varId >= 0) {
-            if (equations[rowId].contains(variables[varId])) {
-                var i = rowId - 1
-                var j = varId - 1
-
-                while (i >= 0) {
-                    if (equations[i].contains(variables[varId])) {
-                        equations[i] = equations[i].substitute(equations[rowId], variables[varId]).extract(variables[j])
-                    }
-
-                    i--
-                    j--
-                }
-            }
-
-            rowId--
-            varId--
-        }
-    }
-}
-
-class Equation(val left: Node, val right: Node) {
-    fun extract(variable: Variable): Equation {
+class NodeEquation(val left: Node, val right: Node) {
+    fun extract(variable: Variable): NodeEquation {
         val node = Xor(left, right).simplify()
 
         if (!node.contains(variable)) {
-            return Equation(node, Bit())
+            return NodeEquation(node, Bit())
         }
 
         return when (val extracted = node.extract(variable)) {
-            is Bit -> Equation(extracted, extracted)
-            is Variable, is And -> Equation(extracted, Bit())
+            is Bit -> NodeEquation(extracted, extracted)
+            is Variable, is And -> NodeEquation(extracted, Bit())
             is Xor -> {
                 var l: Node = Bit()
                 val r = LinkedList<Node>()
@@ -103,12 +29,12 @@ class Equation(val left: Node, val right: Node) {
                     }
                 }
 
-                Equation(l, Xor(r).simplify())
+                NodeEquation(l, Xor(r).simplify())
             }
         }
     }
 
-    fun substitute(equation: Equation, variable: Variable): Equation {
+    fun substitute(equation: NodeEquation, variable: Variable): NodeEquation {
         if (!(equation.left.contains(variable) && this.contains(variable))) return this
 
         return when (equation.left) {
@@ -123,23 +49,28 @@ class Equation(val left: Node, val right: Node) {
         }
     }
 
-    fun replace(what: Node, with: Node): Equation {
-        return Equation(left.replace(what, with), right.replace(what, with))
+    fun replace(what: Node, with: Node): NodeEquation {
+        return NodeEquation(left.replace(what, with), right.replace(what, with))
     }
 
-    fun multiply(mul: And): Equation {
-        return Equation(left.multiply(mul), right.multiply(mul))
+    fun multiply(mul: And): NodeEquation {
+        return NodeEquation(left.multiply(mul), right.multiply(mul))
     }
 
     fun contains(variable: Variable): Boolean {
         return left.contains(variable) || right.contains(variable)
     }
 
+    fun flatten(): NodeEquation {
+        val left = Xor(left.flatten(), right.flatten())
+        return NodeEquation(left, Bit(false))
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as Equation
+        other as NodeEquation
 
         return left == other.left && right == other.right || left == other.right && right == other.left
     }

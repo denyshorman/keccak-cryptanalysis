@@ -1,7 +1,6 @@
 package keccak
 
 import keccak.util.invert
-import keccak.util.pow
 import keccak.util.setBitsCount
 import java.util.*
 
@@ -10,7 +9,7 @@ class CombinationIterator(
     val mask: BitSet = defaultMask(varsCount),
 ) {
     val combination = BitSet(varsCount)
-    val solutionsCount = pow(2, mask.setBitsCount())
+    val solutionsCount = 1 shl mask.setBitsCount()
     var solutionIndex = -1L
         private set
 
