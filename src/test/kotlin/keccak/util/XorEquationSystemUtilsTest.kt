@@ -28,7 +28,7 @@ class XorEquationSystemUtilsTest : FunSpec({
             val bytes = system.toLittleEndianBytes()
             var i = 0
             while (i < bytes.size) {
-                bytes[i].evaluate(longBitGroup.bitSet)
+                bytes[i].substitute(longBitGroup.bitSet)
                 assertEquals(bytes[i].toByte(), long.getByte(i))
                 i++
             }

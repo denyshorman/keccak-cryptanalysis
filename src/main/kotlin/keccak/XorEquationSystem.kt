@@ -337,35 +337,52 @@ class XorEquationSystem {
         return !equations[0].isEmpty
     }
 
-    fun evaluate(vars: BitSet) {
+    fun substitute(values: BitSet) {
         var i = 0
         while (i < rows) {
-            equations[i].and(vars)
-            if (equations[i].setBitsCount() % 2 != 0) {
-                results.xor(i, true)
+            equations[i].and(values)
+            if (equations[i].setBitsCount() and 1 != 0) {
+                results.invertValue(i)
             }
             equations[i].clear()
             i++
         }
     }
 
-    fun partiallyEvaluate(varValues: BitSet, availableVars: BitSet) {
-        val availableVarsInverted = availableVars.clone() as BitSet
-        availableVarsInverted.invert(cols)
+    fun substitute(values: BitSet, mask: BitSet) {
+        val maskInverted = mask.clone() as BitSet
+        maskInverted.invert(cols)
 
         var i = 0
         while (i < rows) {
             val res = equations[i].clone() as BitSet
-            res.and(varValues)
-            res.and(availableVars)
+            res.and(values)
+            res.and(mask)
 
-            equations[i].and(availableVarsInverted)
+            equations[i].and(maskInverted)
 
-            if (res.setBitsCount() % 2 != 0) {
-                results.xor(i, true)
+            if (res.setBitsCount() and 1 != 0) {
+                results.invertValue(i)
             }
 
             i++
+        }
+    }
+
+    fun substitute(index: Int, value: Boolean) {
+        var i = 0
+        while (i < rows) {
+            if (equations[i][index]) {
+                equations[i].clear(index)
+                results.xor(i, value)
+            }
+            i++
+        }
+    }
+
+    fun substitute(values: Iterable<Pair<Int, Boolean>>) {
+        for ((index, value) in values) {
+            substitute(index, value)
         }
     }
 

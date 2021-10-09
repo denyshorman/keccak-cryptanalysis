@@ -39,7 +39,7 @@ class XorEquationSystemTest : FunSpec({
             expectedEqSystem.equations[1][1] = false
             expectedEqSystem.results[1] = false
 
-            eqSystem.evaluate(vars)
+            eqSystem.substitute(vars)
 
             assertEquals(expectedEqSystem, eqSystem)
         }
@@ -70,7 +70,7 @@ class XorEquationSystemTest : FunSpec({
             expectedEqSystem.equations[1][1] = false
             expectedEqSystem.results[1] = false
 
-            eqSystem.evaluate(vars)
+            eqSystem.substitute(vars)
 
             assertEquals(expectedEqSystem, eqSystem)
         }
@@ -111,7 +111,7 @@ class XorEquationSystemTest : FunSpec({
             expectedEqSystem.equations[1][1] = false
             expectedEqSystem.results[1] = false
 
-            eqSystem.partiallyEvaluate(varValues.bitSet, availableVars.bitSet)
+            eqSystem.substitute(varValues.bitSet, availableVars.bitSet)
 
             assertEquals(expectedEqSystem, eqSystem)
         }
@@ -150,7 +150,7 @@ class XorEquationSystemTest : FunSpec({
             expectedEqSystem.equations[1][1] = true
             expectedEqSystem.results[1] = true
 
-            eqSystem.partiallyEvaluate(varValues.bitSet, availableVars.bitSet)
+            eqSystem.substitute(varValues.bitSet, availableVars.bitSet)
 
             assertEquals(expectedEqSystem, eqSystem)
         }
@@ -189,7 +189,7 @@ class XorEquationSystemTest : FunSpec({
             expectedEqSystem.equations[1][1] = false
             expectedEqSystem.results[1] = false
 
-            eqSystem.partiallyEvaluate(varValues.bitSet, availableVars.bitSet)
+            eqSystem.substitute(varValues.bitSet, availableVars.bitSet)
 
             assertEquals(expectedEqSystem, eqSystem)
         }

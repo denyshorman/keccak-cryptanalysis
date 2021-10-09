@@ -3,10 +3,7 @@ package keccak
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
-import keccak.util.toAndEquationSystem
-import keccak.util.toFile
-import keccak.util.toXorAndEquationSystem
-import keccak.util.toXorEquationSystem
+import keccak.util.*
 import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 import java.io.File
@@ -200,7 +197,7 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
                 andHumanReadable = true,
             )
 
-        xorAndEqSystem.substituteAndSystem()
+        xorAndEqSystem.substituteAndWithXor()
 
         xorAndEqSystem.andSystem.toFile(File("D:\\test\\andEquationsProcessed.txt"), humanReadable = true)
     }
@@ -245,5 +242,15 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
 
         println(a)
         println(b)
+    }
+
+    test("find solution for keccak256 equation system").config(timeout = Duration.INFINITE) {
+        val msgBytes = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msgBytes, replaceRulesInverse = true, replacePadding = false)
+
+        val solution = hashResult.equationSystem.solveKeccak256()
+
+        println(solution)
     }
 })

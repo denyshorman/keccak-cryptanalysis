@@ -25,6 +25,29 @@ fun BitSet.setBitsCount(): Int {
     return cardinality()
 }
 
+fun BitSet.setIfTrue(bitIndex: Int, value: Boolean) {
+    if (value) {
+        set(bitIndex)
+    }
+}
+
+fun BitSet.clearIfTrue(bitIndex: Int, value: Boolean) {
+    if (value) {
+        clear(bitIndex)
+    }
+}
+
+fun BitSet.nextSetBit(fromIndex: Int, toIndex: Int): Int {
+    val bitIndex = nextSetBit(fromIndex)
+
+    @Suppress("ConvertTwoComparisonsToRangeCheck")
+    return if (bitIndex >= 0 && bitIndex < toIndex) {
+        bitIndex
+    } else {
+        -1
+    }
+}
+
 fun BitSet.nextSetBitDefault(fromIndex: Int, defaultIfNotFound: Int): Int {
     val bitIndex = nextSetBit(fromIndex)
 
@@ -37,6 +60,10 @@ fun BitSet.nextSetBitDefault(fromIndex: Int, defaultIfNotFound: Int): Int {
 
 fun BitSet.xor(bitIndex: Int, value: Boolean) {
     this[bitIndex] = this[bitIndex] xor value
+}
+
+fun BitSet.invertValue(bitIndex: Int) {
+    this[bitIndex] = !this[bitIndex]
 }
 
 fun BitSet.invert(size: Int) {

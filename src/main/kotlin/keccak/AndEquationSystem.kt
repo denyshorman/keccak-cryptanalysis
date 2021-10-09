@@ -1,11 +1,14 @@
 package keccak
 
 import keccak.util.evaluate
+import keccak.util.modPow2
 import keccak.util.toString
+import keccak.util.xor
+import mu.KotlinLogging
 import java.util.*
 
 class AndEquationSystem {
-    val rows: Int
+    val rows: Int get() = equations.size
     val cols: Int
     val equations: Array<Equation>
     val andOpLeftResults: BitSet
@@ -13,7 +16,6 @@ class AndEquationSystem {
     val rightXorResults: BitSet
 
     constructor(rows: Int, cols: Int) {
-        this.rows = rows
         this.cols = cols
         this.equations = Array(rows) { Equation(BitSet(cols), BitSet(cols), BitSet(cols)) }
         this.andOpLeftResults = BitSet(rows)
@@ -29,7 +31,6 @@ class AndEquationSystem {
         andOpRightResults: BitSet,
         rightXorResults: BitSet,
     ) {
-        this.rows = rows
         this.cols = cols
         this.equations = equations
         this.andOpLeftResults = andOpLeftResults
@@ -66,6 +67,74 @@ class AndEquationSystem {
 
     fun solve(): Boolean {
         TODO("Not implemented")
+    }
+
+    fun substitute(index: Int, value: Boolean) {
+        var i = 0
+
+        while (i < rows) {
+            if (equations[i].andOpLeft[index]) {
+                equations[i].andOpLeft.clear(index)
+                andOpLeftResults.xor(index, value)
+            }
+
+            if (equations[i].andOpRight[index]) {
+                equations[i].andOpRight.clear(index)
+                andOpRightResults.xor(index, value)
+            }
+
+            if (equations[i].rightXor[index]) {
+                equations[i].rightXor.clear(index)
+                rightXorResults.xor(index, value)
+            }
+
+            i++
+        }
+    }
+
+    fun substitute(values: Iterable<Pair<Int, Boolean>>) {
+        for ((index, value) in values) {
+            substitute(index, value)
+        }
+    }
+
+    fun substitute(xorSystem: XorEquationSystem, mask: BitSet? = null) {
+        var xorEqIndex = 0
+
+        while (xorEqIndex < xorSystem.rows) {
+            if (!xorSystem.equations[xorEqIndex].isEmpty) {
+                val firstBitIndex = xorSystem.equations[xorEqIndex].nextSetBit(0)
+
+                if (firstBitIndex >= 0 && (mask == null || mask[firstBitIndex])) {
+                    var andEqIndex = 0
+
+                    while (andEqIndex < rows) {
+                        if (!equations[andEqIndex].andOpLeft.isEmpty && equations[andEqIndex].andOpLeft[firstBitIndex]) {
+                            equations[andEqIndex].andOpLeft.xor(xorSystem.equations[xorEqIndex])
+                            andOpLeftResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
+                        }
+
+                        if (!equations[andEqIndex].andOpRight.isEmpty && equations[andEqIndex].andOpRight[firstBitIndex]) {
+                            equations[andEqIndex].andOpRight.xor(xorSystem.equations[xorEqIndex])
+                            andOpRightResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
+                        }
+
+                        if (!equations[andEqIndex].rightXor.isEmpty && equations[andEqIndex].rightXor[firstBitIndex]) {
+                            equations[andEqIndex].rightXor.xor(xorSystem.equations[xorEqIndex])
+                            rightXorResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
+                        }
+
+                        andEqIndex++
+                    }
+                }
+            }
+
+            xorEqIndex++
+
+            if (modPow2(xorEqIndex, 4096) == 0) {
+                logger.info("Processed $xorEqIndex rows")
+            }
+        }
     }
 
     fun clone(): AndEquationSystem {
@@ -148,5 +217,9 @@ class AndEquationSystem {
             }
         }
         return sb.toString()
+    }
+
+    companion object {
+        private val logger = KotlinLogging.logger {}
     }
 }
