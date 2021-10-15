@@ -31,8 +31,20 @@ fun BitSet.setIfTrue(bitIndex: Int, value: Boolean) {
     }
 }
 
+fun BitSet.setIfFalse(bitIndex: Int, value: Boolean) {
+    if (!value) {
+        set(bitIndex)
+    }
+}
+
 fun BitSet.clearIfTrue(bitIndex: Int, value: Boolean) {
     if (value) {
+        clear(bitIndex)
+    }
+}
+
+fun BitSet.clearIfFalse(bitIndex: Int, value: Boolean) {
+    if (!value) {
         clear(bitIndex)
     }
 }
@@ -46,6 +58,18 @@ fun BitSet.nextSetBit(fromIndex: Int, toIndex: Int): Int {
     } else {
         -1
     }
+}
+
+fun BitSet.nextSetBit(mask: BitSet): Int {
+    var i = 0
+
+    do {
+        i = mask.nextSetBit(i)
+        if (i == -1) return -1
+        i = nextSetBit(i)
+    } while (i >= 0 && !mask[i])
+
+    return i
 }
 
 fun BitSet.nextSetBitDefault(fromIndex: Int, defaultIfNotFound: Int): Int {

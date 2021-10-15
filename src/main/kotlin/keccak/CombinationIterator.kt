@@ -11,7 +11,7 @@ class CombinationIterator(
     val algorithm: Algorithm = Algorithm.Lexicographical,
 ) {
     val combination = BitSet(varsCount)
-    val solutionsCount = 1 shl mask.setBitsCount()
+    val solutionsCount = 1L shl mask.setBitsCount()
     var solutionIndex = -1L
         private set
 

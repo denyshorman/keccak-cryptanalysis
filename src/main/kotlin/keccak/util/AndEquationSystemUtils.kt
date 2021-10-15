@@ -9,7 +9,7 @@ import kotlin.math.min
 import kotlin.random.Random
 
 private val AndEquationBinaryPattern = "^\\(([01]+)\\|([01])\\)\\(([01]+)\\|([01])\\)\\s*=\\s*([01]+)\\|([01])$".toRegex()
-private val AndEquationHumanPattern = "^\\s*\\(?((?:\\w+\\d+|[01])(?:\\s*\\+\\s*(?:\\w+\\d+|[01]))*)\\)?\\s*\\*\\s*\\(?((?:\\w+\\d+|[01])(?:\\s*\\+\\s*(?:\\w+\\d+|[01]))*)\\)?\\s*=\\s*((?:\\w+\\d+|[01])(?:\\s*\\+\\s*(?:\\w+\\d+|[01]))*)$".toRegex()
+private val AndEquationHumanPattern = "^\\s*\\(?(.*?)\\)?\\s*\\*\\s*\\(?(.*?)\\)?\\s*=\\s*(.*?)$".toRegex()
 
 fun AndEquationSystem(rows: Int, cols: Int, vararg equations: String): AndEquationSystem {
     val system = AndEquationSystem(rows, cols)

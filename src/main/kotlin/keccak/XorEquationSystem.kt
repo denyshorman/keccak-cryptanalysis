@@ -184,7 +184,7 @@ class XorEquationSystem {
         }
 
         if (logProgress) {
-            logger.info("Forward processing has been completed with $row rows processed. Starting backward processing")
+            logger.info("Forward processing has been completed. Starting backward processing")
         }
 
         row = rowsMask?.previousSetBit(rows - 1) ?: (rows - 1)
@@ -198,15 +198,10 @@ class XorEquationSystem {
                 var i = rowsMask?.previousSetBit(row - 1) ?: (row - 1)
 
                 if (i >= 0) {
-                    if (colsMask == null) {
-                        col = equations[row].nextSetBit(0)
+                    col = if (colsMask == null) {
+                        equations[row].nextSetBit(0)
                     } else {
-                        col = 0
-                        do {
-                            col = colsMask.nextSetBit(col)
-                            if (col == -1) break
-                            col = equations[row].nextSetBit(col)
-                        } while (col >= 0 && !colsMask[col])
+                        equations[row].nextSetBit(colsMask)
                     }
 
                     if (col >= 0) {
@@ -228,8 +223,12 @@ class XorEquationSystem {
             row = rowsMask?.previousSetBit(row - 1) ?: (row - 1)
 
             if (logProgress && modPow2(row, progressStep) == 0) {
-                logger.info("Processed ${2 * rows - row} rows")
+                logger.info("Processed ${rows - row} rows")
             }
+        }
+
+        if (logProgress) {
+            logger.info("Backward processing has been completed.")
         }
 
         return true
