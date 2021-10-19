@@ -1,7 +1,6 @@
 package keccak
 
 import keccak.util.invert
-import keccak.util.setBitsCount
 import keccak.util.toString
 import java.util.*
 
@@ -11,25 +10,27 @@ class CombinationIterator(
     val algorithm: Algorithm = Algorithm.Lexicographical,
 ) {
     val combination = BitSet(varsCount)
-    val solutionsCount = 1L shl mask.setBitsCount()
-    var solutionIndex = -1L
-        private set
 
-    fun hasNext(): Boolean {
-        return solutionIndex + 1 < solutionsCount
+    val next = when (algorithm) {
+        Algorithm.Lexicographical -> ::lexicographicalNext
+        Algorithm.Increasing -> ::increasingNext
     }
 
-    fun next() {
-        when (algorithm) {
-            Algorithm.Lexicographical -> lexicographicalNext()
-            Algorithm.Increasing -> increasingNext()
+    fun hasNext(): Boolean {
+        var i = mask.nextSetBit(0)
+
+        while (i >= 0) {
+            if (!combination[i]) {
+                return true
+            }
+
+            i = mask.nextSetBit(i + 1)
         }
 
-        solutionIndex++
+        return false
     }
 
     fun reset() {
-        solutionIndex = -1L
         combination.clear()
     }
 
