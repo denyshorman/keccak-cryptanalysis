@@ -76,6 +76,52 @@ class XorAndEquationSystem(
         return XorAndEquationSystem(xorSystem0, andSystem0)
     }
 
+    fun invertToXorSystem(): XorEquationSystem {
+        val system = XorEquationSystem(
+            rows = xorSystem.rows + 3*andSystem.rows,
+            cols = cols + 3*andSystem.rows,
+        )
+
+        var i = 0
+        while (i < xorSystem.rows) {
+            system.equations[i] = xorSystem.equations[i].clone() as BitSet
+            system.results.setIfTrue(i, xorSystem.results[i])
+            i++
+        }
+
+        var j = 0
+        var k = cols
+        while (j < andSystem.rows) {
+            system.equations[i] = andSystem.equations[j].andOpLeft.clone() as BitSet
+            system.equations[i].set(k)
+            system.results.setIfTrue(i, andSystem.andOpLeftResults[j])
+
+            i++
+            k++
+
+            system.equations[i] = andSystem.equations[j].andOpRight.clone() as BitSet
+            system.equations[i].set(k)
+            system.results.setIfTrue(i, andSystem.andOpRightResults[j])
+
+            i++
+            k++
+            j++
+        }
+
+        j = 0
+        while (j < andSystem.rows) {
+            system.equations[i] = andSystem.equations[j].rightXor.clone() as BitSet
+            system.equations[i].set(k)
+            system.results.setIfTrue(i, andSystem.rightXorResults[j])
+
+            i++
+            k++
+            j++
+        }
+
+        return system
+    }
+
     companion object {
         private val logger = KotlinLogging.logger {}
     }
