@@ -147,7 +147,7 @@ class NodeEquationSystemTest : FunSpec({
             eqSystem.solve()
 
             equations.forEachIndexed { index, _ ->
-                equations[index] = NodeEquation(equations[index].left.flatten(), equations[index].right.flatten())
+                equations[index] = NodeEquation(equations[index].left.expand(), equations[index].right.expand())
             }
 
             equations.forEach { eq ->

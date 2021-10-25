@@ -61,8 +61,8 @@ class NodeEquation(val left: Node, val right: Node) {
         return left.contains(variable) || right.contains(variable)
     }
 
-    fun flatten(): NodeEquation {
-        val left = Xor(left.flatten(), right.flatten())
+    fun expand(): NodeEquation {
+        val left = Xor(left.expand(), right.expand())
         return NodeEquation(left, Bit(false))
     }
 

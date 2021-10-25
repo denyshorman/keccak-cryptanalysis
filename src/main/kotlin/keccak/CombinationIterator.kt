@@ -34,6 +34,19 @@ class CombinationIterator(
         combination.clear()
     }
 
+    inline fun iterateAll(callback: () -> Unit) {
+        while (true) {
+            callback()
+            if (hasNext()) next() else break
+        }
+    }
+
+    inline fun iterate(callback: () -> Boolean) {
+        while (callback() && hasNext()) {
+            next()
+        }
+    }
+
     override fun toString(): String {
         return combination.toString(varsCount)
     }

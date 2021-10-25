@@ -1,9 +1,6 @@
 package keccak
 
-import keccak.util.evaluate
-import keccak.util.modPow2
-import keccak.util.toString
-import keccak.util.xor
+import keccak.util.*
 import mu.KotlinLogging
 import java.util.*
 
@@ -135,6 +132,39 @@ class AndEquationSystem {
                 logger.info("Processed $xorEqIndex rows")
             }
         }
+    }
+
+    fun invert(): XorAndEquationSystem {
+        val xorSystem = XorEquationSystem(rows * 2, cols + rows * 2)
+        val andSystem = AndEquationSystem(rows, xorSystem.cols)
+
+        var andEqRow = 0
+        var newXorEqRow = 0
+        var newVarIndex = cols
+
+        while (andEqRow < rows) {
+            xorSystem.equations[newXorEqRow] = equations[andEqRow].andOpLeft.clone() as BitSet
+            xorSystem.equations[newXorEqRow].set(newVarIndex)
+            xorSystem.results.setIfTrue(newXorEqRow, andOpLeftResults[andEqRow])
+            andSystem.equations[andEqRow].andOpLeft.set(newVarIndex)
+
+            newXorEqRow++
+            newVarIndex++
+
+            xorSystem.equations[newXorEqRow] = equations[andEqRow].andOpRight.clone() as BitSet
+            xorSystem.equations[newXorEqRow].set(newVarIndex)
+            xorSystem.results.setIfTrue(newXorEqRow, andOpRightResults[andEqRow])
+            andSystem.equations[andEqRow].andOpRight.set(newVarIndex)
+
+            andSystem.equations[andEqRow].rightXor = equations[andEqRow].rightXor.clone() as BitSet
+            andSystem.rightXorResults.setIfTrue(andEqRow, rightXorResults[andEqRow])
+
+            newXorEqRow++
+            newVarIndex++
+            andEqRow++
+        }
+
+        return XorAndEquationSystem(xorSystem, andSystem)
     }
 
     fun clone(): AndEquationSystem {

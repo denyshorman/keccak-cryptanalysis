@@ -230,7 +230,15 @@ fun Node.simplify(): Node {
     }
 }
 
-fun Node.flatten(): Node {
+fun Node.cleanup(): Node {
+    return when (this) {
+        is Bit, is Variable -> this
+        is And -> And(nodes.asSequence().map { it.cleanup().simplify() })
+        is Xor -> Xor(nodes.asSequence().map { it.cleanup().simplify() })
+    }
+}
+
+fun Node.expand(): Node {
     return when (this) {
         is Bit, is Variable -> this
         is And -> {
@@ -245,11 +253,9 @@ fun Node.flatten(): Node {
                     }
                     is Variable -> variables.add(node)
                     is Xor -> {
-                        when (val flattenedNode = node.flatten().simplify()) {
+                        when (val flattenedNode = node.expand().simplify()) {
                             is Bit -> {
-                                if (!flattenedNode.value) {
-                                    return Bit()
-                                }
+                                xors.add(Xor(flattenedNode))
                             }
                             is Variable -> {
                                 variables.add(flattenedNode)
@@ -269,28 +275,32 @@ fun Node.flatten(): Node {
                 }
             }
 
-            val initXor = if (variables.size == 0) {
-                Xor(Bit(true))
+            if (variables.size == 0 && xors.size == 0) {
+                Bit(false)
             } else {
-                Xor(And(variables))
-            }
-
-            val flattenXor = xors.fold(initXor) { a, b ->
-                val nodes = LinkedList<Node>()
-
-                a.nodes.forEach { l ->
-                    b.nodes.forEach { r ->
-                        nodes.add(And(l, r).simplify())
-                    }
+                val initXor = if (variables.size == 0) {
+                    Xor(Bit(true))
+                } else {
+                    Xor(And(variables))
                 }
 
-                Xor(nodes)
-            }
+                val flattenXor = xors.fold(initXor) { a, b ->
+                    val nodes = LinkedList<Node>()
 
-            flattenXor.simplify()
+                    a.nodes.forEach { l ->
+                        b.nodes.forEach { r ->
+                            nodes.add(And(l, r).simplify())
+                        }
+                    }
+
+                    Xor(nodes)
+                }
+
+                flattenXor.simplify()
+            }
         }
         is Xor -> {
-            val flattenNodes = this.nodes.asSequence().map { it.flatten().simplify() }
+            val flattenNodes = this.nodes.asSequence().map { it.expand().simplify() }
             Xor(flattenNodes).simplify()
         }
     }
@@ -424,6 +434,77 @@ fun Node.groups(varPrefix: String): Map<Node, Node> {
 
             groupValues
         }
+    }
+}
+
+fun Node.notGroups(varPrefix: String): Node {
+    return when(this) {
+        is Bit -> this
+        is Variable -> {
+            if (name.startsWith(varPrefix)) {
+                Bit(false)
+            } else {
+                this
+            }
+        }
+        is And -> {
+            var valid = true
+
+            for (node in nodes) {
+                when (node) {
+                    is Variable -> {
+                        if (node.name.startsWith(varPrefix)) {
+                            valid = false
+                            break
+                        }
+                    }
+                    else -> {/*ignore*/}
+                }
+            }
+
+            if (valid) {
+                this
+            } else {
+                Bit(false)
+            }
+        }
+        is Xor -> {
+            Xor(nodes.asSequence().map { it.notGroups(varPrefix) }).simplify()
+        }
+    }
+}
+
+fun Node.substitute(varName: String, value: Node): Node {
+    return when (this) {
+        is Bit -> this
+        is Variable -> if (this.name == varName) value else this
+        is And -> And(nodes.asSequence().map { it.substitute(varName, value) })
+        is Xor -> Xor(nodes.asSequence().map { it.substitute(varName, value) })
+    }
+}
+
+fun Node.keep(termSize: Int): Node {
+    return when (this) {
+        is Bit -> if (termSize == 0) this else Bit(false)
+        is Variable -> if (termSize == 1) this else Bit(false)
+        is And -> if (nodes.size == termSize) this else Bit(false)
+        is Xor -> Xor(nodes.asSequence().map { it.keep(termSize) }).simplify()
+    }
+}
+
+fun Node.keep(varPrefix: String, termSize: Int): Node {
+    return when (this) {
+        is Bit -> Bit(false)
+        is Variable -> if (termSize == 1 && name.startsWith(varPrefix)) this else Bit(false)
+        is And -> if (nodes.count { it is Variable && it.name.startsWith(varPrefix) } == termSize) this else Bit(false)
+        is Xor -> Xor(nodes.asSequence().map { it.keep(varPrefix, termSize) }).simplify()
+    }
+}
+
+fun Node.termsCount(): Int {
+    return when (this) {
+        is Bit, is Variable, is And -> 1
+        is Xor -> nodes.size
     }
 }
 //#endregion

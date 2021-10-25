@@ -11,10 +11,10 @@ class NodeEquationSystem(
         top(equations, variables)
     }
 
-    fun flatten() {
+    fun expand() {
         var i = 0
         while (i < equations.size) {
-            equations[i] = equations[i].flatten()
+            equations[i] = equations[i].expand()
             i++
         }
     }

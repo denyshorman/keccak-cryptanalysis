@@ -32,6 +32,13 @@ class CombWithoutRepetitionIterator(val n: Int, val r: Int) {
         index++
     }
 
+    inline fun iterate(callback: () -> Unit) {
+        while (true) {
+            callback()
+            if (hasNext()) next() else break
+        }
+    }
+
     private fun calcCombinationsCount(): Long {
         var count = n.toLong()
         var x = 1L
