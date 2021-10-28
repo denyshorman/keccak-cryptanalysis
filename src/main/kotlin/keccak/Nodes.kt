@@ -509,99 +509,100 @@ fun Node.termsCount(): Int {
 }
 
 fun Node.factor(): Node {
-    if (this is Bit || this is Variable || this is And) {
-        return this
-    }
+    return when (this) {
+        is Bit, is Variable -> this
+        is And -> And(nodes.asSequence().map { it.factor() })
+        is Xor -> {
+            val preprocessedNode = Xor(nodes.asSequence().map { it.factor() })
+            val termsMap = HashMap<Node, Int>()
 
-    this as Xor
-
-    val termsMap = HashMap<Node, Int>()
-
-    for (node in nodes) {
-        when (node) {
-            is Bit -> {/*ignore*/}
-            is Variable -> termsMap.merge(node, 1, Integer::sum)
-            is And -> for (andNodeTerm in node.nodes) {
-                if (andNodeTerm !is Bit) {
-                    termsMap.merge(andNodeTerm, 1, Integer::sum)
+            for (node in preprocessedNode.nodes) {
+                when (node) {
+                    is Bit -> {/*ignore*/}
+                    is Variable -> termsMap.merge(node, 1, Integer::sum)
+                    is And -> for (andNodeTerm in node.nodes) {
+                        if (andNodeTerm !is Bit) {
+                            termsMap.merge(andNodeTerm, 1, Integer::sum)
+                        }
+                    }
+                    is Xor -> throw IllegalStateException()
                 }
             }
-            is Xor -> throw IllegalStateException()
-        }
-    }
 
-    for ((term, _) in termsMap) {
-        if (term is Xor) {
-            val xTermNode = if (term.contains(Bit(true))) {
-                term + Bit(true)
-            } else {
-                term
+            for ((term, _) in termsMap) {
+                if (term is Xor) {
+                    val xTermNode = if (term.contains(Bit(true))) {
+                        term + Bit(true)
+                    } else {
+                        term
+                    }
+
+                    if (preprocessedNode.nodes.containsAll(xTermNode.nodes)) {
+                        termsMap.merge(term, 1, Integer::sum)
+                    }
+                }
             }
 
-            if (nodes.containsAll(xTermNode.nodes)) {
-                termsMap.merge(term, 1, Integer::sum)
-            }
-        }
-    }
+            val maxTerm = termsMap.maxWithOrNull(compareBy { it.value })?.key ?: return preprocessedNode
 
-    val maxTerm = termsMap.maxWithOrNull(compareBy { it.value })?.key ?: return this
+            val haveMaxTermNodes = LinkedList<Node>()
+            val dontHaveMaxTermNodes = LinkedList<Node>()
 
-    val haveMaxTermNodes = LinkedList<Node>()
-    val dontHaveMaxTermNodes = LinkedList<Node>()
-
-    for (node in nodes) {
-        if (node.contains(maxTerm)) {
-            haveMaxTermNodes.add(node)
-        } else {
-            dontHaveMaxTermNodes.add(node)
-        }
-    }
-
-    if (maxTerm is Xor) {
-        var termHasSetBit = false
-
-        val xTermNode = if (maxTerm.contains(Bit(true))) {
-            termHasSetBit = true
-            maxTerm + Bit(true)
-        } else {
-            maxTerm
-        }
-
-        if (xTermNode.nodes.all { dontHaveMaxTermNodes.contains(it) }) {
-            haveMaxTermNodes.add(maxTerm)
-
-            for (xNode in xTermNode.nodes) {
-                dontHaveMaxTermNodes.remove(xNode)
-            }
-
-            if (termHasSetBit) {
-                if (dontHaveMaxTermNodes.contains(Bit(true))) {
-                    dontHaveMaxTermNodes.remove(Bit(true))
+            for (node in preprocessedNode.nodes) {
+                if (node.contains(maxTerm)) {
+                    haveMaxTermNodes.add(node)
                 } else {
-                    dontHaveMaxTermNodes.add(Bit(true))
+                    dontHaveMaxTermNodes.add(node)
                 }
             }
-        }
-    }
 
-    if (haveMaxTermNodes.size == 1) {
-        return this
-    }
+            if (maxTerm is Xor) {
+                var termHasSetBit = false
 
-    val l = run {
-        val nodesWithoutMaxTerm = haveMaxTermNodes.asSequence().map { node ->
-            when (node) {
-                is Variable, is Xor -> Bit(true)
-                is And -> And(node.nodes.asSequence().filter { it != maxTerm }).simplify()
-                is Bit -> throw IllegalStateException()
+                val xTermNode = if (maxTerm.contains(Bit(true))) {
+                    termHasSetBit = true
+                    maxTerm + Bit(true)
+                } else {
+                    maxTerm
+                }
+
+                if (xTermNode.nodes.all { dontHaveMaxTermNodes.contains(it) }) {
+                    haveMaxTermNodes.add(maxTerm)
+
+                    for (xNode in xTermNode.nodes) {
+                        dontHaveMaxTermNodes.remove(xNode)
+                    }
+
+                    if (termHasSetBit) {
+                        if (dontHaveMaxTermNodes.contains(Bit(true))) {
+                            dontHaveMaxTermNodes.remove(Bit(true))
+                        } else {
+                            dontHaveMaxTermNodes.add(Bit(true))
+                        }
+                    }
+                }
             }
+
+            if (haveMaxTermNodes.size == 1) {
+                return preprocessedNode
+            }
+
+            val l = run {
+                val nodesWithoutMaxTerm = haveMaxTermNodes.asSequence().map { node ->
+                    when (node) {
+                        is Variable, is Xor -> Bit(true)
+                        is And -> And(node.nodes.asSequence().filter { it != maxTerm }).simplify()
+                        is Bit -> throw IllegalStateException()
+                    }
+                }
+
+                And(maxTerm, Xor(nodesWithoutMaxTerm).simplify().factor()).simplify()
+            }
+
+            val r = Xor(dontHaveMaxTermNodes).simplify().factor()
+
+            return Xor(l, r).simplify().factor()
         }
-
-        And(maxTerm, Xor(nodesWithoutMaxTerm).simplify().factor()).simplify()
     }
-
-    val r = Xor(dontHaveMaxTermNodes).simplify().factor()
-
-    return Xor(l, r).simplify().factor()
 }
 //#endregion
