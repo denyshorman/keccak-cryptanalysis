@@ -515,22 +515,36 @@ fun Node.factor(): Node {
 
     this as Xor
 
-    val termsCount = HashMap<Node, Int>()
+    val termsMap = HashMap<Node, Int>()
 
     for (node in nodes) {
         when (node) {
             is Bit -> {/*ignore*/}
-            is Variable -> termsCount.merge(node, 1, Integer::sum)
+            is Variable -> termsMap.merge(node, 1, Integer::sum)
             is And -> for (andNodeTerm in node.nodes) {
                 if (andNodeTerm !is Bit) {
-                    termsCount.merge(andNodeTerm, 1, Integer::sum)
+                    termsMap.merge(andNodeTerm, 1, Integer::sum)
                 }
             }
             is Xor -> throw IllegalStateException()
         }
     }
 
-    val maxTerm = termsCount.maxWithOrNull(compareBy { it.value })?.key ?: return this
+    for ((term, _) in termsMap) {
+        if (term is Xor) {
+            val xTermNode = if (term.contains(Bit(true))) {
+                term + Bit(true)
+            } else {
+                term
+            }
+
+            if (nodes.containsAll(xTermNode.nodes)) {
+                termsMap.merge(term, 1, Integer::sum)
+            }
+        }
+    }
+
+    val maxTerm = termsMap.maxWithOrNull(compareBy { it.value })?.key ?: return this
 
     val haveMaxTermNodes = LinkedList<Node>()
     val dontHaveMaxTermNodes = LinkedList<Node>()
@@ -543,6 +557,33 @@ fun Node.factor(): Node {
         }
     }
 
+    if (maxTerm is Xor) {
+        var termHasSetBit = false
+
+        val xTermNode = if (maxTerm.contains(Bit(true))) {
+            termHasSetBit = true
+            maxTerm + Bit(true)
+        } else {
+            maxTerm
+        }
+
+        if (xTermNode.nodes.all { dontHaveMaxTermNodes.contains(it) }) {
+            haveMaxTermNodes.add(maxTerm)
+
+            for (xNode in xTermNode.nodes) {
+                dontHaveMaxTermNodes.remove(xNode)
+            }
+
+            if (termHasSetBit) {
+                if (dontHaveMaxTermNodes.contains(Bit(true))) {
+                    dontHaveMaxTermNodes.remove(Bit(true))
+                } else {
+                    dontHaveMaxTermNodes.add(Bit(true))
+                }
+            }
+        }
+    }
+
     if (haveMaxTermNodes.size == 1) {
         return this
     }
@@ -550,9 +591,9 @@ fun Node.factor(): Node {
     val l = run {
         val nodesWithoutMaxTerm = haveMaxTermNodes.asSequence().map { node ->
             when (node) {
-                is Variable -> Bit(true)
+                is Variable, is Xor -> Bit(true)
                 is And -> And(node.nodes.asSequence().filter { it != maxTerm }).simplify()
-                is Bit, is Xor -> throw IllegalStateException()
+                is Bit -> throw IllegalStateException()
             }
         }
 
