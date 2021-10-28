@@ -507,4 +507,60 @@ fun Node.termsCount(): Int {
         is Xor -> nodes.size
     }
 }
+
+fun Node.factor(): Node {
+    if (this is Bit || this is Variable || this is And) {
+        return this
+    }
+
+    this as Xor
+
+    val termsCount = HashMap<Node, Int>()
+
+    for (node in nodes) {
+        when (node) {
+            is Bit -> {/*ignore*/}
+            is Variable -> termsCount.merge(node, 1, Integer::sum)
+            is And -> for (andNodeTerm in node.nodes) {
+                if (andNodeTerm !is Bit) {
+                    termsCount.merge(andNodeTerm, 1, Integer::sum)
+                }
+            }
+            is Xor -> throw IllegalStateException()
+        }
+    }
+
+    val maxTerm = termsCount.maxWithOrNull(compareBy { it.value })?.key ?: return this
+
+    val haveMaxTermNodes = LinkedList<Node>()
+    val dontHaveMaxTermNodes = LinkedList<Node>()
+
+    for (node in nodes) {
+        if (node.contains(maxTerm)) {
+            haveMaxTermNodes.add(node)
+        } else {
+            dontHaveMaxTermNodes.add(node)
+        }
+    }
+
+    if (haveMaxTermNodes.size == 1) {
+        return this
+    }
+
+    val l = run {
+        val nodesWithoutMaxTerm = haveMaxTermNodes.asSequence().map { node ->
+            when (node) {
+                is Variable -> Bit(true)
+                is And -> And(node.nodes.asSequence().filter { it != maxTerm }).simplify()
+                is Bit, is Xor -> throw IllegalStateException()
+            }
+        }
+
+        And(maxTerm, Xor(nodesWithoutMaxTerm).simplify().factor()).simplify()
+    }
+
+    val r = Xor(dontHaveMaxTermNodes).simplify().factor()
+
+    return Xor(l, r).simplify().factor()
+}
 //#endregion
