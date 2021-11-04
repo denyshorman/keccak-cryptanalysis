@@ -2,11 +2,15 @@ package keccak
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import keccak.util.f
+import keccak.util.t
+import keccak.util.x0
+import keccak.util.x1
 import kotlin.test.assertEquals
 
 class NodesTest : FunSpec({
     context("operators") {
-        context("flatten") {
+        context("expand") {
             test("1") {
                 val input = ("a" xor "b") and ("x" xor "y")
                 val flattenedInput = input.expand()
@@ -51,6 +55,18 @@ class NodesTest : FunSpec({
                 println(input)
                 println(flattenedInput)
                 assertEquals(expected, flattenedInput)
+            }
+
+            test("6") {
+                val f = arrayOf(
+                    And(f) + And(x1),
+                    And(f) + And(t) + x0*x1 + And(x1),
+                    And(f) + x0*x1,
+                    And(f) + And(x0),
+                )
+
+                val expanded = ((f[0] or f[1])*(f[2] or f[3])).expand()
+                expanded.shouldBe(x0)
             }
         }
 

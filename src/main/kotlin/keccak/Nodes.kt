@@ -242,12 +242,14 @@ fun Node.expand(): Node {
     return when (this) {
         is Bit, is Variable -> this
         is And -> {
+            var bit = Bit(true)
             val variables = LinkedList<Variable>()
             val xors = LinkedList<Xor>()
 
             for (node in nodes) {
                 when (node) {
                     is Bit -> if (!node.value) {
+                        bit = Bit(false)
                         variables.clear()
                         break
                     }
@@ -276,7 +278,7 @@ fun Node.expand(): Node {
             }
 
             if (variables.size == 0 && xors.size == 0) {
-                Bit(false)
+                bit
             } else {
                 val initXor = if (variables.size == 0) {
                     Xor(Bit(true))
