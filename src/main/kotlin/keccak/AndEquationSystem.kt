@@ -167,6 +167,34 @@ class AndEquationSystem {
         return XorAndEquationSystem(xorSystem, andSystem)
     }
 
+    fun simplify(): AndEquationSystem {
+        val system = AndEquationSystem(2 * rows, cols)
+
+        var i = 0
+        var j = 0
+        while (i < rows) {
+            system.equations[j].andOpLeft = equations[i].andOpLeft.clone() as BitSet
+            system.andOpLeftResults.setIfTrue(j, andOpLeftResults[i])
+
+            system.equations[j].andOpRight = equations[i].andOpRight.clone() as BitSet
+            system.equations[j].andOpRight.xor(equations[i].rightXor)
+            system.andOpRightResults.setIfTrue(j, andOpRightResults[i] xor rightXorResults[i])
+
+            j++
+
+            system.equations[j].andOpLeft = equations[i].rightXor.clone() as BitSet
+            system.andOpLeftResults.setIfTrue(j, rightXorResults[i])
+
+            system.equations[j].andOpRight = equations[i].andOpLeft.clone() as BitSet
+            system.andOpRightResults.setIfTrue(j, andOpLeftResults[i] xor true)
+
+            j++
+            i++
+        }
+
+        return system
+    }
+
     fun clone(): AndEquationSystem {
         return AndEquationSystem(
             rows,
