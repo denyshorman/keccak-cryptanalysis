@@ -1,6 +1,12 @@
 package keccak
 
+import keccak.util.toBoolean
+import keccak.util.toNumChar
 import java.util.*
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
+import kotlin.random.Random
 
 class NodeContext {
     val variables = mutableMapOf<String, Bit>()
@@ -193,6 +199,18 @@ class And : Node {
 
 //#region Extensions
 
+fun BitArray(bits: String): Array<Bit> {
+    return Array(bits.length) { Bit(bits[it].toBoolean()) }
+}
+
+fun randomBitArray(size: Int, random: Random = Random): Array<Bit> {
+    return Array(size) { Bit(random.nextBoolean()) }
+}
+
+fun Array<Bit>.toBitString(): String {
+    return String(CharArray(size) { this[it].value.toNumChar() })
+}
+
 operator fun Node.contains(other: Node) = this.contains(other)
 
 operator fun Node.plus(other: Node) = Xor(this, other)
@@ -204,6 +222,7 @@ operator fun Node.times(other: String) = And(this, Variable(other))
 operator fun String.plus(other: String) = Xor(Variable(this), Variable(other))
 operator fun String.times(other: String) = And(Variable(this), Variable(other))
 
+infix fun Node.or(other: Node) = (Bit(true) + this)*(Bit(true) + other) + Bit(true)
 infix fun Node.xor(other: Node) = Xor(this, other)
 infix fun Node.and(other: Node) = And(this, other)
 infix fun String.xor(other: Node) = Xor(Variable(this), other)
@@ -606,5 +625,13 @@ fun Node.factor(): Node {
             return Xor(l, r).simplify().factor()
         }
     }
+}
+
+fun Node.evaluate(variables: BooleanArray, variablePrefix: String = "x"): Boolean {
+    val ctx = NodeContext()
+    variables.forEachIndexed { i, v ->
+        ctx.variables["$variablePrefix$i"] = Bit(v)
+    }
+    return evaluate(ctx).value
 }
 //#endregion
