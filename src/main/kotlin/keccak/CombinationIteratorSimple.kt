@@ -1,15 +1,14 @@
 package keccak
 
-import keccak.util.invert
-import keccak.util.toString
-import java.util.*
+import keccak.util.clear
+import keccak.util.set
+import keccak.util.toBitString
 
-class CombinationIterator(
+class CombinationIteratorSimple(
     val varsCount: Int,
-    val mask: BitSet = defaultMask(varsCount),
     val algorithm: Algorithm = Algorithm.Lexicographical,
 ) {
-    val combination = BitSet(varsCount)
+    val combination = BooleanArray(varsCount) { false }
 
     val next = when (algorithm) {
         Algorithm.Lexicographical -> ::lexicographicalNext
@@ -17,14 +16,14 @@ class CombinationIterator(
     }
 
     fun hasNext(): Boolean {
-        var i = mask.nextSetBit(0)
+        var i = 0
 
-        while (i >= 0) {
+        while (i < varsCount) {
             if (!combination[i]) {
                 return true
             }
 
-            i = mask.nextSetBit(i + 1)
+            i++
         }
 
         return false
@@ -50,16 +49,16 @@ class CombinationIterator(
     }
 
     override fun toString(): String {
-        return combination.toString(varsCount)
+        return combination.toBitString()
     }
 
     private fun lexicographicalNext() {
-        var i = mask.previousSetBit(varsCount - 1)
+        var i = varsCount - 1
 
         while (i >= 0) {
             if (combination[i]) {
                 combination.clear(i)
-                i = mask.previousSetBit(i - 1)
+                i--
             } else {
                 combination.set(i)
                 break
@@ -138,13 +137,5 @@ class CombinationIterator(
     enum class Algorithm {
         Lexicographical,
         Increasing,
-    }
-
-    companion object {
-        private fun defaultMask(size: Int): BitSet {
-            val bitSet = BitSet(size)
-            bitSet.invert(size)
-            return bitSet
-        }
     }
 }
