@@ -28,6 +28,16 @@ fun BooleanArray.toBitArray(): Array<Bit> {
     return Array(size) { Bit(this[it]) }
 }
 
+fun BooleanArray.toDecimal(): Long {
+    var sum = 0L
+    var i = 0
+    while (i < size) {
+        if (this[i]) sum += pow2(size - i - 1)
+        i++
+    }
+    return sum
+}
+
 fun BooleanArray.nextSetBit(bitIndex: Int): Int {
     var j = bitIndex
 

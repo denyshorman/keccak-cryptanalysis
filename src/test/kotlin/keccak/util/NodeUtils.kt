@@ -98,3 +98,152 @@ fun Node.printGroups() {
         println(node)
     }
 }
+
+fun Node.printAllFuncSplitAnd(
+    splitCount: Int,
+    varPrefix: String = "x",
+    factor: Boolean = true,
+    printCondition: ((Array<Node>) -> Boolean)? = null,
+) {
+    val base = this
+    val xIter = CombinationIteratorSimple(base.countVariables(varPrefix))
+    var zeroCount = 0
+
+    xIter.iterateAll {
+        if (!base.evaluate(xIter.combination)) {
+            zeroCount++
+        }
+    }
+
+    val zeroIter = Array(splitCount - 1) { CombinationIteratorSimple(zeroCount) }
+
+    fun modifier(zeroIterCombination: BooleanArray): Node {
+        var mod: Node = Bit(false)
+        var zeroCounter = 0
+
+        xIter.iterateAll {
+            if (!base.evaluate(xIter.combination)) {
+                if (zeroIterCombination[zeroCounter]) {
+                    val terms = xIter.combination.asSequence()
+                        .mapIndexed { i, v -> Variable("$varPrefix$i") + Bit(v) + t }
+                    mod += And(terms)
+                }
+                zeroCounter++
+            }
+        }
+
+        return mod
+    }
+
+    fun Array<Node>.print() {
+        if (printCondition != null && !printCondition(this)) {
+            return
+        }
+
+        forEach { term ->
+            var preparedTerm = term.expand()
+            if (factor) {
+                preparedTerm = preparedTerm.factor()
+            }
+            println(preparedTerm)
+        }
+
+        println()
+    }
+
+    fun iterate(idx: Int) {
+        if (idx >= zeroIter.size) {
+            val terms = Array(splitCount) { i ->
+                if (i == splitCount - 1) {
+                    Bit(false)
+                } else {
+                    modifier(zeroIter[i].combination)
+                }
+            }
+
+            var d: Node = Bit(true)
+            var i = 0
+            while (i < splitCount - 1) {
+                d *= terms[i]
+                terms[i] += base
+                i++
+            }
+            terms[i] = d + t
+
+            terms.print()
+        } else {
+            zeroIter[idx].iterateAll {
+                iterate(idx + 1)
+            }
+        }
+    }
+
+    iterate(0)
+}
+
+fun Node.printAllFuncSplitXor(
+    splitCount: Int,
+    varPrefix: String = "x",
+    factor: Boolean = true,
+    printCondition: ((Array<Node>) -> Boolean)? = null,
+) {
+    val base = this
+    val xIter = CombinationIteratorSimple(base.countVariables(varPrefix))
+    val funcIter = Array(splitCount - 1) { CombinationIteratorSimple(pow2(xIter.varsCount).toInt()) }
+
+    fun modifier(idx: Int): Node {
+        var mod: Node = Bit(false)
+
+        xIter.iterateAll {
+            if (funcIter[idx].combination[xIter.combination.toDecimal().toInt()]) {
+                val terms = xIter.combination.asSequence()
+                    .mapIndexed { i, v -> Variable("$varPrefix$i") + Bit(v) + t }
+                mod += And(terms)
+            }
+        }
+
+        return mod
+    }
+
+    fun Array<Node>.print() {
+        if (printCondition != null && !printCondition(this)) {
+            return
+        }
+
+        forEach { term ->
+            var preparedTerm = term.expand()
+            if (factor) {
+                preparedTerm = preparedTerm.factor()
+            }
+            println(preparedTerm)
+        }
+
+        println()
+    }
+
+    fun iterate(idx: Int) {
+        if (idx >= funcIter.size) {
+            val terms = Array(splitCount) { i ->
+                if (i == splitCount - 1) {
+                    base
+                } else {
+                    modifier(i)
+                }
+            }
+
+            var i = 0
+            val j = terms.size - 1
+            while (i < j) {
+                terms[j] += terms[i++]
+            }
+
+            terms.print()
+        } else {
+            funcIter[idx].iterateAll {
+                iterate(idx + 1)
+            }
+        }
+    }
+
+    iterate(0)
+}

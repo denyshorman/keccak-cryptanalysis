@@ -10,6 +10,14 @@ fun pow(a: Int, b: Int): Long {
     return count
 }
 
+fun pow2(n: Int): Long {
+    return 1L shl n
+}
+
+fun pow2(n: Long): Long {
+    return 1L shl n.toInt()
+}
+
 fun isPow2(n: Int): Boolean = ((n - 1) and n) == 0
 
 fun modPow2(n: Int, p2: Int): Int = n and (p2 - 1)

@@ -634,4 +634,21 @@ fun Node.evaluate(variables: BooleanArray, variablePrefix: String = "x"): Boolea
     }
     return evaluate(ctx).value
 }
+
+fun Node.countVariables(varPrefix: String = "x"): Int {
+    val variables = HashSet<Variable>()
+
+    fun Node.count() {
+        when (this) {
+            is Bit -> {}
+            is Variable -> if (name.startsWith(varPrefix)) variables.add(this)
+            is And -> nodes.forEach { it.count() }
+            is Xor -> nodes.forEach { it.count() }
+        }
+    }
+
+    count()
+
+    return variables.size
+}
 //#endregion

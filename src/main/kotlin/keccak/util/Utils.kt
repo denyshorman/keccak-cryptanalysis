@@ -162,3 +162,28 @@ fun <T> Array<T>.exchange(i: Int, j: Int) {
     this[i] = this[j]
     this[j] = tmp
 }
+
+fun factorial(n: Long): Long {
+    var x = 1L
+    var i = n
+    while (i >= 2) {
+        x *= i--
+    }
+    return x
+}
+
+fun placement(n: Long, k: Long): Long {
+    var x = 1L
+    var i = n
+    var j = 0
+    while (j < k) {
+        x *= i
+        i--
+        j++
+    }
+    return x
+}
+
+fun combinations(n: Long, k: Long): Long {
+    return placement(n, k) / factorial(k)
+}
