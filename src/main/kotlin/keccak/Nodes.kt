@@ -12,7 +12,7 @@ class NodeContext {
     val variables = mutableMapOf<String, Bit>()
 }
 
-sealed interface Node : Comparable<Node> {
+sealed interface Node {
     fun evaluate(context: NodeContext): Bit
     fun contains(node: Node): Boolean
 }
@@ -27,13 +27,6 @@ value class Bit(val value: Boolean = false) : Node {
 
     override fun contains(node: Node): Boolean {
         return this == node
-    }
-
-    override fun compareTo(other: Node): Int {
-        return when (other) {
-            is Bit -> value.compareTo(other.value)
-            is Variable, is And, is Xor -> 1
-        }
     }
 
     override fun toString(): String {
@@ -51,37 +44,8 @@ value class Variable(val name: String) : Node {
         return this == node
     }
 
-    override fun compareTo(other: Node): Int {
-        return when (other) {
-            is Bit, is And, is Xor -> -1
-            is Variable -> {
-                val var0 = VariablePattern.matchEntire(name)
-                val var1 = VariablePattern.matchEntire(other.name)
-
-                if (var0 != null && var1 != null) {
-                    val (name0, id0) = var0.destructured
-                    val (name1, id1) = var1.destructured
-
-                    val nameComp = name0.compareTo(name1)
-
-                    if (nameComp == 0) {
-                        id0.toLong().compareTo(id1.toLong())
-                    } else {
-                        nameComp
-                    }
-                } else {
-                    name.compareTo(other.name)
-                }
-            }
-        }
-    }
-
     override fun toString(): String {
         return name
-    }
-
-    companion object {
-        private val VariablePattern = """^([a-zA-Z]+)(\d+)$""".toRegex()
     }
 }
 
@@ -92,7 +56,7 @@ class Xor : Node {
     constructor(initNodes: Sequence<Node>) : this(initNodes.asIterable())
 
     constructor(initNodes: Iterable<Node>) {
-        nodes = TreeSet<Node>()
+        nodes = HashSet<Node>()
         nodes.addNodes(initNodes)
         nodes.pad()
     }
@@ -108,13 +72,6 @@ class Xor : Node {
         return when (node) {
             is Bit, is Variable, is And -> nodes.contains(node) || nodes.any { it.contains(node) }
             is Xor -> nodes.containsAll(node.nodes) || nodes.any { it.contains(node) }
-        }
-    }
-
-    override fun compareTo(other: Node): Int {
-        return when (other) {
-            is Bit, is Variable, is And -> 1
-            is Xor -> nodes.size.compareTo(other.nodes.size)
         }
     }
 
@@ -142,7 +99,7 @@ class Xor : Node {
         }.joinToString(" + ")
     }
 
-    private fun MutableSet<Node>.addNodes(nodes: Iterable<Node>) {
+    private fun HashSet<Node>.addNodes(nodes: Iterable<Node>) {
         nodes.forEach { node ->
             when (node) {
                 is Xor -> addNodes(node.nodes)
@@ -151,7 +108,7 @@ class Xor : Node {
         }
     }
 
-    private fun MutableSet<Node>.addNode(node: Node) {
+    private fun HashSet<Node>.addNode(node: Node) {
         if (contains(node)) {
             remove(node)
         } else {
@@ -159,7 +116,7 @@ class Xor : Node {
         }
     }
 
-    private fun MutableSet<Node>.pad() {
+    private fun HashSet<Node>.pad() {
         remove(Bit())
         if (isEmpty()) add(Bit())
     }
@@ -173,7 +130,7 @@ class And : Node {
 
     constructor(initNodes: Iterable<Node>) {
         nodes = try {
-            val nodeSet = TreeSet<Node>()
+            val nodeSet = HashSet<Node>()
             nodeSet.addNodes(initNodes.asIterable())
             nodeSet.pad()
             nodeSet
@@ -190,14 +147,6 @@ class And : Node {
         return when (node) {
             is Bit, is Variable, is Xor -> nodes.contains(node) || nodes.any { it.contains(node) }
             is And -> nodes.containsAll(node.nodes) || nodes.any { it.contains(node) }
-        }
-    }
-
-    override fun compareTo(other: Node): Int {
-        return when (other) {
-            is Bit, is Variable -> 1
-            is Xor -> -1
-            is And -> nodes.size.compareTo(other.nodes.size)
         }
     }
 
@@ -225,7 +174,7 @@ class And : Node {
         }.joinToString("*")
     }
 
-    private fun MutableSet<Node>.addNodes(nodes: Iterable<Node>) {
+    private fun HashSet<Node>.addNodes(nodes: Iterable<Node>) {
         nodes.forEach { node ->
             when (node) {
                 is Bit -> if (node.value) add(node) else throw Zero
@@ -235,7 +184,7 @@ class And : Node {
         }
     }
 
-    private fun MutableSet<Node>.pad() {
+    private fun HashSet<Node>.pad() {
         if (size > 1) {
             remove(Bit(true))
         } else if (isEmpty()) {
