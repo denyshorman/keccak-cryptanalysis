@@ -34,16 +34,14 @@ class Keccak256EqSystemGenerator private constructor() {
             allVarsCount = allVarsCount,
         )
 
-        val (xorEquationSystem, hash) = state.run {
+        val hash = state.run {
             populateMessageVariables(paddedMessage)
             absorb(blocks)
             squeeze()
         }
 
-        val xorAndEquationSystem = XorAndEquationSystem(xorEquationSystem, state.andEqSystem)
-
         return Result(
-            xorAndEquationSystem,
+            state.andEqSystem,
             state.varValues,
             hash,
         )
@@ -259,21 +257,14 @@ class Keccak256EqSystemGenerator private constructor() {
 
         ROUND_OFFSETS[4].forEach { x ->
             state0[x[0]] = b0[x[0]] xor b0[x[1]] xor (b0[x[1]] and b0[x[2]])
-
-            val eqSystem = XorEquationSystem(Long.SIZE_BITS, allVarsCount)
-            eqSystem.xor(
-                b1[x[0]],
-                b1[x[1]],
-                recordConstraint(b1[x[1]], b1[x[2]], (b0[x[1]] and b0[x[2]])),
-            )
-            state1[x[0]] = eqSystem
+            state1[x[0]] = recordConstraint(b1[x[0]], b1[x[1]], b1[x[2]], state0[x[0]])
         }
 
         state0[0] = state0[0] xor ROUND_CONSTANTS[round]
         state1[0].results.xor(ROUND_CONSTANTS_FIXED_BIT_SET[round].bitSet)
     }
 
-    private fun State.squeeze(): Pair<XorEquationSystem, ByteArray> {
+    private fun State.squeeze(): ByteArray {
         val hashEqSystem = arrayOf(
             *state1[0].toLittleEndianBytes(),
             *state1[5].toLittleEndianBytes(),
@@ -300,12 +291,17 @@ class Keccak256EqSystemGenerator private constructor() {
             byteIndex++
         }
 
-        return Pair(hashEqSystem.merge(), hashBytes)
+        for (xorSystem in hashEqSystem) {
+            andEqSystem.substitute(xorSystem)
+        }
+
+        return hashBytes
     }
 
     private fun State.recordConstraint(
-        leftSystem: XorEquationSystem,
-        rightSystem: XorEquationSystem,
+        a: XorEquationSystem,
+        b: XorEquationSystem,
+        c: XorEquationSystem,
         result: Long,
     ): XorEquationSystem {
         val system = XorEquationSystem(Long.SIZE_BITS, allVarsCount)
@@ -314,12 +310,15 @@ class Keccak256EqSystemGenerator private constructor() {
         while (i < Long.SIZE_BITS) {
             val andSystemEqIndex = constraintVarIndex - messageCount
 
-            andEqSystem.equations[andSystemEqIndex].andOpLeft = leftSystem.equations[i].clone() as BitSet
-            andEqSystem.equations[andSystemEqIndex].andOpRight = rightSystem.equations[i].clone() as BitSet
+            andEqSystem.equations[andSystemEqIndex].andOpLeft = b.equations[i].clone() as BitSet
+            andEqSystem.equations[andSystemEqIndex].andOpRight = c.equations[i].clone() as BitSet
+            andEqSystem.equations[andSystemEqIndex].rightXor = a.equations[i].clone() as BitSet
+            andEqSystem.equations[andSystemEqIndex].rightXor.xor(b.equations[i])
             andEqSystem.equations[andSystemEqIndex].rightXor.set(constraintVarIndex)
 
-            andEqSystem.andOpLeftResults[andSystemEqIndex] = leftSystem.results[i]
-            andEqSystem.andOpRightResults[andSystemEqIndex] = rightSystem.results[i]
+            andEqSystem.andOpLeftResults[andSystemEqIndex] = b.results[i]
+            andEqSystem.andOpRightResults[andSystemEqIndex] = c.results[i]
+            andEqSystem.rightXorResults[andSystemEqIndex] = a.results[i] xor b.results[i]
 
             system.equations[i].set(constraintVarIndex)
 
@@ -372,7 +371,7 @@ class Keccak256EqSystemGenerator private constructor() {
 
     //#region Public Models
     class Result(
-        val equationSystem: XorAndEquationSystem,
+        val equationSystem: AndEquationSystem,
         val varValues: BitSet,
         val hash: ByteArray,
     )

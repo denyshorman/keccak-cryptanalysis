@@ -134,9 +134,16 @@ class AndEquationSystem {
         }
     }
 
-    fun invert(): XorAndEquationSystem {
-        val xorSystem = XorEquationSystem(rows * 2, cols + rows * 2)
-        val andSystem = AndEquationSystem(rows, xorSystem.cols)
+    fun invertToXorAndSystem(): XorAndEquationSystem {
+        val xorSystem = invertToXorSystem()
+        val andSystem = invertToAndSystem()
+        return XorAndEquationSystem(xorSystem, andSystem)
+    }
+
+    fun invertToXorSystem(): XorEquationSystem {
+        val newRowsCount = rows * 2
+        val newColsCount = cols + newRowsCount
+        val xorSystem = XorEquationSystem(newRowsCount, newColsCount)
 
         var andEqRow = 0
         var newXorEqRow = 0
@@ -146,7 +153,6 @@ class AndEquationSystem {
             xorSystem.equations[newXorEqRow] = equations[andEqRow].andOpLeft.clone() as BitSet
             xorSystem.equations[newXorEqRow].set(newVarIndex)
             xorSystem.results.setIfTrue(newXorEqRow, andOpLeftResults[andEqRow])
-            andSystem.equations[andEqRow].andOpLeft.set(newVarIndex)
 
             newXorEqRow++
             newVarIndex++
@@ -154,6 +160,28 @@ class AndEquationSystem {
             xorSystem.equations[newXorEqRow] = equations[andEqRow].andOpRight.clone() as BitSet
             xorSystem.equations[newXorEqRow].set(newVarIndex)
             xorSystem.results.setIfTrue(newXorEqRow, andOpRightResults[andEqRow])
+
+            newXorEqRow++
+            newVarIndex++
+            andEqRow++
+        }
+
+        return xorSystem
+    }
+
+    fun invertToAndSystem(): AndEquationSystem {
+        val andSystem = AndEquationSystem(rows, cols + rows * 2)
+
+        var andEqRow = 0
+        var newXorEqRow = 0
+        var newVarIndex = cols
+
+        while (andEqRow < rows) {
+            andSystem.equations[andEqRow].andOpLeft.set(newVarIndex)
+
+            newXorEqRow++
+            newVarIndex++
+
             andSystem.equations[andEqRow].andOpRight.set(newVarIndex)
 
             andSystem.equations[andEqRow].rightXor = equations[andEqRow].rightXor.clone() as BitSet
@@ -164,7 +192,7 @@ class AndEquationSystem {
             andEqRow++
         }
 
-        return XorAndEquationSystem(xorSystem, andSystem)
+        return andSystem
     }
 
     fun simplify(): AndEquationSystem {
