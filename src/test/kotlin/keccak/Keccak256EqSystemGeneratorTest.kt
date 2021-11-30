@@ -7,6 +7,7 @@ import keccak.util.*
 import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 import java.io.File
+import java.util.*
 import kotlin.random.Random
 import kotlin.random.Random.Default.nextBytes
 import kotlin.time.Duration
@@ -244,13 +245,266 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
         println(b)
     }
 
-    test("find solution for keccak256 equation system").config(timeout = Duration.INFINITE) {
-        val msgBytes = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45)
+    test("keccak256 equations invert to xor-and system") {
+        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
 
-        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msgBytes, replaceRulesInverse = true, replacePadding = false)
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
 
-        val solution = hashResult.equationSystem.solveKeccak256()
+        val invertedSystem = hashResult.equationSystem.invertToXorAndSystem()
+        invertedSystem.xorSystem.solve(skipValidation = true, logProgress = true, progressStep = 4096)
+        invertedSystem.substituteAndWithXor()
 
-        println(solution)
+        invertedSystem.toFile(
+            File("D:\\test\\xor1.txt"),
+            File("D:\\test\\and1.txt"),
+            xorHumanReadable = false,
+            andHumanReadable = true,
+        )
+    }
+
+    test("keccak256 equations invert to xor system") {
+        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
+
+        val normalizedSystem = hashResult.equationSystem.simplify()
+        val invertedSystem = normalizedSystem.invertToXorSystem()
+        invertedSystem.solve(skipValidation = true, logProgress = true, progressStep = 1024)
+
+        invertedSystem.toFile(
+            file = File("D:\\test\\updated_normalized_inverted_xor.txt"),
+            humanReadable = true,
+        )
+    }
+
+    test("keccak256 validate inverted system") {
+        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
+
+        val system = (File("D:\\test\\xor1.txt") to File("D:\\test\\and1.txt")).toXorAndEquationSystem(
+            xorEqRows = 77056,
+            andEqRows = hashResult.equationSystem.rows,
+            varsCount = 116288,
+            xorHumanReadable = false,
+            andHumanReadable = true,
+        )
+
+        var i = hashResult.equationSystem.cols
+        var j = 0
+        while (j < hashResult.equationSystem.rows) {
+            var value = hashResult.equationSystem.equations[j].andOpLeft.evaluate(hashResult.varValues) xor hashResult.equationSystem.andOpLeftResults[j]
+            hashResult.varValues.setIfTrue(i++, value)
+
+            value = hashResult.equationSystem.equations[j].andOpRight.evaluate(hashResult.varValues) xor hashResult.equationSystem.andOpRightResults[j]
+            hashResult.varValues.setIfTrue(i++, value)
+
+            j++
+        }
+
+        val valid = system.isValid(hashResult.varValues)
+
+        println(valid)
+    }
+
+    test("keccak256 load xor and convert to human") {
+        val xorSystem = File("D:\\test\\xor1.txt").toXorEquationSystem(77056, 116288, false)
+        xorSystem.toFile(File("D:\\test\\xor1_binary.txt"), 0, 264, false)
+    }
+
+    test("keccak256 load xor and convert to initial") {
+        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
+
+        val loadedXorSystem = File("D:\\test\\xor1_binary.txt").toXorEquationSystem(264, 116288, false)
+
+        var i = 0
+        while (i < 264) {
+            var bitIndex = 1088
+
+            while (true) {
+                bitIndex = loadedXorSystem.equations[i].nextSetBit(bitIndex)
+                if (bitIndex == -1) break
+
+                val andEqIndex = (bitIndex - hashResult.equationSystem.cols) / 2
+                val side = bitIndex % 2
+
+                if (side == 0) {
+                    loadedXorSystem.equations[i].xor(hashResult.equationSystem.equations[andEqIndex].andOpLeft)
+                    loadedXorSystem.results[i].xor(hashResult.equationSystem.andOpLeftResults[andEqIndex])
+                } else {
+                    loadedXorSystem.equations[i].xor(hashResult.equationSystem.equations[andEqIndex].andOpRight)
+                    loadedXorSystem.results[i].xor(hashResult.equationSystem.andOpRightResults[andEqIndex])
+                }
+
+                loadedXorSystem.equations[i].clear(bitIndex)
+            }
+
+            i++
+        }
+
+        loadedXorSystem.toFile(File("D:\\test\\xor2_human.txt"), 0, 264, true)
+    }
+
+    test("keccak256 load xor and calc variables") {
+        val xorSystem = File("D:\\test\\xor1.txt").toXorEquationSystem(77056, 116288, false)
+
+        var i = 0
+        val mask = BitSet(xorSystem.cols)
+        while (i < 264) {
+            mask.or(xorSystem.equations[i])
+            mask.clear(i)
+            i++
+        }
+
+        println(mask.setBitsCount())
+        println(mask.nextSetBit(0))
+        println(mask.previousSetBit(xorSystem.cols - 1))
+    }
+
+    test("keccak256 240 bit message") {
+        val msg = nextBytes(32)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
+
+        val colsMask = BitSet(hashResult.equationSystem.cols)
+        colsMask.set(0, hashResult.equationSystem.cols)
+
+        var replaced = true
+        var count = 0
+
+        while (replaced) {
+            replaced = false
+
+            hashResult.equationSystem.equations.forEachIndexed { index, equation ->
+                if ((equation.andOpLeft.isEmpty || equation.andOpRight.isEmpty) && !equation.rightXor.isEmpty) {
+                    val varIndex = equation.rightXor.nextSetBit(1088)
+
+                    if (equation.andOpLeft.isEmpty && equation.andOpRight.isEmpty) {
+                        val value = hashResult.equationSystem.andOpLeftResults[index] &&
+                                hashResult.equationSystem.andOpRightResults[index]
+
+                        hashResult.equationSystem.substitute(varIndex, value)
+                        replaced = true
+                        count++
+                    } else if (equation.andOpLeft.isEmpty) {
+                        if (!hashResult.equationSystem.andOpLeftResults[index]) {
+                            hashResult.equationSystem.substitute(varIndex, false)
+                            replaced = true
+                            count++
+                        }
+                    } else if (equation.andOpRight.isEmpty) {
+                        if (!hashResult.equationSystem.andOpRightResults[index]) {
+                            hashResult.equationSystem.substitute(varIndex, false)
+                            replaced = true
+                            count++
+                        }
+                    }
+                }
+            }
+        }
+
+        println(count)
+
+        hashResult.equationSystem.toFile(File("D:\\test\\and1.txt"), humanReadable = false)
+    }
+
+    test("keccak256 count all bad lines") {
+        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
+
+        val normalizedSystem = hashResult.equationSystem.simplify()
+        val invertedSystem = normalizedSystem.invertToXorSystem()
+
+        val normSysCols = normalizedSystem.cols
+        val invSystemRows = invertedSystem.rows
+        val invSystemCols = invertedSystem.cols
+
+        System.gc()
+
+        val xorSystem = File("D:\\test\\updated_normalized_inverted_xor.txt").toXorEquationSystem(invSystemRows, invSystemCols, true)
+
+        var i = 0
+        var counter = 0
+        while (i < xorSystem.rows) {
+            val index0 = xorSystem.equations[i].nextSetBit(0)
+
+            if (index0 >= normSysCols) {
+                if (i + 1 < xorSystem.rows) {
+                    val index1 = xorSystem.equations[i + 1].nextSetBit(0)
+
+                    if (index0 + 1 == index1) {
+                        xorSystem.equations[i].clear(index0)
+                        xorSystem.equations[i + 1].clear(index1)
+
+                        if (xorSystem.equations[i] == xorSystem.equations[i + 1]) {
+                            counter++
+                        }
+
+                        i += 2
+                    } else {
+                        i++
+                    }
+                } else {
+                    i++
+                }
+            } else {
+                i++
+            }
+        }
+
+        println("Eqs: $counter")
+    }
+
+    test("find first 3200 nodes") {
+        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
+
+        val normalizedSystem = hashResult.equationSystem.simplify()
+
+        var i = 0
+        val nodes = LinkedList<Node>()
+        while (i < 3200) {
+            val lNode = normalizedSystem.equations[i].andOpLeft.toNode(normalizedSystem.andOpLeftResults[i])
+            val rNode = normalizedSystem.equations[i].andOpRight.toNode(normalizedSystem.andOpRightResults[i])
+            val and = And(lNode, rNode, Variable("a$i"))
+            //val and = And(lNode, rNode, Bit(Random.nextBoolean()))
+            nodes.add(and)
+            //println(and)
+            i++
+        }
+
+        val node = Xor(nodes)
+        println("Init node")
+        //println(node.expand())
+        println()
+
+        val expandedNode = Xor((node.expand() as Xor).nodes.asSequence().filter { it is And && it.nodes.size >= 3 }).groupBy("x")
+
+        val nodeGroups = expandedNode.groups("x")
+
+        /*for (nodeGroup in nodeGroups) {
+            println(nodeGroup)
+        }*/
+
+        val system = XorEquationSystem(rows = nodeGroups.size, cols = node.countVariables("a"))
+
+        nodeGroups.values.forEachIndexed { index, eq ->
+            system.set(index, "$eq = 0", true)
+        }
+
+        val solved = system.solve()
+        println("Solved: $solved")
+        //println(system)
+        println()
+        i = 0
+        while (i < system.rows) {
+            println(system.equations[i].toXorString(system.results[i]))
+            i++
+        }
+        println()
     }
 })

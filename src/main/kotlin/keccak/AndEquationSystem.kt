@@ -62,8 +62,165 @@ class AndEquationSystem {
         return true
     }
 
-    fun solve(): Boolean {
-        TODO("Not implemented")
+    fun solve(
+        logProgress: Boolean = false,
+    ): XorEquationSystem? {
+        var solved: Boolean
+        val solutionSystem = XorEquationSystem(cols, cols)
+
+        if (logProgress) {
+            println(this)
+            println()
+            println(solutionSystem)
+            println()
+        }
+
+        while (true) {
+            //region Populate solution system
+            var andEqIndex = 0
+            var appendIndex = 0
+            var hasNotEmptyEq = false
+
+            while (andEqIndex < this.rows) {
+                val lRes = this.andOpLeftResults[andEqIndex]
+                val rRes = this.andOpRightResults[andEqIndex]
+                val lEmpty = this.equations[andEqIndex].andOpLeft.isEmpty
+                val rEmpty = this.equations[andEqIndex].andOpRight.isEmpty
+                val lEq = this.equations[andEqIndex].andOpLeft
+                val rEq = this.equations[andEqIndex].andOpRight
+
+                when {
+                    // y1 = 1
+                    // y2 = 1
+                    lEmpty && rEmpty && lRes && rRes -> {
+                        return null
+                    }
+                    // y1 + a + b + c = 0/1
+                    // y2 + a + b + c = 0/1
+                    !lEmpty && !rEmpty && lRes == rRes && lEq == rEq -> {
+                        appendIndex = solutionSystem.append(lEq, lRes, appendIndex)
+                        appendIndex++
+
+                        lEq.clear()
+                        rEq.clear()
+
+                        this.andOpLeftResults.clear(andEqIndex)
+                        this.andOpRightResults.clear(andEqIndex)
+                    }
+                    // y1 = 1
+                    // y2 + a + b = 0/1
+                    lEmpty && lRes && !rEmpty -> {
+                        appendIndex = solutionSystem.append(rEq, rRes, appendIndex)
+                        appendIndex++
+
+                        rEq.clear()
+                        this.andOpRightResults.clear(andEqIndex)
+                    }
+                    // y1 + a + b = 0/1
+                    // y2 = 1
+                    !lEmpty && rEmpty && rRes -> {
+                        appendIndex = solutionSystem.append(lEq, lRes, appendIndex)
+                        appendIndex++
+
+                        lEq.clear()
+                        this.andOpLeftResults.clear(andEqIndex)
+                    }
+                    // y1 + a + b + c = 0/1
+                    // y2 + a + d = 0/1
+                    !hasNotEmptyEq && !lEmpty && !rEmpty && lEq != rEq -> {
+                        hasNotEmptyEq = true
+                    }
+                    /*// y1 + a = 0
+                    // y2 + b + c + d = 0/1
+                    lEq.setBitsCount() == 1 && !lRes && !rEq.isEmpty -> {
+                        var i = 0
+                        var good = true
+
+                        while (i < this.rows) {
+                            if (
+                                i != andEqIndex &&
+                                (lEq == this.equations[i].andOpLeft && this.andOpLeftResults[i] ||
+                                lEq == this.equations[i].andOpRight && this.andOpRightResults[i])
+                            ) {
+                                good = false
+                                break
+                            }
+
+                            i++
+                        }
+
+                        if (good) {
+                            *//*appendIndex = solutionSystem.append(lEq, false, appendIndex)
+                            appendIndex++*//*
+
+                            lEq.clear()
+                        } else {
+                            appendIndex = solutionSystem.append(lEq, true, appendIndex)
+                            appendIndex++
+                        }
+                    }
+                    // y1 + b + c + d = 0/1
+                    // y2 + a = 0
+                    rEq.setBitsCount() == 1 && !rRes && !lEq.isEmpty -> {
+                        var i = 0
+                        var good = true
+
+                        while (i < this.rows) {
+                            if (
+                                i != andEqIndex &&
+                                (rEq == this.equations[i].andOpLeft && this.andOpLeftResults[i] ||
+                                rEq == this.equations[i].andOpRight && this.andOpRightResults[i])
+                            ) {
+                                good = false
+                                break
+                            }
+
+                            i++
+                        }
+
+                        if (good) {
+                            *//*appendIndex = solutionSystem.append(rEq, false, appendIndex)
+                            appendIndex++*//*
+
+                            rEq.clear()
+                        } else {
+                            appendIndex = solutionSystem.append(rEq, true, appendIndex)
+                            appendIndex++
+                        }
+                    }*/
+                }
+
+                andEqIndex++
+            }
+            //endregion
+
+            if (logProgress) {
+                println(this)
+                println()
+            }
+
+            if (appendIndex == 0) {
+                if (hasNotEmptyEq) {
+                    println(this.invertToXorSystem().toNodeEquationSystem(varOffset = 0))
+                    TODO("Has more than one solution")
+                } else {
+                    return solutionSystem
+                }
+            }
+
+            solved = solutionSystem.solve()
+
+            if (logProgress) {
+                println(solutionSystem)
+                println()
+            }
+
+            if (!solved) {
+                return null
+            }
+
+            this.substitute(solutionSystem)
+        }
     }
 
     fun substitute(index: Int, value: Boolean) {
@@ -221,6 +378,20 @@ class AndEquationSystem {
         }
 
         return system
+    }
+
+    fun countSolutions(): Int {
+        val iterator = CombinationIterator(cols)
+        var solutions = 0
+
+        iterator.iterateAll {
+            if (isValid(iterator.combination)) {
+                // println(iterator.combination.toString(cols))
+                solutions++
+            }
+        }
+
+        return solutions
     }
 
     fun clone(): AndEquationSystem {

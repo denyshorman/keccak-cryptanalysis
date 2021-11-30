@@ -99,15 +99,15 @@ fun AndEquationSystem.toXorEquationSystem(): XorEquationSystem {
     return xorEquationSystem
 }
 
-fun AndEquationSystem.toNodeEquationSystem(): NodeEquationSystem {
-    val variables = Array(cols) { Variable("x${it + 1}") }
+fun AndEquationSystem.toNodeEquationSystem(varPrefix: String = "x", varOffset: Int = 1): NodeEquationSystem {
+    val variables = Array(cols) { Variable("$varPrefix${it + varOffset}") }
 
     fun convert(vars: BitSet, value: Boolean): List<Node> {
         val left = LinkedList<Node>()
 
         var bitIndex = vars.nextSetBit(0)
         while (bitIndex >= 0) {
-            left.add(Variable("x${bitIndex + 1}"))
+            left.add(Variable("$varPrefix${bitIndex + varOffset}"))
             bitIndex = vars.nextSetBit(bitIndex + 1)
         }
 
@@ -129,6 +129,22 @@ fun AndEquationSystem.toNodeEquationSystem(): NodeEquationSystem {
     return NodeEquationSystem(equations, variables)
 }
 
+fun AndEquationSystem.toCharacteristicEquation(
+    characteristicVarPrefix: String = "a",
+    varPrefix: String = "x",
+    useZeroPosition: Boolean = true,
+): Node {
+    val lSystem = XorEquationSystem(rows, cols, Array(equations.size) { equations[it].andOpLeft }, andOpLeftResults)
+    val rSystem = XorEquationSystem(rows, cols, Array(equations.size) { equations[it].andOpRight }, andOpRightResults)
+    val xSystem = XorEquationSystem(rows, cols, Array(equations.size) { equations[it].rightXor }, rightXorResults)
+
+    val lChar = lSystem.toCharacteristicEquation(characteristicVarPrefix, varPrefix, useZeroPosition)
+    val rChar = rSystem.toCharacteristicEquation(characteristicVarPrefix, varPrefix, useZeroPosition)
+    val xChar = xSystem.toCharacteristicEquation(characteristicVarPrefix, varPrefix, useZeroPosition)
+
+    return lChar*rChar + xChar
+}
+
 fun AndEquationSystem.toFile(
     file: File,
     eqStartIndex: Int = 0,
@@ -141,9 +157,9 @@ fun AndEquationSystem.toFile(
 
         if (humanReadable) {
             while (eqIndex < limit) {
-                val left = equations[eqIndex].andOpLeft.toXorString(cols, andOpLeftResults[eqIndex])
-                val right = equations[eqIndex].andOpRight.toXorString(cols, andOpRightResults[eqIndex])
-                val result = equations[eqIndex].rightXor.toXorString(cols, rightXorResults[eqIndex])
+                val left = equations[eqIndex].andOpLeft.toXorString(andOpLeftResults[eqIndex])
+                val right = equations[eqIndex].andOpRight.toXorString(andOpRightResults[eqIndex])
+                val result = equations[eqIndex].rightXor.toXorString(rightXorResults[eqIndex])
 
                 if (!(left == "0" && right == "0" && result == "0")) {
                     if (left.contains('+')) {
@@ -211,38 +227,47 @@ fun randomAndEquationSystem(
     rows: Int,
     cols: Int,
     allowIncompatibleSystem: Boolean = false,
+    equalToZero: Boolean = false,
+    solutionsCount: Int? = null,
     random: Random = Random,
 ): Pair<BitSet, AndEquationSystem> {
     val system = AndEquationSystem(rows, cols)
-
     val solution = randomBitSet(cols, random)
 
-    var i = 0
-    while (i < rows) {
-        while (true) {
-            system.equations[i].andOpLeft.randomize(cols, random)
-            system.equations[i].andOpRight.randomize(cols, random)
-            system.equations[i].rightXor.clear()
-            system.equations[i].rightXor.set(i)
+    while (true) {
+        var i = 0
+        while (i < rows) {
+            while (true) {
+                system.equations[i].andOpLeft.randomize(cols, random)
+                system.equations[i].andOpRight.randomize(cols, random)
+                system.andOpLeftResults[i] = random.nextBoolean()
+                system.andOpRightResults[i] = random.nextBoolean()
 
-            system.andOpLeftResults[i] = random.nextBoolean()
-            system.andOpRightResults[i] = random.nextBoolean()
-            system.rightXorResults[i] = false
+                if (!equalToZero) {
+                    system.equations[i].rightXor.clear()
+                    system.equations[i].rightXor.set(i)
+                    system.rightXorResults[i] = false
+                }
 
-            if (system.equations[i].andOpLeft.isEmpty || system.equations[i].andOpRight.isEmpty || system.equations[i].rightXor.isEmpty) {
-                continue
+                if (system.equations[i].andOpLeft.isEmpty || system.equations[i].andOpRight.isEmpty || (system.equations[i].rightXor.isEmpty xor equalToZero)) {
+                    continue
+                }
+
+                val x0 = system.equations[i].andOpLeft.evaluate(solution) xor system.andOpLeftResults[i]
+                val x1 = system.equations[i].andOpRight.evaluate(solution) xor system.andOpRightResults[i]
+                val x2 = system.equations[i].rightXor.evaluate(solution) xor system.rightXorResults[i]
+
+                if (allowIncompatibleSystem || (x0 && x1) == x2) {
+                    break
+                }
             }
 
-            val x0 = system.equations[i].andOpLeft.evaluate(solution) xor system.andOpLeftResults[i]
-            val x1 = system.equations[i].andOpRight.evaluate(solution) xor system.andOpRightResults[i]
-            val x2 = system.equations[i].rightXor.evaluate(solution) xor system.rightXorResults[i]
-
-            if (allowIncompatibleSystem || (x0 && x1) == x2) {
-                break
-            }
+            i++
         }
 
-        i++
+        if (solutionsCount == null || system.countSolutions() == solutionsCount) {
+            break
+        }
     }
 
     return Pair(solution, system)

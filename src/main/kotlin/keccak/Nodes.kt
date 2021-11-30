@@ -36,6 +36,16 @@ value class Bit(val value: Boolean = false) : Node {
 
 @JvmInline
 value class Variable(val name: String) : Node {
+    val prefix: Int get() {
+        return VarPattern.matchEntire(name)?.groups?.get(1)?.value?.toInt()
+            ?: throw Exception("Variable prefix is not defined")
+    }
+
+    val index: Int get() {
+        return VarPattern.matchEntire(name)?.groups?.get(2)?.value?.toInt()
+            ?: throw Exception("Variable index is not defined")
+    }
+
     override fun evaluate(context: NodeContext): Bit {
         return context.variables[name] ?: throw IllegalStateException("Variable $name not found")
     }
@@ -46,6 +56,10 @@ value class Variable(val name: String) : Node {
 
     override fun toString(): String {
         return name
+    }
+
+    companion object {
+        private val VarPattern = """^([a-zA-Z]+)(\d+)$""".toRegex()
     }
 }
 
@@ -327,7 +341,7 @@ fun Node.expand(): Node {
     }
 }
 
-fun Node.groupBy(varPrefix: String): Node {
+fun Node.groupBy(varPrefix: String, factorGroups: Boolean = false): Node {
     return when (this) {
         is Bit, is Variable, is And -> this
         is Xor -> {
@@ -394,7 +408,10 @@ fun Node.groupBy(varPrefix: String): Node {
             val xorTerms = LinkedList<Node>()
 
             groups.forEach { (group, terms) ->
-                val and = And(group.asSequence() + Xor(terms).simplify()).simplify()
+                var and = And(group.asSequence() + Xor(terms).simplify()).simplify()
+                if (factorGroups) {
+                    and = and.factor()
+                }
                 xorTerms.add(and)
             }
 
@@ -650,5 +667,26 @@ fun Node.countVariables(varPrefix: String = "x"): Int {
     count()
 
     return variables.size
+}
+
+fun Node.maxVariables(varPrefix: String = "x"): Int {
+    fun Node.maxIndex(): Int {
+        return when (this) {
+            is Bit -> -1
+            is Variable -> if (name.startsWith(varPrefix)) index else -1
+            is And -> nodes.maxOf { it.maxIndex() }
+            is Xor -> nodes.maxOf { it.maxIndex() }
+        }
+    }
+
+    return maxIndex() + 1
+}
+
+fun Node.isSimpleNode(): Boolean {
+    return when (this) {
+        is Bit, is Variable -> true
+        is And -> false
+        is Xor -> nodes.all { it.isSimpleNode() }
+    }
 }
 //#endregion

@@ -1,5 +1,9 @@
 package keccak.util
 
+import keccak.Bit
+import keccak.Node
+import keccak.Variable
+import keccak.Xor
 import java.util.*
 import kotlin.random.Random
 
@@ -118,7 +122,6 @@ fun BitSet.toString(size: Int): String {
 }
 
 fun BitSet.toXorString(
-    varCount: Int,
     freeBit: Boolean = false,
     varPrefix: String = "x",
     defaultIfEmpty: String = "0",
@@ -127,14 +130,12 @@ fun BitSet.toXorString(
         return if (freeBit) freeBit.toNumChar().toString() else defaultIfEmpty
     }
 
-    var bitIndex = 0
+    var bitIndex = nextSetBit(0)
     val vars = LinkedList<String>()
 
-    while (bitIndex < varCount) {
-        if (this[bitIndex]) {
-            vars.add("$varPrefix$bitIndex")
-        }
-        bitIndex++
+    while (bitIndex >= 0) {
+        vars.add("$varPrefix$bitIndex")
+        bitIndex = nextSetBit(bitIndex + 1)
     }
 
     if (freeBit) {
@@ -142,6 +143,21 @@ fun BitSet.toXorString(
     }
 
     return vars.joinToString(separator = " + ")
+}
+
+fun BitSet.toNode(
+    freeBit: Boolean = false,
+    varPrefix: String = "x",
+    varOffset: Int = 0,
+): Node {
+    var i = nextSetBit(0)
+    val nodes = LinkedList<Node>()
+    nodes.add(Bit(freeBit))
+    while (i >= 0) {
+        nodes.add(Variable("$varPrefix${i + varOffset}"))
+        i = nextSetBit(i + 1)
+    }
+    return Xor(nodes)
 }
 
 fun bitSet(vararg bits: Boolean): BitSet {

@@ -1,6 +1,6 @@
 package keccak.util
 
-import keccak.Bit
+import keccak.*
 import java.util.*
 import kotlin.random.Random
 
@@ -81,6 +81,14 @@ fun BooleanArray.or(bitSet: BitSet) {
         this[i] = this[i] or bitSet[i]
         i++
     }
+}
+
+fun BooleanArray.toNode(varPrefix: String = "x", varIndexOffset: Int = 0): Node {
+    val terms = asSequence()
+        .mapIndexed { i, v -> Variable("$varPrefix${i + varIndexOffset}") + Bit(!v) }
+        .map { it.simplify() }
+
+    return And(terms).simplify()
 }
 
 operator fun Boolean.plus(other: Boolean) = this xor other

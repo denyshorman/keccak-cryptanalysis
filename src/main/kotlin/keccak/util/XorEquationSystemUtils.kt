@@ -4,10 +4,13 @@ import keccak.*
 import keccak.XorEquationSystem
 import java.io.File
 import java.util.*
+import kotlin.math.ceil
+import kotlin.math.log2
 import kotlin.math.min
 import kotlin.random.Random
 
 private val XorEquationPattern = "^([01]+)\\|([01])$".toRegex()
+private val XorHumanEquationPattern = """(\d+)""".toRegex()
 
 fun XorEquationSystem(rows: Int, cols: Int, vararg equations: String): XorEquationSystem {
     val system = XorEquationSystem(rows, cols)
@@ -35,7 +38,15 @@ fun XorEquationSystem(rows: Int, cols: Int, vararg equations: String): XorEquati
 
 fun XorEquationSystem.set(eqIndex: Int, equation: String, humanReadable: Boolean) {
     if (humanReadable) {
-        TODO()
+        val setBitIndices = XorHumanEquationPattern.findAll(equation).map { it.value.toInt() }.toList()
+
+        setBitIndices.forEachIndexed { index, bitIndex ->
+            if (index < setBitIndices.size - 1) {
+                equations[eqIndex].set(bitIndex)
+            } else {
+                results.setIfTrue(eqIndex, bitIndex == 1)
+            }
+        }
     } else {
         var bitIndex = 0
         while (bitIndex < cols) {
@@ -109,15 +120,15 @@ fun XorEquationSystem.toBitEquation(eqIndex: Int): XorEquation {
     return XorEquation(cols, eq, res)
 }
 
-fun XorEquationSystem.toNodeEquationSystem(): NodeEquationSystem {
-    val variables = Array(cols) { Variable("x${it + 1}") }
+fun XorEquationSystem.toNodeEquationSystem(varPrefix: String = "x", varOffset: Int = 1): NodeEquationSystem {
+    val variables = Array(cols) { Variable("$varPrefix${it + varOffset}") }
 
     val equations = Array(rows) { eqIndex ->
         val left = LinkedList<Node>()
 
         var bitIndex = equations[eqIndex].nextSetBit(0)
         while (bitIndex >= 0) {
-            left.add(Variable("x${bitIndex + 1}"))
+            left.add(Variable("$varPrefix${bitIndex + varOffset}"))
             bitIndex = equations[eqIndex].nextSetBit(bitIndex + 1)
         }
 
@@ -125,6 +136,53 @@ fun XorEquationSystem.toNodeEquationSystem(): NodeEquationSystem {
     }
 
     return NodeEquationSystem(equations, variables)
+}
+
+fun XorEquationSystem.toCharacteristicEquation(
+    characteristicVarPrefix: String = "a",
+    varPrefix: String = "x",
+    useZeroPosition: Boolean = true,
+): Node {
+    val rowsInUse = rows + if (useZeroPosition) 0 else 1
+    val characteristicVarsCount = ceil(log2(rowsInUse.toDouble())).toLong()
+    val characteristicFunctions = Array<Node>(cols) { Bit(false) }
+    var characteristicFunctionOfFreeBit: Node = Bit(false)
+    var characteristicFunction: Node = Bit(false)
+    val characteristicVarsIterator = CombinationIteratorSimple(characteristicVarsCount.toInt())
+
+    if (!useZeroPosition) {
+        characteristicVarsIterator.next()
+    }
+
+    var i = 0
+    while (i < rows) {
+        var j = 0
+        val resultFunc = characteristicVarsIterator.combination.toNode(characteristicVarPrefix)
+
+        while (j < cols) {
+            if (equations[i][j]) {
+                characteristicFunctions[j] += resultFunc
+            }
+            j++
+        }
+
+        if (results[i]) {
+            characteristicFunctionOfFreeBit += resultFunc
+        }
+
+        characteristicVarsIterator.next()
+        i++
+    }
+
+    i = 0
+    while (i < cols) {
+        val term = characteristicFunctions[i]*Variable("$varPrefix$i")
+        characteristicFunction += term.simplify()
+        i++
+    }
+    characteristicFunction += characteristicFunctionOfFreeBit
+
+    return characteristicFunction
 }
 
 fun XorEquationSystem.toFile(

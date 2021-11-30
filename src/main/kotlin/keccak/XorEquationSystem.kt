@@ -7,9 +7,9 @@ import kotlin.math.min
 
 class XorEquationSystem {
     val rows: Int get() = equations.size
-    val cols: Int
-    val equations: Array<BitSet>
-    val results: BitSet
+    var cols: Int
+    var equations: Array<BitSet>
+    var results: BitSet
 
     constructor(
         rows: Int,
@@ -383,6 +383,66 @@ class XorEquationSystem {
         for ((index, value) in values) {
             substitute(index, value)
         }
+    }
+
+    fun substitute(other: XorEquationSystem) {
+        var i = 0
+        while (i < other.rows) {
+            if (!other.equations[i].isEmpty) {
+                val firstVarIndex = other.equations[i].nextSetBit(0)
+                var j = 0
+                while (j < this.rows) {
+                    if (!this.equations[j].isEmpty && this.equations[j][firstVarIndex]) {
+                        this.equations[j].xor(other.equations[i])
+                        this.results.xor(j, other.results[i])
+                    }
+                    j++
+                }
+            }
+            i++
+        }
+    }
+
+    fun extend(size: Int) {
+        equations = Array(equations.size + size) { i ->
+            if (i < equations.size) {
+                equations[i]
+            } else {
+                BitSet(cols)
+            }
+        }
+
+        results = run {
+            val bits = BitSet(equations.size)
+            bits.xor(results)
+            bits
+        }
+    }
+
+    fun append(
+        vars: BitSet,
+        res: Boolean,
+        appendFromIndex: Int = 0,
+        extendSize: Int = 128,
+    ): Int {
+        var i = appendFromIndex
+
+        while (i < equations.size) {
+            if (equations[i].isEmpty && !results[i]) {
+                equations[i].xor(vars)
+                results.setIfTrue(i, res)
+                return i
+            }
+
+            i++
+        }
+
+        extend(extendSize)
+
+        equations[i].xor(vars)
+        results.setIfTrue(i, res)
+
+        return i
     }
 
     fun clear() {

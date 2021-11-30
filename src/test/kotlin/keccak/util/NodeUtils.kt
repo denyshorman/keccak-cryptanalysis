@@ -61,23 +61,76 @@ fun Node.printNodesCount() {
     }
 }
 
-fun Node.printAllSolutions(varsCount: Int, varPrefix: String = "x", varAdd: Int = 1) {
-    val iter = CombinationIterator(varsCount)
+fun Node.printAllSolutions(
+    varPrefix: String = "x",
+    varsCount: Int = maxVariables(varPrefix),
+    varOffset: Int = 0,
+    condition: (NodeContext, Boolean) -> Boolean = { _, _ -> true },
+) {
+    printAllSolutions(arrayOf(this), varPrefix, varsCount, varOffset, condition)
+}
+
+fun printAllSolutions(
+    functions: Array<out Node>,
+    varPrefix: String = "x",
+    varsCount: Int,
+    varOffset: Int = 0,
+    condition: (NodeContext, Boolean) -> Boolean = { _, _ -> true },
+) {
+    val iter = CombinationIteratorSimple(varsCount)
     val ctx = NodeContext()
     var i: Int
-    var trueFuncCount = 0L
+
+    while (true) {
+        ctx.variables.clear()
+        i = -1
+
+        while (++i < iter.varsCount) {
+            ctx.variables["$varPrefix${i + varOffset}"] = Bit(iter.combination[i])
+        }
+
+        val funcRes = functions.asSequence()
+            .map { it.evaluate(ctx) }
+            .filter { condition(ctx, it.value) }
+            .joinToString(" ") { it.toString() }
+
+        if (funcRes.isNotBlank()) {
+            println("$iter = $funcRes")
+        }
+
+        if (iter.hasNext()) iter.next() else break
+    }
+}
+
+fun countTrueValues(
+    functions: Array<out Node>,
+    varPrefix: String = "x",
+    varsCount: Int,
+    varOffset: Int = 0,
+) {
+    val iter = CombinationIteratorSimple(varsCount)
+    val ctx = NodeContext()
+    var i: Int
+    val trueValues = Array(functions.size) { 0 }
+
     while (true) {
         ctx.variables.clear()
         i = -1
         while (++i < iter.varsCount) {
-            ctx.variables["$varPrefix${i + varAdd}"] = Bit(iter.combination[i])
+            ctx.variables["$varPrefix${i + varOffset}"] = Bit(iter.combination[i])
         }
-        val funcRes = evaluate(ctx)
-        if (funcRes.value) trueFuncCount++
-        println("$iter = $funcRes")
+
+        functions.forEachIndexed { idx, v ->
+            val res = v.evaluate(ctx)
+            if (res.value) trueValues[idx]++
+        }
+
         if (iter.hasNext()) iter.next() else break
     }
-    println("True results: $trueFuncCount")
+
+    trueValues.forEachIndexed { index, count ->
+        println("F$index: ${count}T ${pow2(varsCount) - count}F | ${functions[index]}")
+    }
 }
 
 fun Node.printGroups() {
