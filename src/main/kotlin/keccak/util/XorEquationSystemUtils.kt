@@ -7,6 +7,7 @@ import java.util.*
 import kotlin.math.ceil
 import kotlin.math.log2
 import kotlin.math.min
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 private val XorEquationPattern = "^([01]+)\\|([01])$".toRegex()
@@ -121,8 +122,6 @@ fun XorEquationSystem.toBitEquation(eqIndex: Int): XorEquation {
 }
 
 fun XorEquationSystem.toNodeEquationSystem(varPrefix: String = "x", varOffset: Int = 1): NodeEquationSystem {
-    val variables = Array(cols) { Variable("$varPrefix${it + varOffset}") }
-
     val equations = Array(rows) { eqIndex ->
         val left = LinkedList<Node>()
 
@@ -135,7 +134,51 @@ fun XorEquationSystem.toNodeEquationSystem(varPrefix: String = "x", varOffset: I
         NodeEquation(Xor(left), Bit(results[eqIndex]))
     }
 
-    return NodeEquationSystem(equations, variables)
+    return NodeEquationSystem(equations)
+}
+
+fun XorEquationSystem.toSecondOrderNodeEquationSystem(varPrefix: String = "x", varOffset: Int = 0): NodeEquationSystem {
+    val variablesCount = secondOrderSystemVarsCount(cols)
+
+    val equations = Array(rows) { eqIndex ->
+        val left = LinkedList<Node>()
+        var bitIndex = equations[eqIndex].nextSetBit(0)
+
+        while (bitIndex >= 0) {
+            val (leftIndex, rightIndex) = calcCombinationPartialIndex(bitIndex, variablesCount)
+
+            if (leftIndex == rightIndex) {
+                left.add(Variable("$varPrefix${leftIndex + varOffset}"))
+            } else {
+                left.add(Variable("$varPrefix${leftIndex + varOffset}")*Variable("$varPrefix${rightIndex + varOffset}"))
+            }
+
+            bitIndex = equations[eqIndex].nextSetBit(bitIndex + 1)
+        }
+
+        NodeEquation(Xor(left), Bit(results[eqIndex]))
+    }
+
+    return NodeEquationSystem(equations)
+}
+
+fun XorEquationSystem.extractFirstOrderEquationsFromSecondOrderSystem(): XorEquationSystem {
+    val system = XorEquationSystem(rows = 128, cols = secondOrderSystemVarsCount(cols))
+
+    var i = 0
+    while (i < rows) {
+        if (!equations[i].isSecondOrderEq(system.cols)) {
+            val bitSet = BitSet(system.cols)
+            equations[i].iterateOverAllSetBits { x ->
+                val (y, _) = calcCombinationPartialIndex(x, system.cols)
+                bitSet.set(y)
+            }
+            system.append(bitSet, results[i])
+        }
+        i++
+    }
+
+    return system
 }
 
 fun XorEquationSystem.toCharacteristicEquation(
@@ -311,4 +354,8 @@ fun randomXorEquationSystem(rows: Int, cols: Int, random: Random = Random): XorE
         row++
     }
     return system
+}
+
+fun secondOrderSystemVarsCount(secondOrderVarsCount: Int): Int {
+    return (sqrt(0.25 + 2*secondOrderVarsCount) - 0.5).toInt()
 }

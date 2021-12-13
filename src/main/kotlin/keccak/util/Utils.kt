@@ -187,3 +187,7 @@ fun placement(n: Long, k: Long): Long {
 fun combinations(n: Long, k: Long): Long {
     return placement(n, k) / factorial(k)
 }
+
+fun combinationsWithRepetition(n: Long, k: Long): Long {
+    return combinations(n + k - 1, k)
+}

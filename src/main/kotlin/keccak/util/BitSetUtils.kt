@@ -117,6 +117,37 @@ fun BitSet.evaluate(vars: BitSet): Boolean {
     return result
 }
 
+inline fun BitSet.iterateOverAllSetBits(callback: (Int) -> Unit) {
+    var i = nextSetBit(0)
+
+    while (i >= 0) {
+        callback(i)
+        if (i == Int.MAX_VALUE) break
+        i = nextSetBit(i + 1)
+    }
+}
+
+inline fun BitSet.iterateOverSetBits(callback: (Int) -> Boolean) {
+    var i = nextSetBit(0)
+
+    while (i >= 0) {
+        if (!callback(i) || i == Int.MAX_VALUE) break
+        i = nextSetBit(i + 1)
+    }
+}
+
+fun BitSet.isSecondOrderEq(firstOrderSystemVarsCount: Int): Boolean {
+    var secondOrderEq = false
+
+    iterateOverSetBits { i ->
+        val (l, r) = calcCombinationPartialIndex(i, firstOrderSystemVarsCount)
+        if (l != r) secondOrderEq = true
+        !secondOrderEq
+    }
+
+    return secondOrderEq
+}
+
 fun BitSet.toString(size: Int): String {
     return String(CharArray(size) { this[it].toNumChar() })
 }

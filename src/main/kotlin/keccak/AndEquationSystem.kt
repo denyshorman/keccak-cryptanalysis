@@ -252,7 +252,13 @@ class AndEquationSystem {
         }
     }
 
-    fun substitute(xorSystem: XorEquationSystem, mask: BitSet? = null) {
+    fun substitute(
+        xorSystem: XorEquationSystem,
+        mask: BitSet? = null,
+        substituteLeft: Boolean = true,
+        substituteRight: Boolean = true,
+        substituteResult: Boolean = true,
+    ) {
         var xorEqIndex = 0
 
         while (xorEqIndex < xorSystem.rows) {
@@ -263,17 +269,17 @@ class AndEquationSystem {
                     var andEqIndex = 0
 
                     while (andEqIndex < rows) {
-                        if (!equations[andEqIndex].andOpLeft.isEmpty && equations[andEqIndex].andOpLeft[firstBitIndex]) {
+                        if (substituteLeft && !equations[andEqIndex].andOpLeft.isEmpty && equations[andEqIndex].andOpLeft[firstBitIndex]) {
                             equations[andEqIndex].andOpLeft.xor(xorSystem.equations[xorEqIndex])
                             andOpLeftResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
                         }
 
-                        if (!equations[andEqIndex].andOpRight.isEmpty && equations[andEqIndex].andOpRight[firstBitIndex]) {
+                        if (substituteRight && !equations[andEqIndex].andOpRight.isEmpty && equations[andEqIndex].andOpRight[firstBitIndex]) {
                             equations[andEqIndex].andOpRight.xor(xorSystem.equations[xorEqIndex])
                             andOpRightResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
                         }
 
-                        if (!equations[andEqIndex].rightXor.isEmpty && equations[andEqIndex].rightXor[firstBitIndex]) {
+                        if (substituteResult && !equations[andEqIndex].rightXor.isEmpty && equations[andEqIndex].rightXor[firstBitIndex]) {
                             equations[andEqIndex].rightXor.xor(xorSystem.equations[xorEqIndex])
                             rightXorResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
                         }

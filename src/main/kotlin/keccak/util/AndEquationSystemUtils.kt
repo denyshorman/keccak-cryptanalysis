@@ -100,8 +100,6 @@ fun AndEquationSystem.toXorEquationSystem(): XorEquationSystem {
 }
 
 fun AndEquationSystem.toNodeEquationSystem(varPrefix: String = "x", varOffset: Int = 1): NodeEquationSystem {
-    val variables = Array(cols) { Variable("$varPrefix${it + varOffset}") }
-
     fun convert(vars: BitSet, value: Boolean): List<Node> {
         val left = LinkedList<Node>()
 
@@ -126,7 +124,7 @@ fun AndEquationSystem.toNodeEquationSystem(varPrefix: String = "x", varOffset: I
         NodeEquation(And(Xor(left), Xor(right)), Xor(center))
     }
 
-    return NodeEquationSystem(equations, variables)
+    return NodeEquationSystem(equations)
 }
 
 fun AndEquationSystem.toCharacteristicEquation(
@@ -271,4 +269,202 @@ fun randomAndEquationSystem(
     }
 
     return Pair(solution, system)
+}
+
+
+fun AndEquationSystem.solveExperimental(): XorEquationSystem {
+    val invertedXorSystem = invertToXorSystem()
+    invertedXorSystem.solve(skipValidation = true)
+
+    //region debug
+    val invertedXorSystemNode = invertedXorSystem.toNodeEquationSystem(varOffset = 0)
+    println(invertedXorSystemNode)
+    println()
+    //endregion
+
+    var startIndex = 0
+    var i = 0
+    while (i < invertedXorSystem.rows) {
+        val firstSetBitIndex = invertedXorSystem.equations[i].nextSetBit(0)
+        if (firstSetBitIndex == cols) {
+            startIndex = i
+            break
+        }
+        i++
+    }
+
+    val invertedVariableRows = invertedXorSystem.rows - cols
+    val invertedVariableCols = rows * 2
+
+    val system2 = XorEquationSystem(
+        rows = (invertedVariableRows*invertedVariableRows + 1)*(rows + 1) - 1,
+        cols = combinationsWithRepetition(invertedVariableCols.toLong(), 2).toInt(),
+    )
+
+    val invertedAndSystem = invertToAndSystem()
+
+    invertedAndSystem.substitute(
+        xorSystem = invertedXorSystem,
+        substituteLeft = false,
+        substituteRight = false,
+    )
+
+    //region debug
+    val invertedAndSystemNode = invertedAndSystem.toNodeEquationSystem(varOffset = 0)
+    println(invertedAndSystemNode)
+    println()
+    //endregion
+
+    var k = 0
+    i = startIndex
+
+    while (i < invertedXorSystem.rows) {
+        var j = startIndex
+        while (j < invertedXorSystem.rows) {
+            invertedXorSystem.equations[i].iterateOverAllSetBits { i0 ->
+                invertedXorSystem.equations[j].iterateOverAllSetBits { j0 ->
+                    val newIndex = calcCombinationIndex(i0 - startIndex, j0 - startIndex, invertedVariableCols)
+                    system2.equations[k].flip(newIndex)
+                }
+            }
+
+            val a = !invertedXorSystem.results[i]
+            val b = !invertedXorSystem.results[j]
+
+            if (a) {
+                invertedXorSystem.equations[j].iterateOverAllSetBits { j0 ->
+                    val newIndex = calcCombinationIndex(j0 - startIndex, invertedVariableCols)
+                    system2.equations[k].flip(newIndex)
+                }
+            }
+
+            if (b) {
+                invertedXorSystem.equations[i].iterateOverAllSetBits { i0 ->
+                    val newIndex = calcCombinationIndex(i0 - startIndex, invertedVariableCols)
+                    system2.equations[k].flip(newIndex)
+                }
+            }
+
+            if (!(a && b)) {
+                system2.results.set(k)
+            }
+
+            k++
+            j++
+        }
+        i++
+    }
+
+    i = 0
+    while (i < invertedAndSystem.rows) {
+        invertedAndSystem.equations[i].andOpLeft.iterateOverAllSetBits { i0 ->
+            invertedAndSystem.equations[i].andOpRight.iterateOverAllSetBits { j0 ->
+                val newIndex = calcCombinationIndex(i0 - startIndex, j0 - startIndex, invertedVariableCols)
+                system2.equations[k].flip(newIndex)
+            }
+        }
+
+        val a = invertedAndSystem.andOpLeftResults[i]
+        val b = invertedAndSystem.andOpRightResults[i]
+
+        if (a) {
+            invertedAndSystem.equations[i].andOpRight.iterateOverAllSetBits { j0 ->
+                val newIndex = calcCombinationIndex(j0 - startIndex, invertedVariableCols)
+                system2.equations[k].flip(newIndex)
+            }
+        }
+
+        if (b) {
+            invertedAndSystem.equations[i].andOpLeft.iterateOverAllSetBits { i0 ->
+                val newIndex = calcCombinationIndex(i0 - startIndex, invertedVariableCols)
+                system2.equations[k].flip(newIndex)
+            }
+        }
+
+        if (a && b) {
+            system2.results.set(k)
+        }
+
+        invertedAndSystem.equations[i].rightXor.iterateOverAllSetBits { i0 ->
+            val newIndex = calcCombinationIndex(i0 - startIndex, invertedVariableCols)
+            system2.equations[k].flip(newIndex)
+        }
+
+        system2.results.xor(k, invertedAndSystem.rightXorResults[i])
+
+        k++
+        i++
+    }
+
+    val left = BitSet(invertedXorSystem.cols)
+    val right = BitSet(invertedXorSystem.cols)
+    var leftBit: Boolean
+    var rightBit: Boolean
+
+    i = 0
+    while (i < invertedAndSystem.rows) {
+        var x = startIndex
+        while (x < invertedXorSystem.rows) {
+            var y = startIndex
+            while (y < invertedXorSystem.rows) {
+                left.clear()
+                right.clear()
+
+                left.xor(invertedAndSystem.equations[i].andOpLeft)
+                right.xor(invertedAndSystem.equations[i].andOpRight)
+
+                left.xor(invertedXorSystem.equations[x])
+                right.xor(invertedXorSystem.equations[y])
+
+                leftBit = invertedAndSystem.andOpLeftResults[i] xor invertedXorSystem.results[x]
+                rightBit = invertedAndSystem.andOpRightResults[i] xor invertedXorSystem.results[y]
+
+                left.iterateOverAllSetBits { i0 ->
+                    right.iterateOverAllSetBits { j0 ->
+                        val newIndex = calcCombinationIndex(i0 - startIndex, j0 - startIndex, invertedVariableCols)
+                        system2.equations[k].flip(newIndex)
+                    }
+                }
+
+                if (leftBit) {
+                    right.iterateOverAllSetBits { j0 ->
+                        val newIndex = calcCombinationIndex(j0 - startIndex, invertedVariableCols)
+                        system2.equations[k].flip(newIndex)
+                    }
+                }
+
+                if (rightBit) {
+                    left.iterateOverAllSetBits { i0 ->
+                        val newIndex = calcCombinationIndex(i0 - startIndex, invertedVariableCols)
+                        system2.equations[k].flip(newIndex)
+                    }
+                }
+
+                if (leftBit && rightBit) {
+                    system2.results.set(k)
+                }
+
+                invertedAndSystem.equations[i].rightXor.iterateOverAllSetBits { i0 ->
+                    val newIndex = calcCombinationIndex(i0 - startIndex, invertedVariableCols)
+                    system2.equations[k].flip(newIndex)
+                }
+
+                system2.results.xor(k, invertedAndSystem.rightXorResults[i])
+
+                k++
+                y++
+            }
+            x++
+        }
+
+        i++
+    }
+
+    //region debug
+    val solutionSystemNode = system2.toSecondOrderNodeEquationSystem(varOffset = startIndex)
+    println(solutionSystemNode)
+    println()
+    //endregion
+
+    return system2
 }
