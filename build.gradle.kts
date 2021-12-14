@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.5.31"
+    kotlin("jvm") version "1.6.10"
     application
 }
 
@@ -10,39 +10,36 @@ repositories {
     mavenCentral()
 }
 
-val kotestVersion = "4.6.3"
+val kotestVersion = "5.0.2"
 
 dependencies {
-    implementation("org.web3j:core:5.0.0")
-    implementation("io.github.microutils:kotlin-logging-jvm:2.0.11")
-    implementation("ch.qos.logback:logback-classic:1.2.6")
+    implementation("org.web3j:core:4.8.9")
+    implementation("io.github.microutils:kotlin-logging-jvm:2.1.0")
+    implementation("ch.qos.logback:logback-classic:1.2.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
 
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-json:$kotestVersion")
-    testImplementation("io.mockk:mockk:1.12.0")
+    testImplementation("io.mockk:mockk:1.12.1")
 }
 
 tasks {
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().all {
         with(kotlinOptions) {
-            jvmTarget = "16"
+            jvmTarget = "17"
 
             freeCompilerArgs = freeCompilerArgs + listOf(
                 "-Xjsr305=strict",
-                "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes",
-                "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi",
-                "-Xuse-experimental=kotlinx.coroutines.ObsoleteCoroutinesApi",
-                "-Xuse-experimental=kotlinx.coroutines.FlowPreview",
-                "-Xuse-experimental=kotlinx.coroutines.DelicateCoroutinesApi",
-                "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi",
-                "-Xuse-experimental=kotlinx.serialization.InternalSerializationApi",
-                "-Xuse-experimental=kotlin.time.ExperimentalTime",
-                "-Xuse-experimental=kotlin.ExperimentalStdlibApi",
-                "-Xuse-experimental=io.ktor.util.KtorExperimentalAPI",
-                "-Xuse-experimental=kotlin.experimental.ExperimentalTypeInference"
+                "-opt-in=kotlin.ExperimentalUnsignedTypes",
+                "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+                "-opt-in=kotlinx.coroutines.ObsoleteCoroutinesApi",
+                "-opt-in=kotlinx.coroutines.FlowPreview",
+                "-opt-in=kotlinx.coroutines.DelicateCoroutinesApi",
+                "-opt-in=kotlin.time.ExperimentalTime",
+                "-opt-in=kotlin.ExperimentalStdlibApi",
+                "-opt-in=kotlin.experimental.ExperimentalTypeInference"
             )
         }
     }
