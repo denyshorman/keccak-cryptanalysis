@@ -1,6 +1,7 @@
 package keccak.util
 
 import keccak.*
+import kotlin.math.log2
 import kotlin.math.min
 
 fun Xor.toBitEquation(varsCount: Int): XorEquation {
@@ -190,4 +191,28 @@ fun combinations(n: Long, k: Long): Long {
 
 fun combinationsWithRepetition(n: Long, k: Long): Long {
     return combinations(n + k - 1, k)
+}
+
+fun estimateFactorial(n: Long): Double {
+    var i = n
+    var estimate = 0.0
+
+    while (i > 1) {
+        estimate += log2(i.toDouble())
+        i--
+    }
+
+    return estimate
+}
+
+fun estimatePartialPermutation(n: Long, k: Long): Double {
+    return estimateFactorial(n) - estimateFactorial(n - k)
+}
+
+fun estimateCombinations(n: Long, k: Long): Double {
+    return estimatePartialPermutation(n, k) - estimateFactorial(k)
+}
+
+fun estimateCombinationsWithRepetition(n: Long, k: Long): Double {
+    return estimateCombinations(n + k - 1, k)
 }
