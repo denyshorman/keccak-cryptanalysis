@@ -14,8 +14,8 @@ val kotestVersion = "5.0.2"
 
 dependencies {
     implementation("org.web3j:core:4.8.9")
-    implementation("io.github.microutils:kotlin-logging-jvm:2.1.0")
-    implementation("ch.qos.logback:logback-classic:1.2.7")
+    implementation("io.github.microutils:kotlin-logging-jvm:2.1.20")
+    implementation("ch.qos.logback:logback-classic:1.2.9")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
 
     testImplementation(kotlin("test"))
