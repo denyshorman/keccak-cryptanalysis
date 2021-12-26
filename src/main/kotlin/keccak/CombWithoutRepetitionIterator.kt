@@ -32,10 +32,10 @@ class CombWithoutRepetitionIterator(val n: Int, val r: Int) {
         index++
     }
 
-    inline fun iterate(callback: () -> Unit) {
-        while (true) {
+    inline fun iterateAll(callback: () -> Unit) {
+        while (hasNext()) {
             callback()
-            if (hasNext()) next() else break
+            next()
         }
     }
 

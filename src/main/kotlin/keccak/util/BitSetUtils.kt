@@ -155,6 +155,7 @@ fun BitSet.toString(size: Int): String {
 fun BitSet.toXorString(
     freeBit: Boolean = false,
     varPrefix: String = "x",
+    varOffset: Int = 0,
     defaultIfEmpty: String = "0",
 ): String {
     if (isEmpty) {
@@ -165,7 +166,7 @@ fun BitSet.toXorString(
     val vars = LinkedList<String>()
 
     while (bitIndex >= 0) {
-        vars.add("$varPrefix$bitIndex")
+        vars.add("$varPrefix${bitIndex + varOffset}")
         bitIndex = nextSetBit(bitIndex + 1)
     }
 

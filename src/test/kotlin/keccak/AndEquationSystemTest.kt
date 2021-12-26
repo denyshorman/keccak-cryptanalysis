@@ -5,7 +5,6 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import keccak.util.*
-import keccak.util.AndEquationSystem
 import kotlin.test.fail
 
 class AndEquationSystemTest : FunSpec({
@@ -13,6 +12,7 @@ class AndEquationSystemTest : FunSpec({
         test("1") {
             val andEqSystem = AndEquationSystem(
                 rows = 4, cols = 4,
+                humanReadable = false,
                 "(1010|0)(0011|0) = 1000|0",
                 "(1110|0)(0101|1) = 0100|0",
                 "(0111|0)(0110|0) = 0010|0",
@@ -60,6 +60,7 @@ class AndEquationSystemTest : FunSpec({
         test("2") {
             val andEqSystem = AndEquationSystem(
                 rows = 3, cols = 3,
+                humanReadable = false,
                 "(111|1)(111|0) = 100|0",
                 "(011|0)(110|0) = 010|0",
                 "(011|1)(100|1) = 001|0",
@@ -99,6 +100,7 @@ class AndEquationSystemTest : FunSpec({
         test("3") {
             val andEqSystem = AndEquationSystem(
                 rows = 4, cols = 4,
+                humanReadable = false,
                 "(0010|1)(0111|0) = 1000|0",
                 "(0101|0)(0110|0) = 0100|0",
                 "(0011|1)(0000|0) = 0010|0",
@@ -139,6 +141,7 @@ class AndEquationSystemTest : FunSpec({
         test("4") {
             val andEqSystem = AndEquationSystem(
                 rows = 4, cols = 4,
+                humanReadable = false,
                 "(1011|1)(0110|0) = 1000|0",
                 "(0001|0)(0100|0) = 0100|0",
                 "(1011|1)(1001|0) = 0010|0",
@@ -179,6 +182,7 @@ class AndEquationSystemTest : FunSpec({
         test("5_two_solutions") {
             val andEqSystem = AndEquationSystem(
                 rows = 4, cols = 4,
+                humanReadable = false,
                 "(1001|0)(0111|1) = 1000|0",
                 "(0010|1)(1011|1) = 0100|0",
                 "(0010|1)(0100|0) = 0010|0",
@@ -442,6 +446,7 @@ class AndEquationSystemTest : FunSpec({
             test("1") {
                 val andSystem = AndEquationSystem(
                     rows = 6, cols = 6,
+                    humanReadable = false,
                     "(111101|0)(111101|0) = 000000|0",
                     "(110111|0)(001110|0) = 000000|0",
                     "(111011|1)(010110|0) = 000000|0",
@@ -463,6 +468,7 @@ class AndEquationSystemTest : FunSpec({
         test("2") {
             val andSystem = AndEquationSystem(
                 rows = 6, cols = 6,
+                humanReadable = false,
                 "(011100|0)(111100|1) = 000000|0",
                 "(110110|1)(000101|1) = 000000|0",
                 "(101100|1)(010101|1) = 000000|0",
@@ -548,6 +554,7 @@ class AndEquationSystemTest : FunSpec({
             val andSystem = AndEquationSystem(
                 rows = 12,
                 cols = 6,
+                humanReadable = false,
                 "(011110|1)(001000|1) = 000000|0",
                 "(100000|0)(011110|0) = 000000|0",
                 "(101101|0)(101111|1) = 000000|0",
@@ -580,6 +587,7 @@ class AndEquationSystemTest : FunSpec({
             val andSystem = AndEquationSystem(
                 rows = 12,
                 cols = 6,
+                humanReadable = false,
                 "(100000|1)(010000|0) = 000000|0",
                 "(100000|0)(100000|0) = 000000|0",
                 "(010110|0)(110011|0) = 000000|0",
@@ -611,6 +619,7 @@ class AndEquationSystemTest : FunSpec({
             val andSystem = AndEquationSystem(
                 rows = 12,
                 cols = 6,
+                humanReadable = false,
                 "(000100|0)(011100|0) = 000000|0",
                 "(100000|0)(000100|1) = 000000|0",
                 "(111101|0)(111101|1) = 000000|0",

@@ -1,7 +1,6 @@
 package keccak.util
 
 import keccak.*
-import keccak.AndEquationSystem
 import keccak.XorEquationSystem
 import java.io.File
 import java.util.*
@@ -11,12 +10,12 @@ import kotlin.random.Random
 private val AndEquationBinaryPattern = "^\\(([01]+)\\|([01])\\)\\(([01]+)\\|([01])\\)\\s*=\\s*([01]+)\\|([01])$".toRegex()
 private val AndEquationHumanPattern = "^\\s*\\(?(.*?)\\)?\\s*\\*\\s*\\(?(.*?)\\)?\\s*=\\s*(.*?)$".toRegex()
 
-fun AndEquationSystem(rows: Int, cols: Int, vararg equations: String): AndEquationSystem {
+fun AndEquationSystem(rows: Int, cols: Int, humanReadable: Boolean, vararg equations: String): AndEquationSystem {
     val system = AndEquationSystem(rows, cols)
 
     var i = 0
     while (i < equations.size) {
-        system.set(i, equations[i], false)
+        system.set(i, equations[i], humanReadable)
         i++
     }
 
@@ -271,6 +270,21 @@ fun randomAndEquationSystem(
     return Pair(solution, system)
 }
 
+fun AndEquationSystem.toHumanString(
+    varPrefix: String = "x",
+    varOffset: Int = 0,
+): String {
+    val sb = StringBuilder()
+    var i = 0
+    while (i < rows) {
+        val l = equations[i].andOpLeft.toXorString(andOpLeftResults[i], varPrefix, varOffset)
+        val r = equations[i].andOpRight.toXorString(andOpRightResults[i], varPrefix, varOffset)
+        val x = equations[i].rightXor.toXorString(rightXorResults[i], varPrefix, varOffset)
+        sb.appendLine("($l)*($r) = $x")
+        i++
+    }
+    return sb.toString()
+}
 
 fun AndEquationSystem.solveExperimental(): XorEquationSystem {
     val invertedXorSystem = invertToXorSystem()
