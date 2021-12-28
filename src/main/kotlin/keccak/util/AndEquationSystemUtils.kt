@@ -286,6 +286,53 @@ fun AndEquationSystem.toHumanString(
     return sb.toString()
 }
 
+fun AndEquationSystem.rotate(solution: BitSet, left: Boolean, right: Boolean) {
+    var i = 0
+    while (i < rows) {
+        val leftFreeBit = andOpLeftResults[i]
+        val rightFreeBit = andOpRightResults[i]
+
+        val leftActual = equations[i].andOpLeft.evaluate(solution) xor leftFreeBit
+        val rightActual = equations[i].andOpRight.evaluate(solution) xor rightFreeBit
+
+        if (!left && !right) {
+            if (!leftActual && rightActual) {
+                equations[i].andOpRight.xor(equations[i].andOpLeft)
+                andOpRightResults.set(i, !rightFreeBit xor leftFreeBit)
+            } else if (leftActual && !rightActual) {
+                equations[i].andOpLeft.xor(equations[i].andOpRight)
+                andOpLeftResults.set(i, !leftFreeBit xor rightFreeBit)
+            }
+        } else if (!left) {
+            if (!leftActual && !rightActual) {
+                equations[i].andOpRight.xor(equations[i].andOpLeft)
+                andOpRightResults.set(i, !rightFreeBit xor leftFreeBit)
+            } else if (!rightActual) {
+                val tmp = equations[i].andOpRight
+                equations[i].andOpRight = equations[i].andOpLeft
+                equations[i].andOpLeft = tmp
+
+                andOpLeftResults.set(i, rightFreeBit)
+                andOpRightResults.set(i, leftFreeBit)
+            }
+        } else if (!right) {
+            if (!leftActual && !rightActual) {
+                equations[i].andOpLeft.xor(equations[i].andOpRight)
+                andOpLeftResults.set(i, !leftFreeBit xor rightFreeBit)
+            } else if (!leftActual) {
+                val tmp = equations[i].andOpRight
+                equations[i].andOpRight = equations[i].andOpLeft
+                equations[i].andOpLeft = tmp
+
+                andOpLeftResults.set(i, rightFreeBit)
+                andOpRightResults.set(i, leftFreeBit)
+            }
+        }
+
+        i++
+    }
+}
+
 fun AndEquationSystem.solveExperimental(): XorEquationSystem {
     val invertedXorSystem = invertToXorSystem()
     invertedXorSystem.solve(skipValidation = true)
