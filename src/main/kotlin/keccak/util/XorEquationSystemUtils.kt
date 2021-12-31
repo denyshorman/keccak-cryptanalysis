@@ -37,6 +37,21 @@ fun XorEquationSystem(rows: Int, cols: Int, vararg equations: String): XorEquati
     return system
 }
 
+fun XorEquationSystem.toHumanString(
+    varPrefix: String = "x",
+    varOffset: Int = 0,
+): String {
+    val sb = StringBuilder()
+    var i = 0
+    while (i < rows) {
+        val eq = equations[i].toXorString(freeBit = false, varPrefix, varOffset)
+        val res = results[i].toNumChar()
+        sb.appendLine("$eq = $res")
+        i++
+    }
+    return sb.toString()
+}
+
 fun XorEquationSystem.set(eqIndex: Int, equation: String, humanReadable: Boolean) {
     if (humanReadable) {
         val setBitIndices = XorHumanEquationPattern.findAll(equation).map { it.value.toInt() }.toList()
