@@ -7,7 +7,6 @@ import io.kotest.matchers.shouldBe
 import keccak.util.BitSet
 import keccak.util.XorEquationSystem
 import keccak.util.randomXorEquationSystem
-import keccak.util.toString
 import org.junit.jupiter.api.Assertions.assertEquals
 import java.util.*
 
@@ -195,298 +194,11 @@ class XorEquationSystemTest : FunSpec({
         }
     }
 
-    context("solutionIterator") {
-        test("one solution") {
-            val system = XorEquationSystem(rows = 4, cols = 4,
-            "1000|1",
-            "0100|0",
-            "0010|1",
-            "0001|0",
-            )
-
-            val solIter = system.solutionIterator()
-
-            solIter.solution.toString(system.cols).shouldBe("0000")
-            solIter.iterator.mask.toString(system.cols).shouldBe("0000")
-            solIter.iterator.combination.toString(system.cols).shouldBe("0000")
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("1010")
-            solIter.iterator.mask.toString(system.cols).shouldBe("0000")
-            solIter.iterator.combination.toString(system.cols).shouldBe("0000")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeFalse()
-        }
-
-        test("two solutions") {
-            val system = XorEquationSystem(rows = 4, cols = 4,
-                "1001|1",
-                "0101|0",
-                "0010|1",
-                "0000|0",
-            )
-
-            val solIter = system.solutionIterator()
-
-            solIter.solution.toString(system.cols).shouldBe("0000")
-            solIter.iterator.mask.toString(system.cols).shouldBe("0001")
-            solIter.iterator.combination.toString(system.cols).shouldBe("0000")
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("1010")
-            solIter.iterator.combination.toString(system.cols).shouldBe("0001")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("0111")
-            solIter.iterator.combination.toString(system.cols).shouldBe("0000")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeFalse()
-        }
-
-        test("10x12") {
-            val system = XorEquationSystem(rows = 10, cols = 12,
-                "100000000011|1",
-                "010010010001|0",
-                "001000000010|1",
-                "000110010010|1",
-                "000000000000|0",
-                "000001010001|1",
-                "000000100001|1",
-                "000000000000|0",
-                "000000001011|0",
-                "000000000101|1",
-            )
-
-            val solIter = system.solutionIterator()
-
-            solIter.solution.toString(system.cols).shouldBe("000000000000")
-            solIter.iterator.mask.toString(system.cols).shouldBe("000010010011")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000000000")
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("101101100100")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000000001")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("011100001001")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000000010")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("000001101110")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000000011")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("110000000011")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000010000")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("111000110100")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000010001")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("001001011001")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000010010")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("010100111110")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000010011")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("100101010011")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000010000000")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("111011100100")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000010000001")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("001010001001")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000010000010")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("010111101110")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000010000011")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("100110000011")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000010010000")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("101110110100")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000010010001")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("011111011001")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000010010010")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("000010111110")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000010010011")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeTrue()
-            solIter.next()
-
-            solIter.solution.toString(system.cols).shouldBe("110011010011")
-            solIter.iterator.combination.toString(system.cols).shouldBe("000000000000")
-            system.isValid(solIter.solution).shouldBeTrue()
-
-            solIter.hasNext().shouldBeFalse()
-        }
-    }
-
-    context("hasSolution") {
-        test("1") {
-            val system = XorEquationSystem(
-                rows = 4, cols = 4,
-                "1000|1",
-                "0100|0",
-                "0010|1",
-                "0001|0",
-            )
-
-            system.hasSolution().shouldBeTrue()
-        }
-
-        test("2") {
-            val system = XorEquationSystem(
-                rows = 4, cols = 4,
-                "1000|1",
-                "1000|0",
-                "0010|1",
-                "0001|0",
-            )
-
-            system.hasSolution().shouldBeFalse()
-        }
-
-        test("3") {
-            val system = randomXorEquationSystem(5, 5)
-            val clonedSystem = system.clone()
-
-            println("-----------")
-            println(system.toString())
-            println("-----------")
-
-            val solved = system.solve()
-            val hasSolution = clonedSystem.hasSolution()
-
-            println()
-            println("-----------")
-            println(system.toString())
-            println("-----------")
-            println("-----------")
-            println(clonedSystem.toString())
-            println("-----------")
-
-            solved.shouldBe(hasSolution)
-
-            println()
-            println("----")
-            if (solved) {
-                println("has solution")
-            } else {
-                println("no solution")
-            }
-            println("----")
-        }
-
-        test("4") {
-            val system = XorEquationSystem(
-                5, 5,
-                "01000|1",
-                "01100|0",
-                "01001|1",
-                "10000|0",
-                "00001|1",
-            )
-            val clonedSystem = system.clone()
-
-            println("-----------")
-            println(system.toString())
-            println("-----------")
-
-            val solved = system.solve()
-            val hasSolution = clonedSystem.hasSolution()
-
-            println()
-            println("-----------")
-            println(system.toString())
-            println("-----------")
-            println("-----------")
-            println(clonedSystem.toString())
-            println("-----------")
-
-            solved.shouldBe(hasSolution)
-
-            println()
-            println("----")
-            if (solved) {
-                println("has solution")
-            } else {
-                println("no solution")
-            }
-            println("----")
-        }
-    }
-
     context("solve") {
         test("1") {
             val system = XorEquationSystem(
                 rows = 10, cols = 15,
+                humanReadable = false,
                 "110100011101011|1",
                 "011011110101100|1",
                 "011100000010000|0",
@@ -499,7 +211,7 @@ class XorEquationSystemTest : FunSpec({
                 "101011111000011|1",
             )
 
-            val solved = system.solve()
+            val solved = system.solve(sortEquations = true)
             solved.shouldBeTrue()
 
             val expected = """
@@ -533,7 +245,9 @@ class XorEquationSystemTest : FunSpec({
         }
 
         test("3") {
-            val system = XorEquationSystem(5, 5,
+            val system = XorEquationSystem(
+                rows = 5, cols = 5,
+                humanReadable = false,
                 "01111|1",
                 "10010|0",
                 "00100|1",
@@ -542,7 +256,7 @@ class XorEquationSystemTest : FunSpec({
             )
             val system2 = system.clone()
 
-            system.solve(rowsMask = BitSet("11111"), colsMask = BitSet("11111"))
+            system.solve(activeRows = BitSet("11111"), varPriority = BitSet("11111"))
             system2.solve()
 
             system.shouldBe(system2)
@@ -555,7 +269,7 @@ class XorEquationSystemTest : FunSpec({
             println(system)
             println()
 
-            val solved = system.solve(rowsMask = BitSet("110011"), colsMask = BitSet("110011"))
+            val solved = system.solve(activeRows = BitSet("110011"), varPriority = BitSet("110011"))
             val solved2 = system2.solve()
 
             println(system)
@@ -566,6 +280,21 @@ class XorEquationSystemTest : FunSpec({
 
             println("Solved: $solved")
             println("Solved2: $solved2")
+        }
+
+        test("5") {
+            val system = XorEquationSystem(rows = 5, cols = 5,
+                humanReadable = true,
+                "x1 + x2 + x4 = 1",
+                "x2 + x4 = 0",
+                "x0 + x2 + x4 = 1",
+                "x1 + x4 = 0",
+                "x0 + x1 + x4 = 0",
+            )
+
+            val solved = system.solve()
+
+            solved.shouldBeFalse()
         }
     }
 })

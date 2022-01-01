@@ -1,7 +1,6 @@
 package keccak.util
 
 import keccak.*
-import keccak.XorEquationSystem
 import java.io.File
 import java.util.*
 import kotlin.math.ceil
@@ -10,27 +9,14 @@ import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-private val XorEquationPattern = "^([01]+)\\|([01])$".toRegex()
 private val XorHumanEquationPattern = """(\d+)""".toRegex()
 
-fun XorEquationSystem(rows: Int, cols: Int, vararg equations: String): XorEquationSystem {
+fun XorEquationSystem(rows: Int, cols: Int, humanReadable: Boolean, vararg equations: String): XorEquationSystem {
     val system = XorEquationSystem(rows, cols)
 
     var i = 0
     while (i < equations.size) {
-        val eq = equations[i]
-
-        val matched = XorEquationPattern.matchEntire(eq) ?: throw RuntimeException("Equation is not correct")
-
-        val (l, r) = matched.destructured
-
-        var j = 0
-        while (j < l.length) {
-            system.equations[i][j] = l[j].toBoolean()
-            system.results[i] = r.toBoolean()
-            j++
-        }
-
+        system.set(i, equations[i], humanReadable)
         i++
     }
 
@@ -44,7 +30,7 @@ fun XorEquationSystem.toHumanString(
     val sb = StringBuilder()
     var i = 0
     while (i < rows) {
-        val eq = equations[i].toXorString(freeBit = false, varPrefix, varOffset)
+        val eq = equations[i].toXorString(freeBit = false, varPrefix, varOffset, expressVarIndex = eqVarMap[i])
         val res = results[i].toNumChar()
         sb.appendLine("$eq = $res")
         i++
@@ -255,21 +241,19 @@ fun XorEquationSystem.toFile(
 
         if (humanReadable) {
             while (eqIndex < limit) {
-                var bitIndex = 0
                 val variables = LinkedList<String>()
-
-                while (bitIndex < cols) {
-                    if (equations[eqIndex][bitIndex]) {
-                        variables.add("x$bitIndex")
-                    }
-                    bitIndex++
-                }
 
                 val res = results[eqIndex]
 
                 if (variables.isNotEmpty()) {
-                    val equation = variables.joinToString(" + ", postfix = " = ${res.toNumChar()}")
-                    writer.appendLine(equation)
+                    val equation = equations[eqIndex].toXorString(
+                        freeBit = false,
+                        varPrefix = "x",
+                        varOffset = 0,
+                        expressVarIndex = eqVarMap[eqIndex],
+                    )
+
+                    writer.appendLine("$equation = ${res.toNumChar()}")
                 } else {
                     if (res) {
                         writer.appendLine("0 = 1")

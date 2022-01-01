@@ -316,6 +316,8 @@ class AndEquationSystem {
             xorSystem.equations[newXorEqRow] = equations[andEqRow].andOpLeft.clone() as BitSet
             xorSystem.equations[newXorEqRow].set(newVarIndex)
             xorSystem.results.setIfTrue(newXorEqRow, andOpLeftResults[andEqRow])
+            xorSystem.eqVarMap[newXorEqRow] = newVarIndex
+            xorSystem.varEqMap[newVarIndex] = newXorEqRow
 
             newXorEqRow++
             newVarIndex++
@@ -323,6 +325,8 @@ class AndEquationSystem {
             xorSystem.equations[newXorEqRow] = equations[andEqRow].andOpRight.clone() as BitSet
             xorSystem.equations[newXorEqRow].set(newVarIndex)
             xorSystem.results.setIfTrue(newXorEqRow, andOpRightResults[andEqRow])
+            xorSystem.eqVarMap[newXorEqRow] = newVarIndex
+            xorSystem.varEqMap[newVarIndex] = newXorEqRow
 
             newXorEqRow++
             newVarIndex++

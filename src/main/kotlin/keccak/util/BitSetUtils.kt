@@ -87,7 +87,7 @@ fun BitSet.nextSetBitDefault(fromIndex: Int, defaultIfNotFound: Int): Int {
 }
 
 fun BitSet.xor(bitIndex: Int, value: Boolean) {
-    this[bitIndex] = this[bitIndex] xor value
+    if (value) invertValue(bitIndex)
 }
 
 fun BitSet.invertValue(bitIndex: Int) {
@@ -117,6 +117,20 @@ fun BitSet.evaluate(vars: BitSet): Boolean {
     return result
 }
 
+fun BitSet.firstMatchIndex(other: BitSet): Int {
+    var index = -1
+
+    iterateOverSetBits { bitIndex ->
+        if (other[bitIndex]) {
+            index = bitIndex
+        }
+
+        index == -1
+    }
+
+    return index
+}
+
 inline fun BitSet.iterateOverAllSetBits(callback: (Int) -> Unit) {
     var i = nextSetBit(0)
 
@@ -127,12 +141,33 @@ inline fun BitSet.iterateOverAllSetBits(callback: (Int) -> Unit) {
     }
 }
 
+inline fun BitSet?.iterateOverAllSetBits(fromIndex: Int, toIndex: Int, callback: (Int) -> Unit) {
+    if (this == null) {
+        var i = fromIndex
+        while (i < toIndex) {
+            callback(i)
+            i++
+        }
+    } else {
+        iterateOverAllSetBits(callback)
+    }
+}
+
 inline fun BitSet.iterateOverSetBits(callback: (Int) -> Boolean) {
     var i = nextSetBit(0)
 
     while (i >= 0) {
         if (!callback(i) || i == Int.MAX_VALUE) break
         i = nextSetBit(i + 1)
+    }
+}
+
+inline fun BitSet?.iterateOverSetBits(fromIndex: Int, toIndex: Int, callback: (Int) -> Boolean) {
+    if (this == null) {
+        var i = fromIndex
+        while (i < toIndex && callback(i)) i++
+    } else {
+        iterateOverSetBits(callback)
     }
 }
 
@@ -156,22 +191,27 @@ fun BitSet.toXorString(
     freeBit: Boolean = false,
     varPrefix: String = "x",
     varOffset: Int = 0,
+    expressVarIndex: Int? = null,
     defaultIfEmpty: String = "0",
 ): String {
     if (isEmpty) {
         return if (freeBit) freeBit.toNumChar().toString() else defaultIfEmpty
     }
 
-    var bitIndex = nextSetBit(0)
     val vars = LinkedList<String>()
 
-    while (bitIndex >= 0) {
-        vars.add("$varPrefix${bitIndex + varOffset}")
-        bitIndex = nextSetBit(bitIndex + 1)
+    iterateOverAllSetBits { bitIndex ->
+        val varName = "$varPrefix${bitIndex + varOffset}"
+
+        if (expressVarIndex != null && expressVarIndex == bitIndex) {
+            vars.addFirst(varName)
+        } else {
+            vars.addLast(varName)
+        }
     }
 
     if (freeBit) {
-        vars.add(freeBit.toNumChar().toString())
+        vars.addLast(freeBit.toNumChar().toString())
     }
 
     return vars.joinToString(separator = " + ")

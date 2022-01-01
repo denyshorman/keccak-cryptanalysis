@@ -164,6 +164,12 @@ fun <T> Array<T>.exchange(i: Int, j: Int) {
     this[j] = tmp
 }
 
+fun IntArray.exchange(i: Int, j: Int) {
+    val tmp = this[i]
+    this[i] = this[j]
+    this[j] = tmp
+}
+
 fun factorial(n: Long): Long {
     var x = 1L
     var i = n

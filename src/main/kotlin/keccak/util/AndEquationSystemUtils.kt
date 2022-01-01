@@ -1,7 +1,6 @@
 package keccak.util
 
 import keccak.*
-import keccak.XorEquationSystem
 import java.io.File
 import java.util.*
 import kotlin.math.min
@@ -131,9 +130,9 @@ fun AndEquationSystem.toCharacteristicEquation(
     varPrefix: String = "x",
     useZeroPosition: Boolean = true,
 ): Node {
-    val lSystem = XorEquationSystem(rows, cols, Array(equations.size) { equations[it].andOpLeft }, andOpLeftResults)
-    val rSystem = XorEquationSystem(rows, cols, Array(equations.size) { equations[it].andOpRight }, andOpRightResults)
-    val xSystem = XorEquationSystem(rows, cols, Array(equations.size) { equations[it].rightXor }, rightXorResults)
+    val lSystem = XorEquationSystem(cols, Array(equations.size) { equations[it].andOpLeft }, andOpLeftResults)
+    val rSystem = XorEquationSystem(cols, Array(equations.size) { equations[it].andOpRight }, andOpRightResults)
+    val xSystem = XorEquationSystem(cols, Array(equations.size) { equations[it].rightXor }, rightXorResults)
 
     val lChar = lSystem.toCharacteristicEquation(characteristicVarPrefix, varPrefix, useZeroPosition)
     val rChar = rSystem.toCharacteristicEquation(characteristicVarPrefix, varPrefix, useZeroPosition)
