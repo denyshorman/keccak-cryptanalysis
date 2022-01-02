@@ -21,7 +21,6 @@ class AndEquationSystem {
     }
 
     constructor(
-        rows: Int,
         cols: Int,
         equations: Array<Equation>,
         andOpLeftResults: BitSet,
@@ -60,167 +59,6 @@ class AndEquationSystem {
             i++
         }
         return true
-    }
-
-    fun solve(
-        logProgress: Boolean = false,
-    ): XorEquationSystem? {
-        var solved: Boolean
-        val solutionSystem = XorEquationSystem(cols, cols)
-
-        if (logProgress) {
-            println(this)
-            println()
-            println(solutionSystem)
-            println()
-        }
-
-        while (true) {
-            //region Populate solution system
-            var andEqIndex = 0
-            var appendIndex = 0
-            var hasNotEmptyEq = false
-
-            while (andEqIndex < this.rows) {
-                val lRes = this.andOpLeftResults[andEqIndex]
-                val rRes = this.andOpRightResults[andEqIndex]
-                val lEmpty = this.equations[andEqIndex].andOpLeft.isEmpty
-                val rEmpty = this.equations[andEqIndex].andOpRight.isEmpty
-                val lEq = this.equations[andEqIndex].andOpLeft
-                val rEq = this.equations[andEqIndex].andOpRight
-
-                when {
-                    // y1 = 1
-                    // y2 = 1
-                    lEmpty && rEmpty && lRes && rRes -> {
-                        return null
-                    }
-                    // y1 + a + b + c = 0/1
-                    // y2 + a + b + c = 0/1
-                    !lEmpty && !rEmpty && lRes == rRes && lEq == rEq -> {
-                        appendIndex = solutionSystem.append(lEq, lRes, appendIndex)
-                        appendIndex++
-
-                        lEq.clear()
-                        rEq.clear()
-
-                        this.andOpLeftResults.clear(andEqIndex)
-                        this.andOpRightResults.clear(andEqIndex)
-                    }
-                    // y1 = 1
-                    // y2 + a + b = 0/1
-                    lEmpty && lRes && !rEmpty -> {
-                        appendIndex = solutionSystem.append(rEq, rRes, appendIndex)
-                        appendIndex++
-
-                        rEq.clear()
-                        this.andOpRightResults.clear(andEqIndex)
-                    }
-                    // y1 + a + b = 0/1
-                    // y2 = 1
-                    !lEmpty && rEmpty && rRes -> {
-                        appendIndex = solutionSystem.append(lEq, lRes, appendIndex)
-                        appendIndex++
-
-                        lEq.clear()
-                        this.andOpLeftResults.clear(andEqIndex)
-                    }
-                    // y1 + a + b + c = 0/1
-                    // y2 + a + d = 0/1
-                    !hasNotEmptyEq && !lEmpty && !rEmpty && lEq != rEq -> {
-                        hasNotEmptyEq = true
-                    }
-                    /*// y1 + a = 0
-                    // y2 + b + c + d = 0/1
-                    lEq.setBitsCount() == 1 && !lRes && !rEq.isEmpty -> {
-                        var i = 0
-                        var good = true
-
-                        while (i < this.rows) {
-                            if (
-                                i != andEqIndex &&
-                                (lEq == this.equations[i].andOpLeft && this.andOpLeftResults[i] ||
-                                lEq == this.equations[i].andOpRight && this.andOpRightResults[i])
-                            ) {
-                                good = false
-                                break
-                            }
-
-                            i++
-                        }
-
-                        if (good) {
-                            *//*appendIndex = solutionSystem.append(lEq, false, appendIndex)
-                            appendIndex++*//*
-
-                            lEq.clear()
-                        } else {
-                            appendIndex = solutionSystem.append(lEq, true, appendIndex)
-                            appendIndex++
-                        }
-                    }
-                    // y1 + b + c + d = 0/1
-                    // y2 + a = 0
-                    rEq.setBitsCount() == 1 && !rRes && !lEq.isEmpty -> {
-                        var i = 0
-                        var good = true
-
-                        while (i < this.rows) {
-                            if (
-                                i != andEqIndex &&
-                                (rEq == this.equations[i].andOpLeft && this.andOpLeftResults[i] ||
-                                rEq == this.equations[i].andOpRight && this.andOpRightResults[i])
-                            ) {
-                                good = false
-                                break
-                            }
-
-                            i++
-                        }
-
-                        if (good) {
-                            *//*appendIndex = solutionSystem.append(rEq, false, appendIndex)
-                            appendIndex++*//*
-
-                            rEq.clear()
-                        } else {
-                            appendIndex = solutionSystem.append(rEq, true, appendIndex)
-                            appendIndex++
-                        }
-                    }*/
-                }
-
-                andEqIndex++
-            }
-            //endregion
-
-            if (logProgress) {
-                println(this)
-                println()
-            }
-
-            if (appendIndex == 0) {
-                if (hasNotEmptyEq) {
-                    println(this.invertToXorSystem().toNodeEquationSystem(varOffset = 0))
-                    TODO("Has more than one solution")
-                } else {
-                    return solutionSystem
-                }
-            }
-
-            solved = solutionSystem.solve()
-
-            if (logProgress) {
-                println(solutionSystem)
-                println()
-            }
-
-            if (!solved) {
-                return null
-            }
-
-            this.substitute(solutionSystem)
-        }
     }
 
     fun substitute(index: Int, value: Boolean) {
@@ -406,7 +244,6 @@ class AndEquationSystem {
 
     fun clone(): AndEquationSystem {
         return AndEquationSystem(
-            rows,
             cols,
             Array(rows) { equations[it].clone() },
             andOpLeftResults.clone() as BitSet,
@@ -485,6 +322,136 @@ class AndEquationSystem {
         }
         return sb.toString()
     }
+
+    //#region Public Models
+    class PivotSolutionAlgorithm {
+        private val solutionPairs: BitSet
+        private val varsCount: Int
+        private val varsCountMod2: Boolean
+
+        val pivotSolution: BitSet
+        val invertedSystem: XorEquationSystem
+
+        constructor(
+            system: AndEquationSystem,
+            pivotSolution: BitSet,
+        ) {
+            this.pivotSolution = pivotSolution
+
+            solutionPairs = BitSet(system.rows)
+            varsCount = system.cols
+            varsCountMod2 = isMod2(varsCount)
+
+            system.rotate(pivotSolution, left = false, right = false)
+
+            invertedSystem = system.invertToXorSystem()
+
+            initSolutionPairs()
+        }
+
+        fun solve(): BitSet? {
+            var varIndex = 0
+
+            if (solutionPairs.isEmpty) {
+                varIndex = varsCount
+            }
+
+            initVarsLoop@ while (varIndex < varsCount) {
+                if (invertedSystem.varEqMap[varIndex] != -1) {
+                    varIndex++
+                    continue
+                }
+
+                var eqIndex = 0
+                while (eqIndex < invertedSystem.rows) {
+                    if (
+                        invertedSystem.equations[eqIndex].isEmpty ||
+                        invertedSystem.eqVarMap[eqIndex] < varsCount ||
+                        !invertedSystem.equations[eqIndex][varIndex]
+                    ) {
+                        eqIndex++
+                        continue
+                    }
+
+                    val oldExpressedVar = invertedSystem.eqVarMap[eqIndex]
+
+                    if (oldExpressedVar != -1) {
+                        solutionPairs.clear(oldExpressedVar.toSolutionPairIndex())
+                    }
+
+                    invertedSystem.expressVariable(eqIndex, varIndex, varSubstituted = ::varSubstitutedHandler)
+
+                    if (solutionPairs.isEmpty) {
+                        break@initVarsLoop
+                    } else {
+                        break
+                    }
+                }
+
+                varIndex++
+            }
+
+            if (solutionPairs.isEmpty) {
+                val solution = BitSet(varsCount)
+                var allVarsExtracted = true
+
+                varIndex = 0
+                while (varIndex < varsCount) {
+                    if (invertedSystem.varEqMap[varIndex] != -1) {
+                        solution.setIfTrue(varIndex, invertedSystem.results[invertedSystem.varEqMap[varIndex]])
+                    } else if (allVarsExtracted) {
+                        allVarsExtracted = false
+                    }
+                    varIndex++
+                }
+
+                if (!allVarsExtracted && pivotSolution != solution) {
+                    return solution
+                }
+            }
+
+            return null
+        }
+
+        private fun initSolutionPairs() {
+            var varIndex = varsCount
+            while (varIndex < invertedSystem.cols) {
+                val l = invertedSystem.results[invertedSystem.varEqMap[varIndex]]
+                val r = invertedSystem.results[invertedSystem.varEqMap[varIndex + 1]]
+                if (l && r) {
+                    solutionPairs.set(varIndex.toSolutionPairIndex())
+                }
+                varIndex += 2
+            }
+        }
+
+        private fun varSubstitutedHandler(subEqIndex: Int): Boolean {
+            if (invertedSystem.eqVarMap[subEqIndex] < varsCount) {
+                return true
+            }
+
+            val var0 = invertedSystem.eqVarMap[subEqIndex]
+            val var1 = var0.toCompanionVarIndex()
+
+            if (
+                invertedSystem.varEqMap[var0] != -1 &&
+                invertedSystem.varEqMap[var1] != -1 &&
+                invertedSystem.results[invertedSystem.varEqMap[var0]] &&
+                invertedSystem.results[invertedSystem.varEqMap[var1]]
+            ) {
+                solutionPairs.set(var0.toSolutionPairIndex())
+            } else {
+                solutionPairs.clear(var0.toSolutionPairIndex())
+            }
+
+            return true
+        }
+
+        private fun Int.toSolutionPairIndex(): Int = (this - varsCount) / 2
+
+        private fun Int.toCompanionVarIndex(): Int = this + if (varsCountMod2 xor isMod2(this)) -1 else 1
+    }
+    //#endregion
 
     companion object {
         private val logger = KotlinLogging.logger {}

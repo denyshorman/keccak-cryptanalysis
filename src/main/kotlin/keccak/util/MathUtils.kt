@@ -20,8 +20,11 @@ fun pow2(n: Long): Long {
 
 fun isPow2(n: Int): Boolean = ((n - 1) and n) == 0
 
+fun isMod2(n: Int): Boolean = (n and 1) == 0
+
 fun modPow2(n: Int, p2: Int): Int = n and (p2 - 1)
 
 fun modPow2(n: Long, p2: Long): Long = n and (p2 - 1)
 
 fun modFast(n: Int, b: Int): Int = if (isPow2(b)) modPow2(n, b) else n % b
+
