@@ -90,6 +90,12 @@ fun BitSet.xor(bitIndex: Int, value: Boolean) {
     if (value) invertValue(bitIndex)
 }
 
+fun BitSet.or(bitIndex: Int, value: Boolean) {
+    if (value && !this[bitIndex]) {
+        set(bitIndex)
+    }
+}
+
 fun BitSet.invertValue(bitIndex: Int) {
     this[bitIndex] = !this[bitIndex]
 }
@@ -168,6 +174,24 @@ inline fun BitSet?.iterateOverSetBits(fromIndex: Int, toIndex: Int, callback: (I
         while (i < toIndex && callback(i)) i++
     } else {
         iterateOverSetBits(callback)
+    }
+}
+
+inline fun BitSet.iterateOverAllClearBits(fromIndex: Int = 0, toIndex: Int, callback: (Int) -> Unit) {
+    var i = nextClearBit(fromIndex)
+
+    while (i < toIndex) {
+        callback(i)
+        i = nextClearBit(i + 1)
+    }
+}
+
+inline fun BitSet.iterateOverClearBits(fromIndex: Int = 0, toIndex: Int, callback: (Int) -> Boolean) {
+    var i = nextClearBit(fromIndex)
+
+    while (i < toIndex) {
+        if (!callback(i)) break
+        i = nextClearBit(i + 1)
     }
 }
 
