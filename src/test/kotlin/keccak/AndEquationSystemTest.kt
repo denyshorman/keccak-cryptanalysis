@@ -2,12 +2,10 @@ package keccak
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import keccak.util.AndEquationSystem
-import keccak.util.BitSet
-import keccak.util.set
+import keccak.util.*
 
 class AndEquationSystemTest : FunSpec({
     context("set") {
@@ -47,11 +45,11 @@ class AndEquationSystemTest : FunSpec({
 
             val normalized = system.simplify()
 
-            val solution2 = AndEquationSystem.PivotSolutionAlgorithm(normalized, solution).solve()
+            val solutions = AndEquationSystem.PivotSolutionAlgorithm(normalized, solution).solve()
 
-            solution2.shouldNotBeNull()
-            solution2.shouldNotBe(solution)
-            system.isValid(solution2).shouldBeTrue()
+            solutions.shouldNotBeEmpty()
+            solutions.shouldNotContain(solution)
+            solutions.forEach { system.isValid(it).shouldBeTrue() }
         }
     }
 })

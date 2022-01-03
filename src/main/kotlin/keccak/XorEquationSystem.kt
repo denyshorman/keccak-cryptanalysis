@@ -171,6 +171,14 @@ class XorEquationSystem {
             return false
         }
 
+        val oldVarIndex = eqVarMap[fromEqIndex]
+        eqVarMap[fromEqIndex] = varIndex
+        varEqMap[varIndex] = fromEqIndex
+
+        if (oldVarIndex != -1) {
+            varEqMap[oldVarIndex] = -1
+        }
+
         val currEqFreeBit = results[fromEqIndex]
 
         var eqIndex = 0
@@ -191,46 +199,7 @@ class XorEquationSystem {
             eqIndex++
         }
 
-        val oldVarIndex = eqVarMap[fromEqIndex]
-        eqVarMap[fromEqIndex] = varIndex
-        varEqMap[varIndex] = fromEqIndex
-
-        if (oldVarIndex != -1) {
-            varEqMap[oldVarIndex] = -1
-        }
-
         return true
-    }
-
-    fun expressVariable(
-        varIndex: Int,
-        activeRows: BitSet? = null,
-        varSubstituted: ((Int) -> Boolean)? = null,
-    ): Boolean {
-        if (varEqMap[varIndex] != -1) {
-            return true
-        }
-
-        var fromEqIndex = -1
-
-        activeRows.iterateOverSetBits(fromIndex = 0, rows) { i ->
-            if (equations[i][varIndex]) {
-                fromEqIndex = i
-            }
-
-            fromEqIndex == -1
-        }
-
-        if (fromEqIndex == -1) {
-            return false
-        }
-
-        return expressVariable(
-            fromEqIndex,
-            varIndex,
-            activeRows,
-            varSubstituted,
-        )
     }
 
     fun solve(
