@@ -565,8 +565,10 @@ class AndEquationSystem {
                         tmp.set(newVarIndex)
                     } else {
                         tmp.xor(system.equations[eq0])
-                        tmp.and(system.equations[eq1])
+                        tmp.or(system.equations[eq1])
                         tmp.invert(system.cols)
+                        tmp.or(newVarIndex, true)
+                        tmp.or(newVarCompIndex, true)
                     }
 
                     tmp.iterateOverAllSetBits { varIndex ->
