@@ -240,9 +240,8 @@ fun randomAndEquationSystem(
                 system.andOpRightResults[i] = random.nextBoolean()
 
                 if (!equalToZero) {
-                    system.equations[i].rightXor.clear()
-                    system.equations[i].rightXor.set(i)
-                    system.rightXorResults[i] = false
+                    system.equations[i].rightXor.randomize(cols, random)
+                    system.rightXorResults[i] = random.nextBoolean()
                 }
 
                 if (system.equations[i].andOpLeft.isEmpty || system.equations[i].andOpRight.isEmpty || (system.equations[i].rightXor.isEmpty xor equalToZero)) {
