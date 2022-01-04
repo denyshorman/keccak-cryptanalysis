@@ -433,11 +433,13 @@ class AndEquationSystem {
         init {
             var varIndex = varsCount
             while (varIndex < system.cols) {
-                val l = system.results[system.varEqMap[varIndex]]
-                val r = system.results[system.varEqMap[varIndex + 1]]
-                if (l && r) {
+                val eq0 = system.varEqMap[varIndex]
+                val eq1 = system.varEqMap[varIndex + 1]
+
+                if (eq0 != -1 && eq1 != -1 && system.results[eq0] && system.results[eq1]) {
                     pairs.set(toSolutionPairIndex(varIndex))
                 }
+
                 varIndex += 2
             }
         }
@@ -448,12 +450,16 @@ class AndEquationSystem {
             }
 
             val var0 = system.eqVarMap[eqIndex]
+
+            if (var0 == -1) {
+                return
+            }
+
             val var1 = toCompanionVarIndex(var0)
 
             if (
-                system.varEqMap[var0] != -1 &&
                 system.varEqMap[var1] != -1 &&
-                system.results[system.varEqMap[var0]] &&
+                system.results[eqIndex] &&
                 system.results[system.varEqMap[var1]]
             ) {
                 pairs.set(toSolutionPairIndex(var0))
