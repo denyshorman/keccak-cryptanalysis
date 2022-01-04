@@ -328,7 +328,6 @@ class AndEquationSystem {
         private val pivotSolution: BitSet
         private val solutionPairs: SolutionPairsCounter
         private val badVarsCounter: BadVarsCounter
-        private val badVarsSimpleCounter: BadVarsSimpleCounter
         private val varsCount: Int
 
         val invertedSystem: XorEquationSystem
@@ -343,8 +342,7 @@ class AndEquationSystem {
             varsCount = system.cols
             invertedSystem = system.invertToXorSystem()
             solutionPairs = SolutionPairsCounter(invertedSystem, varsCount, system.rows)
-            badVarsCounter = BadVarsCounter(invertedSystem, solutionPairs, varsCount)
-            badVarsSimpleCounter = BadVarsSimpleCounter(invertedSystem, varsCount)
+            badVarsCounter = BadVarsCounter(invertedSystem, varsCount)
         }
 
         fun solve(): Set<BitSet> {
@@ -352,8 +350,8 @@ class AndEquationSystem {
 
             if (solutionPairs.hasSolution()) {
                 varIndex = varsCount
-            } else if (badVarsSimpleCounter.hasSolution()) {
-                val solutions = badVarsSimpleCounter.solutions().filter { it != pivotSolution }.toSet()
+            } else if (badVarsCounter.hasSolution()) {
+                val solutions = badVarsCounter.solutions().filter { it != pivotSolution }.toSet()
 
                 if (solutions.isNotEmpty()) {
                     return solutions
@@ -385,12 +383,12 @@ class AndEquationSystem {
                         varSubstituted = ::varSubstitutedHandler,
                     )
 
-                    badVarsSimpleCounter.recalculate()
+                    badVarsCounter.recalculate()
 
                     if (solutionPairs.hasSolution()) {
                         break@initVarsLoop
-                    } else if (badVarsSimpleCounter.hasSolution()) {
-                        val solutions = badVarsSimpleCounter.solutions().filter { it != pivotSolution }.toSet()
+                    } else if (badVarsCounter.hasSolution()) {
+                        val solutions = badVarsCounter.solutions().filter { it != pivotSolution }.toSet()
 
                         if (solutions.isNotEmpty()) {
                             return solutions
@@ -422,8 +420,8 @@ class AndEquationSystem {
                 if (!allVarsExtracted && pivotSolution != solution) {
                     return setOf(solution)
                 }
-            } else if (badVarsSimpleCounter.hasSolution()) {
-                val solutions = badVarsSimpleCounter.solutions().filter { it != pivotSolution }.toSet()
+            } else if (badVarsCounter.hasSolution()) {
+                val solutions = badVarsCounter.solutions().filter { it != pivotSolution }.toSet()
 
                 if (solutions.isNotEmpty()) {
                     return solutions
@@ -503,212 +501,11 @@ class AndEquationSystem {
 
     class BadVarsCounter(
         val system: XorEquationSystem,
-        val solutionPairs: SolutionPairsCounter,
-        val varsCount: Int,
-    ) {
-        val badVars = IntArray(system.cols)
-
-        init {
-            calculate()
-        }
-
-        fun recalculate() {
-            badVars.fill(0)
-            calculate()
-        }
-
-        fun recalculate(var0: Int, var1: Int) {
-            val var0Comp: Int
-            val var1Comp: Int
-
-            val eq0: Int
-            val eq1: Int
-            val eq0Comp: Int
-            val eq1Comp: Int
-
-            if (var0 == -1) {
-                var0Comp = -1
-                eq0 = -1
-                eq0Comp = -1
-            } else {
-                var0Comp = solutionPairs.toCompanionVarIndex(var0)
-                eq0 = system.varEqMap[var0]
-                eq0Comp = system.varEqMap[var0Comp]
-            }
-
-            if (var1 == -1) {
-                var1Comp = -1
-                eq1 = -1
-                eq1Comp = -1
-            } else {
-                var1Comp = solutionPairs.toCompanionVarIndex(var1)
-                eq1 = system.varEqMap[var1]
-                eq1Comp = system.varEqMap[var1Comp]
-            }
-
-            update(var0, var0Comp, eq0, eq0Comp, delta = -1)
-            update(var1, var1Comp, eq1, eq1Comp, delta = -1)
-
-            val eq0Delta = -1
-            val eq1Delta: Int
-            val eq1CompDelta: Int
-
-            if (eq1 == -1) {
-                eq1Delta = eq0
-                eq1CompDelta = eq1Comp
-            } else {
-                eq1Delta = eq1
-                eq1CompDelta = eq0
-            }
-
-            update(var0, var0Comp, eq0Delta, eq0Comp, delta = 1)
-            update(var1, var1Comp, eq1Delta, eq1CompDelta, delta = 1)
-
-            var eqIndex = 0
-            while (eqIndex < system.rows) {
-                if (eqIndex != eq1 && system.equations[eqIndex][var1]) {
-                    val var2 = system.eqVarMap[eqIndex]
-                    val var2Comp: Int
-                    val eq2Comp: Int
-
-                    if (var2 != -1) {
-                        var2Comp = solutionPairs.toCompanionVarIndex(var2)
-                        eq2Comp = system.varEqMap[var2Comp]
-                    } else {
-                        var2Comp = -1
-                        eq2Comp = -1
-                    }
-
-                    update(var2, var2Comp, eqIndex, eq2Comp, delta = -1)
-                }
-
-                eqIndex++
-            }
-        }
-
-        fun isValidWithFreeBits(validateFreeBits: Boolean = true): Boolean {
-            var i = 0
-            while (i < badVars.size) {
-                if (isValid(i, validateFreeBits)) {
-                    return true
-                }
-
-                i++
-            }
-            return false
-        }
-
-        fun solutions(validateFreeBits: Boolean = true): Sequence<BitSet> {
-            return sequence {
-                var i = 0
-                while (i < badVars.size) {
-                    if (isValid(i, validateFreeBits)) {
-                        yield(i)
-                    }
-                    i++
-                }
-            }
-                .map { varIndex ->
-                    val solution = BitSet(varsCount)
-
-                    if (varIndex < varsCount) {
-                        solution.set(varIndex)
-                    }
-
-                    var i = 0
-                    while (i < varsCount) {
-                        if (system.varEqMap[i] != -1) {
-                            val value = system.results[system.varEqMap[i]] xor
-                                    system.equations[system.varEqMap[i]][varIndex]
-
-                            solution.setIfTrue(i, value)
-                        }
-                        i++
-                    }
-
-                    solution
-                }
-        }
-
-        private fun calculate() {
-            var newVarIndex = varsCount
-
-            while (newVarIndex < system.cols) {
-                val newVarCompIndex = newVarIndex + 1
-                val eq0 = system.varEqMap[newVarIndex]
-                val eq1 = system.varEqMap[newVarCompIndex]
-
-                update(newVarIndex, newVarCompIndex, eq0, eq1, delta = 1)
-
-                newVarIndex += 2
-            }
-        }
-
-        private fun update(var0: Int, var1: Int, eq0: Int, eq1: Int, delta: Int) {
-            if (eq0 != -1 && eq1 != -1) {
-                system.equations[eq0].iterateOverAllSetBits { varIndex ->
-                    if (system.equations[eq1][varIndex]) {
-                        badVars[varIndex] += delta
-                    }
-                }
-            } else if (eq0 != -1) {
-                if (system.equations[eq0][var1]) {
-                    badVars[var1] += delta
-                }
-            } else if (eq1 != -1) {
-                if (system.equations[eq1][var0]) {
-                    badVars[var0] += delta
-                }
-            }
-        }
-
-        private fun isValid(varIndex: Int, validateFreeBits: Boolean): Boolean {
-            return badVars[varIndex] == 0 &&
-                    system.varEqMap[varIndex] == -1 &&
-                    (!validateFreeBits || isValidWithFreeBits(varIndex))
-        }
-
-        private fun isValidWithFreeBits(varIndex: Int): Boolean {
-            var i = varsCount
-            while (i < system.cols) {
-                val lEq = system.varEqMap[i]
-                val rEq = system.varEqMap[i + 1]
-
-                val l: Boolean
-                val r: Boolean
-
-                if (lEq != -1 && rEq != -1) {
-                    l = system.results[lEq] xor system.equations[lEq][varIndex]
-                    r = system.results[rEq] xor system.equations[rEq][varIndex]
-                } else if (lEq != -1) {
-                    l = system.results[lEq] xor system.equations[lEq][varIndex]
-                    r = (i + 1) == varIndex
-                } else if (rEq != -1) {
-                    l = (i + 1) == varIndex
-                    r = system.results[rEq] xor system.equations[rEq][varIndex]
-                } else {
-                    l = false
-                    r = false
-                }
-
-                if (l && r) return false
-
-                i += 2
-            }
-            return true
-        }
-
-        override fun toString(): String {
-            return badVars.asSequence().map { }.joinToString(" ")
-        }
-    }
-
-    class BadVarsSimpleCounter(
-        val system: XorEquationSystem,
         val varsCount: Int,
     ) {
         private val tmp = BitSet(system.cols)
         val badVars = BitSet(system.cols)
+        val badVarsNum = IntArray(system.cols)
 
         init {
             calculate()
@@ -716,6 +513,7 @@ class AndEquationSystem {
 
         fun recalculate() {
             badVars.clear()
+            badVarsNum.fill(0)
             calculate()
         }
 
@@ -787,19 +585,27 @@ class AndEquationSystem {
                         tmp.invert(system.cols)
                     }
 
+                    tmp.iterateOverAllSetBits { varIndex ->
+                        badVarsNum[varIndex]++
+                    }
+
                     badVars.or(tmp)
                     tmp.clear()
                 } else if (eq0 != -1) {
                     badVars.or(newVarIndex, true)
+                    badVarsNum[newVarIndex]++
 
                     if (system.equations[eq0][newVarCompIndex] || system.results[eq0]) {
                         badVars.or(newVarCompIndex, true)
+                        badVarsNum[newVarCompIndex]++
                     }
                 } else if (eq1 != -1) {
                     badVars.or(newVarCompIndex, true)
+                    badVarsNum[newVarCompIndex]++
 
                     if (system.equations[eq1][newVarIndex] || system.results[eq1]) {
                         badVars.or(newVarIndex, true)
+                        badVarsNum[newVarIndex]++
                     }
                 }
 
@@ -808,7 +614,7 @@ class AndEquationSystem {
         }
 
         override fun toString(): String {
-            return badVars.toString(system.cols)
+            return badVars.toString(system.cols) + "\n" + badVarsNum.joinToString(" ")
         }
     }
     //#endregion
