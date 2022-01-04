@@ -545,12 +545,20 @@ class AndEquationSystem {
         }
 
         private fun calculate() {
-            var newVarIndex = varsCount
+            var varIndex = 0
+            while (varIndex < varsCount) {
+                if (system.varEqMap[varIndex] != -1) {
+                    badVars.set(varIndex)
+                    badVarsNum[varIndex]++
+                }
+                varIndex++
+            }
 
-            while (newVarIndex < system.cols) {
-                val newVarCompIndex = newVarIndex + 1
-                val eq0 = system.varEqMap[newVarIndex]
-                val eq1 = system.varEqMap[newVarCompIndex]
+            varIndex = varsCount
+            while (varIndex < system.cols) {
+                val varCompIndex = varIndex + 1
+                val eq0 = system.varEqMap[varIndex]
+                val eq1 = system.varEqMap[varCompIndex]
 
                 if (eq0 != -1 && eq1 != -1) {
                     val r0 = system.results[eq0]
@@ -559,49 +567,46 @@ class AndEquationSystem {
                     if (!r0 && !r1) {
                         tmp.xor(system.equations[eq0])
                         tmp.and(system.equations[eq1])
-                        tmp.or(newVarIndex, true)
-                        tmp.or(newVarCompIndex, true)
+                        tmp.or(varIndex, true)
+                        tmp.or(varCompIndex, true)
                     } else if (!r0) {
                         tmp.xor(system.equations[eq0])
                         tmp.andNot(system.equations[eq1])
-                        tmp.set(newVarCompIndex)
+                        tmp.set(varCompIndex)
                     } else if (!r1) {
                         tmp.xor(system.equations[eq1])
                         tmp.andNot(system.equations[eq0])
-                        tmp.set(newVarIndex)
+                        tmp.set(varIndex)
                     } else {
                         tmp.xor(system.equations[eq0])
                         tmp.or(system.equations[eq1])
                         tmp.invert(system.cols)
-                        tmp.or(newVarIndex, true)
-                        tmp.or(newVarCompIndex, true)
+                        tmp.or(varIndex, true)
+                        tmp.or(varCompIndex, true)
                     }
 
-                    tmp.iterateOverAllSetBits { varIndex ->
-                        badVarsNum[varIndex]++
-                    }
-
+                    tmp.iterateOverAllSetBits { badVarsNum[it]++ }
                     badVars.or(tmp)
                     tmp.clear()
                 } else if (eq0 != -1) {
-                    badVars.or(newVarIndex, true)
-                    badVarsNum[newVarIndex]++
+                    badVars.or(varIndex, true)
+                    badVarsNum[varIndex]++
 
-                    if (system.equations[eq0][newVarCompIndex] || system.results[eq0]) {
-                        badVars.or(newVarCompIndex, true)
-                        badVarsNum[newVarCompIndex]++
+                    if (system.equations[eq0][varCompIndex] || system.results[eq0]) {
+                        badVars.or(varCompIndex, true)
+                        badVarsNum[varCompIndex]++
                     }
                 } else if (eq1 != -1) {
-                    badVars.or(newVarCompIndex, true)
-                    badVarsNum[newVarCompIndex]++
+                    badVars.or(varCompIndex, true)
+                    badVarsNum[varCompIndex]++
 
-                    if (system.equations[eq1][newVarIndex] || system.results[eq1]) {
-                        badVars.or(newVarIndex, true)
-                        badVarsNum[newVarIndex]++
+                    if (system.equations[eq1][varIndex] || system.results[eq1]) {
+                        badVars.or(varIndex, true)
+                        badVarsNum[varIndex]++
                     }
                 }
 
-                newVarIndex += 2
+                varIndex += 2
             }
         }
 
