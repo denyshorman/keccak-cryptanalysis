@@ -346,19 +346,11 @@ class AndEquationSystem {
         }
 
         fun solve(): Set<BitSet> {
+            var solutions = extractSolutions()
+            if (solutions.isNotEmpty()) return solutions
+
             var varIndex = 0
-
-            if (solutionPairs.hasSolution()) {
-                varIndex = varsCount
-            } else if (badVarsCounter.hasSolution()) {
-                val solutions = badVarsCounter.solutions().filter { it != pivotSolution }.toSet()
-
-                if (solutions.isNotEmpty()) {
-                    return solutions
-                }
-            }
-
-            initVarsLoop@ while (varIndex < varsCount) {
+            while (varIndex < varsCount) {
                 if (invertedSystem.varEqMap[varIndex] != -1) {
                     varIndex++
                     continue
@@ -376,25 +368,13 @@ class AndEquationSystem {
                     }
 
                     solutionPairs.clear(eqIndex)
-
-                    invertedSystem.expressVariable(
-                        eqIndex,
-                        varIndex,
-                        varSubstituted = ::varSubstitutedHandler,
-                    )
-
+                    invertedSystem.expressVariable(eqIndex, varIndex, varSubstituted = ::varSubstitutedHandler)
                     badVarsCounter.recalculate()
 
-                    if (solutionPairs.hasSolution()) {
-                        break@initVarsLoop
-                    } else if (badVarsCounter.hasSolution()) {
-                        val solutions = badVarsCounter.solutions().filter { it != pivotSolution }.toSet()
+                    solutions = extractSolutions()
 
-                        if (solutions.isNotEmpty()) {
-                            return solutions
-                        } else {
-                            break
-                        }
+                    if (solutions.isNotEmpty()) {
+                        return solutions
                     } else {
                         break
                     }
@@ -403,11 +383,15 @@ class AndEquationSystem {
                 varIndex++
             }
 
+            return extractSolutions()
+        }
+
+        private fun extractSolutions(): Set<BitSet> {
             if (solutionPairs.hasSolution()) {
                 val solution = BitSet(varsCount)
                 var allVarsExtracted = true
 
-                varIndex = 0
+                var varIndex = 0
                 while (varIndex < varsCount) {
                     if (invertedSystem.varEqMap[varIndex] != -1) {
                         solution.setIfTrue(varIndex, invertedSystem.results[invertedSystem.varEqMap[varIndex]])
