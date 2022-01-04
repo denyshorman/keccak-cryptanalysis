@@ -3,6 +3,8 @@ package keccak
 import keccak.util.*
 import mu.KotlinLogging
 import java.util.*
+import kotlin.math.max
+import kotlin.random.Random
 
 class AndEquationSystem {
     val rows: Int get() = equations.size
@@ -325,6 +327,7 @@ class AndEquationSystem {
 
     //#region Public Models
     class PivotSolutionAlgorithm {
+        private val random: Random
         private val pivotSolution: BitSet
         private val solutionPairs: SolutionPairsCounter
         private val badVarsCounter: BadVarsCounter
@@ -335,9 +338,11 @@ class AndEquationSystem {
         constructor(
             system: AndEquationSystem,
             pivotSolution: BitSet,
+            random: Random = Random,
         ) {
             system.rotate(pivotSolution, left = false, right = false)
 
+            this.random = random
             this.pivotSolution = pivotSolution
             varsCount = system.cols
             invertedSystem = system.invertToXorSystem()
@@ -383,7 +388,46 @@ class AndEquationSystem {
                 varIndex++
             }
 
-            return extractSolutions()
+            solutions = extractSolutions()
+            if (solutions.isNotEmpty()) return solutions
+
+            solutionPairs.pairs.clear()
+            solutionPairs.pairs.invert(solutionPairs.pairsCount)
+
+            val indexCache = IntArray(max(invertedSystem.cols, invertedSystem.rows))
+            var indexCachePtr = 0
+
+            while (!Thread.interrupted()) {
+                var i = varsCount
+                while (i < invertedSystem.cols) {
+                    if (invertedSystem.varEqMap[i] == -1) {
+                        indexCache[indexCachePtr++] = i
+                    }
+                    i++
+                }
+
+                val randomVarIndex = indexCache[random.nextInt(indexCachePtr)]
+                indexCachePtr = 0
+
+                i = 0
+                while (i < invertedSystem.rows) {
+                    if (invertedSystem.eqVarMap[i] >= varsCount && invertedSystem.equations[i][randomVarIndex]) {
+                        indexCache[indexCachePtr++] = i
+                    }
+                    i++
+                }
+
+                val randomEqIndex = indexCache[random.nextInt(indexCachePtr)]
+                indexCachePtr = 0
+
+                invertedSystem.expressVariable(randomEqIndex, randomVarIndex)
+                badVarsCounter.recalculate()
+
+                solutions = extractSolutions()
+                if (solutions.isNotEmpty()) return solutions
+            }
+
+            return emptySet()
         }
 
         private fun extractSolutions(): Set<BitSet> {
