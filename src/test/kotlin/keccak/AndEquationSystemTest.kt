@@ -43,7 +43,7 @@ class AndEquationSystemTest : FunSpec({
                 "(x0 + x1 + x2 + x3 + x4)*(x2 + x3 + x4 + 1) = x4",
             )
 
-            val normalized = system.simplify()
+            val normalized = system.normalize()
 
             val solutions = AndEquationSystem.PivotSolutionAlgorithm(normalized, solution).solve()
 

@@ -279,20 +279,30 @@ class Keccak256EqSystemGenerator private constructor() {
             *state0[15].toLittleEndianBytes(),
         )
 
+        state1.asSequence()
+            .filterIndexed { i, _ -> i != 0 && i != 5 && i != 10 && i != 15 }
+            .map { it.toLittleEndianBytes() }
+            .flatMap { it.asSequence() }
+            .flatMap { it.eqVarMap.asSequence() }
+            .forEach { varIndex ->
+                for (andEqIndex in andEqSystem.rows - 1 downTo 0) {
+                    if (andEqSystem.equations[andEqIndex].rightXor[varIndex]) {
+                        andEqSystem.clear(andEqIndex)
+                        break
+                    }
+                }
+            }
+
         var byteIndex = 0
         while (byteIndex < hashBytes.size) {
             var bitIndex = 0
             while (bitIndex < Byte.SIZE_BITS) {
-                if (hashBytes[byteIndex].getBit(bitIndex)) {
-                    hashEqSystem[byteIndex].results.flip(bitIndex)
-                }
+                val varIndex = hashEqSystem[byteIndex].eqVarMap[bitIndex]
+                val value = hashEqSystem[byteIndex].results[bitIndex] xor hashBytes[byteIndex].getBit(bitIndex)
+                andEqSystem.substitute(varIndex, value)
                 bitIndex++
             }
             byteIndex++
-        }
-
-        for (xorSystem in hashEqSystem) {
-            andEqSystem.substitute(xorSystem)
         }
 
         return hashBytes
@@ -321,6 +331,8 @@ class Keccak256EqSystemGenerator private constructor() {
             andEqSystem.rightXorResults[andSystemEqIndex] = a.results[i] xor b.results[i]
 
             system.equations[i].set(constraintVarIndex)
+            system.eqVarMap[i] = constraintVarIndex
+            system.varEqMap[constraintVarIndex] = i
 
             if (result.getBit(i)) {
                 varValues.set(constraintVarIndex)

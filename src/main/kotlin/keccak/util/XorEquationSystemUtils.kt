@@ -1,6 +1,7 @@
 package keccak.util
 
 import keccak.*
+import mu.KotlinLogging
 import java.io.File
 import java.util.*
 import kotlin.math.ceil
@@ -10,6 +11,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 private val XorHumanEquationPattern = """(\d+)""".toRegex()
+private val logger = KotlinLogging.logger {}
 
 fun XorEquationSystem(rows: Int, cols: Int, humanReadable: Boolean, vararg equations: String): XorEquationSystem {
     val system = XorEquationSystem(rows, cols)
@@ -38,7 +40,12 @@ fun XorEquationSystem.toHumanString(
     return sb.toString()
 }
 
-fun XorEquationSystem.set(eqIndex: Int, equation: String, humanReadable: Boolean) {
+fun XorEquationSystem.set(
+    eqIndex: Int,
+    equation: String,
+    humanReadable: Boolean,
+    firstVarExpressed: Boolean = false,
+) {
     if (humanReadable) {
         val setBitIndices = XorHumanEquationPattern.findAll(equation).map { it.value.toInt() }.toList()
 
@@ -47,6 +54,15 @@ fun XorEquationSystem.set(eqIndex: Int, equation: String, humanReadable: Boolean
                 equations[eqIndex].set(bitIndex)
             } else {
                 results.setIfTrue(eqIndex, bitIndex == 1)
+            }
+        }
+
+        if (firstVarExpressed) {
+            val firstVarIndex = setBitIndices.firstOrNull()
+
+            if (firstVarIndex != null) {
+                varEqMap[firstVarIndex] = eqIndex
+                eqVarMap[eqIndex] = firstVarIndex
             }
         }
     } else {
@@ -74,6 +90,10 @@ fun XorEquationSystem.toLittleEndianBytes(): Array<XorEquationSystem> {
         while (i < limit) {
             system.equations[j].xor(equations[i])
             system.results[j] = results[i]
+            if (eqVarMap[i] != -1) {
+                system.eqVarMap[j] = eqVarMap[i]
+                system.varEqMap[eqVarMap[i]] = j
+            }
             i++
             j++
         }
@@ -239,25 +259,21 @@ fun XorEquationSystem.toFile(
         var eqIndex = eqStartIndex
         val limit = min(eqIndex + eqCount, rows)
 
+        logger.info("Serializing system to the file")
+
         if (humanReadable) {
             while (eqIndex < limit) {
-                val variables = LinkedList<String>()
+                val equation = equations[eqIndex].toXorString(
+                    freeBit = false,
+                    varPrefix = "x",
+                    varOffset = 0,
+                    expressVarIndex = eqVarMap[eqIndex],
+                )
 
-                val res = results[eqIndex]
+                writer.appendLine("$equation = ${results[eqIndex].toNumChar()}")
 
-                if (variables.isNotEmpty()) {
-                    val equation = equations[eqIndex].toXorString(
-                        freeBit = false,
-                        varPrefix = "x",
-                        varOffset = 0,
-                        expressVarIndex = eqVarMap[eqIndex],
-                    )
-
-                    writer.appendLine("$equation = ${res.toNumChar()}")
-                } else {
-                    if (res) {
-                        writer.appendLine("0 = 1")
-                    }
+                if (modPow2(eqIndex, 4096) == 0) {
+                    logger.info("Serialized $eqIndex lines")
                 }
 
                 eqIndex++
@@ -272,6 +288,10 @@ fun XorEquationSystem.toFile(
                 writer.append('|')
                 writer.append(results[eqIndex].toNumChar())
 
+                if (modPow2(eqIndex, 4096) == 0) {
+                    logger.info("Serialized $eqIndex lines")
+                }
+
                 eqIndex++
 
                 if (eqIndex != limit) {
@@ -279,6 +299,8 @@ fun XorEquationSystem.toFile(
                 }
             }
         }
+
+        logger.info("The system has been successfully serialized")
     }
 }
 

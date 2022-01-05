@@ -11,7 +11,6 @@ import java.util.*
 import kotlin.concurrent.thread
 import kotlin.random.Random
 import kotlin.random.Random.Default.nextBytes
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 
 class Keccak256EqSystemGeneratorTest : FunSpec({
@@ -190,7 +189,7 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
         hashResult.equationSystem.isValid(hashResult.varValues).shouldBeTrue()
     }
 
-    test("xorAndEqSystemProcessing").config(timeout = Duration.days(10)) {
+    test("xorAndEqSystemProcessing") {
         val xorAndEqSystem = (File("D:\\test\\leftRight.txt") to File("D:\\test\\andEquations.txt"))
             .toXorAndEquationSystem(
                 xorEqRows = 76777,
@@ -205,13 +204,13 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
         xorAndEqSystem.andSystem.toFile(File("D:\\test\\andEquationsProcessed.txt"), humanReadable = true)
     }
 
-    test("convertAndEquationsProcessedHumanToBinary").config(timeout = Duration.days(10)) {
+    test("convertAndEquationsProcessedHumanToBinary") {
         val andSystem = File("D:\\test\\andEquationsProcessed.txt").toAndEquationSystem(37057, 116288, true)
 
         andSystem.toFile(File("D:\\test\\andEquationsProcessedBinary.txt"), humanReadable = false)
     }
 
-    test("zero all eqs and try to find a solution").config(timeout = Duration.days(10)) {
+    test("zero all eqs and try to find a solution") {
         val system = File("D:\\test\\leftRight.txt").toXorEquationSystem(76777, 116288, humanReadable = false)
 
         var i = 0
@@ -269,7 +268,7 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
 
         val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
 
-        val normalizedSystem = hashResult.equationSystem.simplify()
+        val normalizedSystem = hashResult.equationSystem.normalize()
         val invertedSystem = normalizedSystem.invertToXorSystem()
         invertedSystem.solve(skipValidation = true, logProgress = true, progressStep = 1024)
 
@@ -417,7 +416,7 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
 
         val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
 
-        val normalizedSystem = hashResult.equationSystem.simplify()
+        val normalizedSystem = hashResult.equationSystem.normalize()
         val invertedSystem = normalizedSystem.invertToXorSystem()
 
         val normSysCols = normalizedSystem.cols
@@ -465,7 +464,7 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
 
         val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
 
-        val normalizedSystem = hashResult.equationSystem.simplify()
+        val normalizedSystem = hashResult.equationSystem.normalize()
 
         var i = 0
         val nodes = LinkedList<Node>()
@@ -514,7 +513,7 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
         val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
 
         val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = true)
-        val normalizedSystem = hashResult.equationSystem.simplify()
+        val normalizedSystem = hashResult.equationSystem.normalize()
 
         val algorithm = AndEquationSystem.PivotSolutionAlgorithm(normalizedSystem, hashResult.varValues)
 
@@ -524,6 +523,11 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
             val solutions = algorithm.solve(logProgress = true, progressStep = 64)
 
             if (solutions.isNotEmpty()) {
+                println("Main solution: ${msg.map { it.toUByte() }}")
+                for (solution in solutions) {
+                    println(solution.toByteArray(136).map{ it.toUByte() })
+                }
+                println()
                 for (solution in solutions) {
                     println(solution.toString(normalizedSystem.cols))
                 }

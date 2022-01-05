@@ -256,6 +256,19 @@ fun BitSet.toNode(
     return Xor(nodes)
 }
 
+fun BitSet.toByteArray(bytesCount: Int): ByteArray {
+    val bytes = ByteArray(bytesCount)
+    var bitIndex = 0
+    while (true) {
+        val byteIndex = bitIndex / Byte.SIZE_BITS
+        if (byteIndex == bytesCount) break
+        val offset = bitIndex % Byte.SIZE_BITS
+        bytes[byteIndex] = bytes[byteIndex].setBit(offset, this[bitIndex])
+        bitIndex++
+    }
+    return bytes
+}
+
 fun bitSet(vararg bits: Boolean): BitSet {
     val bitSet = BitSet(bits.size)
     var i = 0

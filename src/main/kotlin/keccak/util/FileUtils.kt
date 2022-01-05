@@ -9,12 +9,17 @@ import java.util.*
 
 private val logger = KotlinLogging.logger {}
 
-fun File.toXorEquationSystem(rows: Int, cols: Int, humanReadable: Boolean): XorEquationSystem {
+fun File.toXorEquationSystem(
+    rows: Int,
+    cols: Int,
+    humanReadable: Boolean,
+    firstVarExpressed: Boolean = false,
+): XorEquationSystem {
     val system = XorEquationSystem(rows, cols)
 
     inputStream().bufferedReader(Charsets.US_ASCII).use { reader ->
         reader.lineSequence().forEachIndexed { eqIndex, line ->
-            system.set(eqIndex, line, humanReadable)
+            system.set(eqIndex, line, humanReadable, firstVarExpressed)
 
             if (modPow2(eqIndex, 4096) == 0) {
                 logger.info("Loaded $eqIndex lines")

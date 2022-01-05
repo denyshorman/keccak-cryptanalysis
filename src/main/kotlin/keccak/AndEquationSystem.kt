@@ -63,26 +63,47 @@ class AndEquationSystem {
         return true
     }
 
-    fun substitute(index: Int, value: Boolean) {
-        var i = 0
+    fun isEmpty(eqIndex: Int): Boolean {
+        return equations[eqIndex].andOpLeft.isEmpty &&
+                equations[eqIndex].andOpRight.isEmpty &&
+                equations[eqIndex].rightXor.isEmpty &&
+                !andOpLeftResults[eqIndex] &&
+                !andOpRightResults[eqIndex] &&
+                !rightXorResults[eqIndex]
+    }
 
-        while (i < rows) {
-            if (equations[i].andOpLeft[index]) {
-                equations[i].andOpLeft.clear(index)
-                andOpLeftResults.xor(index, value)
+    fun countEmptyEquations(): Int {
+        var eqIndex = 0
+        var counter = 0
+        while (eqIndex < rows) {
+            if (isEmpty(eqIndex)) {
+                counter++
+            }
+            eqIndex++
+        }
+        return counter
+    }
+
+    fun substitute(varIndex: Int, value: Boolean) {
+        var eqIndex = 0
+
+        while (eqIndex < rows) {
+            if (equations[eqIndex].andOpLeft[varIndex]) {
+                equations[eqIndex].andOpLeft.clear(varIndex)
+                andOpLeftResults.xor(eqIndex, value)
             }
 
-            if (equations[i].andOpRight[index]) {
-                equations[i].andOpRight.clear(index)
-                andOpRightResults.xor(index, value)
+            if (equations[eqIndex].andOpRight[varIndex]) {
+                equations[eqIndex].andOpRight.clear(varIndex)
+                andOpRightResults.xor(eqIndex, value)
             }
 
-            if (equations[i].rightXor[index]) {
-                equations[i].rightXor.clear(index)
-                rightXorResults.xor(index, value)
+            if (equations[eqIndex].rightXor[varIndex]) {
+                equations[eqIndex].rightXor.clear(varIndex)
+                rightXorResults.xor(eqIndex, value)
             }
 
-            i++
+            eqIndex++
         }
     }
 
@@ -103,23 +124,23 @@ class AndEquationSystem {
 
         while (xorEqIndex < xorSystem.rows) {
             if (!xorSystem.equations[xorEqIndex].isEmpty) {
-                val firstBitIndex = xorSystem.equations[xorEqIndex].nextSetBit(0)
+                val exprVarIndex = xorSystem.eqVarMap[xorEqIndex]
 
-                if (firstBitIndex >= 0 && (mask == null || mask[firstBitIndex])) {
+                if (exprVarIndex >= 0 && (mask == null || mask[exprVarIndex])) {
                     var andEqIndex = 0
 
                     while (andEqIndex < rows) {
-                        if (substituteLeft && !equations[andEqIndex].andOpLeft.isEmpty && equations[andEqIndex].andOpLeft[firstBitIndex]) {
+                        if (substituteLeft && !equations[andEqIndex].andOpLeft.isEmpty && equations[andEqIndex].andOpLeft[exprVarIndex]) {
                             equations[andEqIndex].andOpLeft.xor(xorSystem.equations[xorEqIndex])
                             andOpLeftResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
                         }
 
-                        if (substituteRight && !equations[andEqIndex].andOpRight.isEmpty && equations[andEqIndex].andOpRight[firstBitIndex]) {
+                        if (substituteRight && !equations[andEqIndex].andOpRight.isEmpty && equations[andEqIndex].andOpRight[exprVarIndex]) {
                             equations[andEqIndex].andOpRight.xor(xorSystem.equations[xorEqIndex])
                             andOpRightResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
                         }
 
-                        if (substituteResult && !equations[andEqIndex].rightXor.isEmpty && equations[andEqIndex].rightXor[firstBitIndex]) {
+                        if (substituteResult && !equations[andEqIndex].rightXor.isEmpty && equations[andEqIndex].rightXor[exprVarIndex]) {
                             equations[andEqIndex].rightXor.xor(xorSystem.equations[xorEqIndex])
                             rightXorResults.xor(andEqIndex, xorSystem.results[xorEqIndex])
                         }
@@ -202,12 +223,17 @@ class AndEquationSystem {
         return andSystem
     }
 
-    fun simplify(): AndEquationSystem {
-        val system = AndEquationSystem(2 * rows, cols)
+    fun normalize(): AndEquationSystem {
+        val system = AndEquationSystem(rows = 2 * (rows - countEmptyEquations()), cols)
 
         var i = 0
         var j = 0
         while (i < rows) {
+            if (isEmpty(i)) {
+                i++
+                continue
+            }
+
             system.equations[j].andOpLeft = equations[i].andOpLeft.clone() as BitSet
             system.andOpLeftResults.setIfTrue(j, andOpLeftResults[i])
 
@@ -221,7 +247,7 @@ class AndEquationSystem {
             system.andOpLeftResults.setIfTrue(j, rightXorResults[i])
 
             system.equations[j].andOpRight = equations[i].andOpLeft.clone() as BitSet
-            system.andOpRightResults.setIfTrue(j, andOpLeftResults[i] xor true)
+            system.andOpRightResults.setIfTrue(j, !andOpLeftResults[i])
 
             j++
             i++
@@ -242,6 +268,15 @@ class AndEquationSystem {
         }
 
         return solutions
+    }
+
+    fun clear(eqIndex: Int) {
+        equations[eqIndex].andOpLeft.clear()
+        equations[eqIndex].andOpRight.clear()
+        equations[eqIndex].rightXor.clear()
+        andOpLeftResults.clear(eqIndex)
+        andOpRightResults.clear(eqIndex)
+        rightXorResults.clear(eqIndex)
     }
 
     fun clone(): AndEquationSystem {
@@ -559,26 +594,23 @@ class AndEquationSystem {
         val varsCount: Int,
     ) {
         private val tmp = BitSet(system.cols)
+        private val noSolution = BitSet(system.cols)
+        private val missingVars = BitSet(system.cols)
         val badVars = BitSet(system.cols)
-        val badVarsNum = IntArray(system.cols)
 
         init {
+            noSolution.invert(system.cols)
+            findMissingVars()
             calculate()
         }
 
         fun recalculate() {
             badVars.clear()
-            badVarsNum.fill(0)
             calculate()
         }
 
         fun hasSolution(): Boolean {
-            var solutionExists = false
-            badVars.iterateOverClearBits(0, system.cols) {
-                solutionExists = true
-                false
-            }
-            return solutionExists
+            return badVars != noSolution
         }
 
         fun solutions(): Sequence<BitSet> {
@@ -610,11 +642,12 @@ class AndEquationSystem {
         }
 
         private fun calculate() {
+            badVars.or(missingVars)
+
             var varIndex = 0
             while (varIndex < varsCount) {
                 if (system.varEqMap[varIndex] != -1) {
                     badVars.set(varIndex)
-                    badVarsNum[varIndex]++
                 }
                 varIndex++
             }
@@ -650,24 +683,19 @@ class AndEquationSystem {
                         tmp.or(varCompIndex, true)
                     }
 
-                    tmp.iterateOverAllSetBits { badVarsNum[it]++ }
                     badVars.or(tmp)
                     tmp.clear()
                 } else if (eq0 != -1) {
                     badVars.or(varIndex, true)
-                    badVarsNum[varIndex]++
 
                     if (system.equations[eq0][varCompIndex] || system.results[eq0]) {
                         badVars.or(varCompIndex, true)
-                        badVarsNum[varCompIndex]++
                     }
                 } else if (eq1 != -1) {
                     badVars.or(varCompIndex, true)
-                    badVarsNum[varCompIndex]++
 
                     if (system.equations[eq1][varIndex] || system.results[eq1]) {
                         badVars.or(varIndex, true)
-                        badVarsNum[varIndex]++
                     }
                 }
 
@@ -675,8 +703,17 @@ class AndEquationSystem {
             }
         }
 
+        private fun findMissingVars() {
+            var eqIndex = 0
+            while (eqIndex < system.rows) {
+                missingVars.or(system.equations[eqIndex])
+                eqIndex++
+            }
+            missingVars.invert(system.cols)
+        }
+
         override fun toString(): String {
-            return badVars.toString(system.cols) + "\n" + badVarsNum.joinToString(" ")
+            return badVars.toString(system.cols)
         }
     }
     //#endregion
