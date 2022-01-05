@@ -350,7 +350,10 @@ class AndEquationSystem {
             badVarsCounter = BadVarsCounter(invertedSystem, varsCount)
         }
 
-        fun solve(): Set<BitSet> {
+        fun solve(
+            logProgress: Boolean = false,
+            progressStep: Int = 1024,
+        ): Set<BitSet> {
             var solutions = extractSolutions()
             if (solutions.isNotEmpty()) return solutions
 
@@ -376,6 +379,10 @@ class AndEquationSystem {
                     invertedSystem.expressVariable(eqIndex, varIndex, varSubstituted = ::varSubstitutedHandler)
                     badVarsCounter.recalculate()
 
+                    if (logProgress && modPow2(varIndex, progressStep) == 0) {
+                        logger.info("Expressed $varIndex variables")
+                    }
+
                     solutions = extractSolutions()
 
                     if (solutions.isNotEmpty()) {
@@ -397,7 +404,17 @@ class AndEquationSystem {
             val indexCache = IntArray(max(invertedSystem.cols, invertedSystem.rows))
             var indexCachePtr = 0
 
+            if (logProgress) {
+                logger.info("Starting random walk")
+            }
+
+            var loopCounter = 0L
+
             while (!Thread.interrupted()) {
+                if (logProgress && modPow2(loopCounter++, progressStep.toLong()) == 0L) {
+                    logger.info("Random walk #$loopCounter")
+                }
+
                 var i = varsCount
                 while (i < invertedSystem.cols) {
                     if (invertedSystem.varEqMap[i] == -1) {
@@ -462,6 +479,10 @@ class AndEquationSystem {
         private fun varSubstitutedHandler(eqIndex: Int): Boolean {
             solutionPairs.update(eqIndex)
             return true
+        }
+
+        companion object {
+            private val logger = KotlinLogging.logger {}
         }
     }
 
