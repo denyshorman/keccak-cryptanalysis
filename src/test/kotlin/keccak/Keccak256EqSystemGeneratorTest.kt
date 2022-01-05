@@ -8,9 +8,11 @@ import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 import java.io.File
 import java.util.*
+import kotlin.concurrent.thread
 import kotlin.random.Random
 import kotlin.random.Random.Default.nextBytes
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 class Keccak256EqSystemGeneratorTest : FunSpec({
     test("keccak256 hash empty string") {
@@ -506,5 +508,38 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
             i++
         }
         println()
+    }
+
+    test("find collision").config(timeout = 10.days) {
+        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = true)
+        val normalizedSystem = hashResult.equationSystem.simplify()
+
+        val algorithm = AndEquationSystem.PivotSolutionAlgorithm(normalizedSystem, hashResult.varValues)
+
+        System.gc()
+
+        val job = thread {
+            val solutions = algorithm.solve(logProgress = true, progressStep = 64)
+
+            if (solutions.isNotEmpty()) {
+                for (solution in solutions) {
+                    println(solution.toString(normalizedSystem.cols))
+                }
+            }
+        }
+
+        Runtime.getRuntime().addShutdownHook(Thread {
+            job.interrupt()
+            job.join()
+
+            algorithm.invertedSystem.toFile(
+                file = File("D:\\test\\solution.txt"),
+                humanReadable = true,
+            )
+        })
+
+        job.join()
     }
 })
