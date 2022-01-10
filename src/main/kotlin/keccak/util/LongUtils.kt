@@ -4,7 +4,7 @@ import keccak.*
 import java.util.*
 
 fun Long.getBit(bitIndex: Int): Boolean {
-    return ((this shr (Long.SIZE_BITS - bitIndex - 1)) and 1) > 0
+    return ((this shr (Long.SIZE_BITS - bitIndex - 1)) and 1L) > 0
 }
 
 fun Long.setBit(bitIndex: Int, value: Boolean): Long {

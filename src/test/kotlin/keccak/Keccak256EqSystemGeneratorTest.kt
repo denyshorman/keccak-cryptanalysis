@@ -546,4 +546,67 @@ class Keccak256EqSystemGeneratorTest : FunSpec({
 
         job.join()
     }
+
+    test("find collision 2").config(timeout = 10.days) {
+        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
+
+        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = true)
+        val normalizedSystem = hashResult.equationSystem.normalize()
+
+        val invertedSystem = File("D:\\test\\solution.txt").toXorEquationSystem(
+            rows = normalizedSystem.rows * 2,
+            cols = normalizedSystem.cols + normalizedSystem.rows * 2,
+            humanReadable = true,
+            firstVarExpressed = true,
+        )
+
+        val algorithm = AndEquationSystem.PivotSolutionAlgorithm(
+            system = invertedSystem,
+            varsCount = normalizedSystem.cols,
+            pivotSolution = hashResult.varValues,
+            solutionFilter = fun(varIndex: Int, system: XorEquationSystem): Boolean {
+                var i = 0
+                while (i < 1088) {
+                    val eqIndex = system.varEqMap[i]
+                    if (eqIndex != -1 && system.equations[eqIndex][varIndex]) {
+                        return true
+                    }
+                    i++
+                }
+                return false
+            }
+        )
+
+        System.gc()
+
+        val job = thread {
+            val solutions = algorithm.solve(logProgress = true, progressStep = 64)
+
+            if (solutions.isNotEmpty()) {
+                println("Main solution: ${hashResult.varValues.toString(normalizedSystem.cols)}")
+                println("Main solution: ${msg.map { it.toUByte() }}")
+                for (solution in solutions) {
+                    println(solution.toByteArray(136).map{ it.toUByte() })
+                }
+                println()
+                for (solution in solutions) {
+                    println(solution.toString(normalizedSystem.cols))
+                }
+            }
+        }
+
+        Runtime.getRuntime().addShutdownHook(Thread {
+            job.interrupt()
+            job.join()
+
+            algorithm.invertedSystem.sortEquations()
+
+            algorithm.invertedSystem.toFile(
+                file = File("D:\\test\\solution2.txt"),
+                humanReadable = true,
+            )
+        })
+
+        job.join()
+    }
 })

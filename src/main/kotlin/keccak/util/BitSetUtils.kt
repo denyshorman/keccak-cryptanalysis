@@ -137,8 +137,8 @@ fun BitSet.firstMatchIndex(other: BitSet): Int {
     return index
 }
 
-inline fun BitSet.iterateOverAllSetBits(callback: (Int) -> Unit) {
-    var i = nextSetBit(0)
+inline fun BitSet.iterateOverAllSetBits(fromIndex: Int = 0, callback: (Int) -> Unit) {
+    var i = nextSetBit(fromIndex)
 
     while (i >= 0) {
         callback(i)
@@ -155,7 +155,7 @@ inline fun BitSet?.iterateOverAllSetBits(fromIndex: Int, toIndex: Int, callback:
             i++
         }
     } else {
-        iterateOverAllSetBits(callback)
+        iterateOverAllSetBits(fromIndex, callback)
     }
 }
 

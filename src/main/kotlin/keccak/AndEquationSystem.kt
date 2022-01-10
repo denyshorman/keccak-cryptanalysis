@@ -361,10 +361,23 @@ class AndEquationSystem {
     }
 
     //#region Public Models
+    class BruteForceAlgorithm(val system: AndEquationSystem) {
+        fun solve(): Sequence<BitSet> {
+            return sequence {
+                val ci = CombinationIterator(system.cols)
+
+                ci.iterateAll {
+                    if (system.isValid(ci.combination)) {
+                        yield(ci.combination.clone() as BitSet)
+                    }
+                }
+            }
+        }
+    }
+
     class PivotSolutionAlgorithm {
         private val random: Random
         private val pivotSolution: BitSet
-        private val solutionPairs: SolutionPairsCounter
         private val badVarsCounter: BadVarsCounter
         private val varsCount: Int
 
@@ -381,8 +394,21 @@ class AndEquationSystem {
             this.pivotSolution = pivotSolution
             varsCount = system.cols
             invertedSystem = system.invertToXorSystem()
-            solutionPairs = SolutionPairsCounter(invertedSystem, varsCount, system.rows)
             badVarsCounter = BadVarsCounter(invertedSystem, varsCount)
+        }
+
+        constructor(
+            system: XorEquationSystem,
+            varsCount: Int,
+            pivotSolution: BitSet,
+            random: Random = Random,
+            solutionFilter: ((Int, XorEquationSystem) -> Boolean)? = null,
+        ) {
+            this.random = random
+            this.pivotSolution = pivotSolution
+            this.varsCount = varsCount
+            invertedSystem = system
+            badVarsCounter = BadVarsCounter(invertedSystem, varsCount, solutionFilter)
         }
 
         fun solve(
@@ -410,8 +436,7 @@ class AndEquationSystem {
                         continue
                     }
 
-                    solutionPairs.clear(eqIndex)
-                    invertedSystem.expressVariable(eqIndex, varIndex, varSubstituted = ::varSubstitutedHandler)
+                    invertedSystem.expressVariable(eqIndex, varIndex)
                     badVarsCounter.recalculate()
 
                     if (logProgress && modPow2(varIndex, progressStep) == 0) {
@@ -432,9 +457,6 @@ class AndEquationSystem {
 
             solutions = extractSolutions()
             if (solutions.isNotEmpty()) return solutions
-
-            solutionPairs.pairs.clear()
-            solutionPairs.pairs.invert(solutionPairs.pairsCount)
 
             val indexCache = IntArray(max(invertedSystem.cols, invertedSystem.rows))
             var indexCachePtr = 0
@@ -483,24 +505,7 @@ class AndEquationSystem {
         }
 
         private fun extractSolutions(): Set<BitSet> {
-            if (solutionPairs.hasSolution()) {
-                val solution = BitSet(varsCount)
-                var allVarsExtracted = true
-
-                var varIndex = 0
-                while (varIndex < varsCount) {
-                    if (invertedSystem.varEqMap[varIndex] != -1) {
-                        solution.setIfTrue(varIndex, invertedSystem.results[invertedSystem.varEqMap[varIndex]])
-                    } else if (allVarsExtracted) {
-                        allVarsExtracted = false
-                    }
-                    varIndex++
-                }
-
-                if (!allVarsExtracted && pivotSolution != solution) {
-                    return setOf(solution)
-                }
-            } else if (badVarsCounter.hasSolution()) {
+            if (badVarsCounter.hasSolution()) {
                 val solutions = badVarsCounter.solutions().filter { it != pivotSolution }.toSet()
 
                 if (solutions.isNotEmpty()) {
@@ -509,11 +514,6 @@ class AndEquationSystem {
             }
 
             return emptySet()
-        }
-
-        private fun varSubstitutedHandler(eqIndex: Int): Boolean {
-            solutionPairs.update(eqIndex)
-            return true
         }
 
         companion object {
@@ -592,6 +592,7 @@ class AndEquationSystem {
     class BadVarsCounter(
         val system: XorEquationSystem,
         val varsCount: Int,
+        val solutionFilter: ((Int, XorEquationSystem) -> Boolean)? = null,
     ) {
         private val tmp = BitSet(system.cols)
         private val noSolution = BitSet(system.cols)
@@ -610,13 +611,40 @@ class AndEquationSystem {
         }
 
         fun hasSolution(): Boolean {
-            return badVars != noSolution
+            var hasSolutions = badVars != noSolution
+
+            return if (hasSolutions) {
+                if (solutionFilter != null) {
+                    hasSolutions = false
+
+                    badVars.iterateOverClearBits(fromIndex = 0, toIndex = system.cols) { varIndex ->
+                        if (solutionFilter!!(varIndex, system)) {
+                            hasSolutions = true
+                            false
+                        } else {
+                            true
+                        }
+                    }
+
+                    hasSolutions
+                } else {
+                    true
+                }
+            } else {
+                false
+            }
         }
 
         fun solutions(): Sequence<BitSet> {
             return sequence {
-                badVars.iterateOverAllClearBits(0, system.cols) {
-                    yield(it)
+                badVars.iterateOverAllClearBits(0, system.cols) { varIndex ->
+                    if (solutionFilter != null) {
+                        if (solutionFilter!!(varIndex, system)) {
+                            yield(varIndex)
+                        }
+                    } else {
+                        yield(varIndex)
+                    }
                 }
             }
                 .map { varIndex ->
