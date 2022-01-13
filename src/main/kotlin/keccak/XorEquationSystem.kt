@@ -259,6 +259,10 @@ class XorEquationSystem {
             }
 
             activeRows.iterateOverAllSetBits(fromIndex = 0, rows) { eqIndex ->
+                if (logProgress && modPow2(eqIndex, progressStep) == 0) {
+                    logger.info("Processed $eqIndex rows")
+                }
+
                 if (equations[eqIndex].isEmpty || eqVarMap[eqIndex] != -1) {
                     return@iterateOverAllSetBits
                 }
@@ -266,10 +270,6 @@ class XorEquationSystem {
                 val varIndex = equations[eqIndex].nextSetBit(0)
                 val expressed = expressVariable(eqIndex, varIndex, activeRows, validateEquation)
                 if (!expressed) return false
-
-                if (logProgress && modPow2(eqIndex, progressStep) == 0) {
-                    logger.info("Processed $eqIndex rows")
-                }
             }
 
             if (logProgress) {
