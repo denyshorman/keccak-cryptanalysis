@@ -521,6 +521,38 @@ class AndEquationSystem {
         }
     }
 
+    class XorAlgorithm(
+        val system: AndEquationSystem,
+        val pivotSolution: BitSet,
+    ) {
+        fun solve(useXor: Boolean): XorEquationSystem {
+            system.rotate(pivotSolution, left = true, right = false)
+            val xorSystem = XorEquationSystem(system.rows, system.cols)
+
+            var i = 0
+            while (i < system.rows) {
+                if (useXor) {
+                    xorSystem.equations[i].xor(system.equations[i].andOpLeft)
+                    xorSystem.equations[i].xor(system.equations[i].andOpRight)
+                    xorSystem.results.setIfTrue(i, system.andOpLeftResults[i] xor system.andOpRightResults[i])
+                } else {
+                    xorSystem.equations[i].xor(system.equations[i].andOpRight)
+                    xorSystem.results.setIfTrue(i, system.andOpRightResults[i])
+                }
+
+                i++
+            }
+
+            xorSystem.solve(
+                skipValidation = true,
+                logProgress = true,
+                sortEquations = true,
+            )
+
+            return xorSystem
+        }
+    }
+
     class SolutionPairsCounter(
         private val system: XorEquationSystem,
         private val varsCount: Int,
