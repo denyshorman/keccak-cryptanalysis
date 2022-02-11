@@ -256,12 +256,10 @@ class Keccak256EqSystemGenerator private constructor() {
         }
 
         ROUND_OFFSETS[4].forEach { x ->
-            state0[x[0]] = b0[x[0]] xor b0[x[1]] xor (b0[x[1]] and b0[x[2]])
-            state1[x[0]] = recordConstraint(b1[x[0]], b1[x[1]], b1[x[2]], state0[x[0]])
+            val roundConstant = if (x[0] == 0) ROUND_CONSTANTS[round] else 0L
+            state0[x[0]] = (b0[x[1]] and b0[x[2]].inv()) xor b0[x[0]] xor roundConstant
+            state1[x[0]] = recordConstraint(b1[x[0]], b1[x[1]], b1[x[2]], roundConstant, state0[x[0]])
         }
-
-        state0[0] = state0[0] xor ROUND_CONSTANTS[round]
-        state1[0].results.xor(ROUND_CONSTANTS_FIXED_BIT_SET[round].bitSet)
     }
 
     private fun State.squeeze(): ByteArray {
@@ -312,6 +310,7 @@ class Keccak256EqSystemGenerator private constructor() {
         a: XorEquationSystem,
         b: XorEquationSystem,
         c: XorEquationSystem,
+        roundConstant: Long,
         result: Long,
     ): XorEquationSystem {
         val system = XorEquationSystem(Long.SIZE_BITS, allVarsCount)
@@ -323,20 +322,17 @@ class Keccak256EqSystemGenerator private constructor() {
             andEqSystem.equations[andSystemEqIndex].andOpLeft = b.equations[i].clone() as BitSet
             andEqSystem.equations[andSystemEqIndex].andOpRight = c.equations[i].clone() as BitSet
             andEqSystem.equations[andSystemEqIndex].rightXor = a.equations[i].clone() as BitSet
-            andEqSystem.equations[andSystemEqIndex].rightXor.xor(b.equations[i])
             andEqSystem.equations[andSystemEqIndex].rightXor.set(constraintVarIndex)
 
             andEqSystem.andOpLeftResults[andSystemEqIndex] = b.results[i]
-            andEqSystem.andOpRightResults[andSystemEqIndex] = c.results[i]
-            andEqSystem.rightXorResults[andSystemEqIndex] = a.results[i] xor b.results[i]
+            andEqSystem.andOpRightResults[andSystemEqIndex] = !c.results[i]
+            andEqSystem.rightXorResults[andSystemEqIndex] = a.results[i] xor roundConstant.getBit(i)
 
             system.equations[i].set(constraintVarIndex)
             system.eqVarMap[i] = constraintVarIndex
             system.varEqMap[constraintVarIndex] = i
 
-            if (result.getBit(i)) {
-                varValues.set(constraintVarIndex)
-            }
+            varValues.setIfTrue(constraintVarIndex, result.getBit(i))
 
             constraintVarIndex++
             i++
@@ -428,33 +424,6 @@ class Keccak256EqSystemGenerator private constructor() {
             0x8000000000008080uL.toLong(),
             0x0000000080000001uL.toLong(),
             0x8000000080008008uL.toLong(),
-        )
-
-        private val ROUND_CONSTANTS_FIXED_BIT_SET = arrayOf(
-            0x0000000000000001uL.toLong().toBitGroup(),
-            0x0000000000008082uL.toLong().toBitGroup(),
-            0x800000000000808auL.toLong().toBitGroup(),
-            0x8000000080008000uL.toLong().toBitGroup(),
-            0x000000000000808buL.toLong().toBitGroup(),
-            0x0000000080000001uL.toLong().toBitGroup(),
-            0x8000000080008081uL.toLong().toBitGroup(),
-            0x8000000000008009uL.toLong().toBitGroup(),
-            0x000000000000008auL.toLong().toBitGroup(),
-            0x0000000000000088uL.toLong().toBitGroup(),
-            0x0000000080008009uL.toLong().toBitGroup(),
-            0x000000008000000auL.toLong().toBitGroup(),
-            0x000000008000808buL.toLong().toBitGroup(),
-            0x800000000000008buL.toLong().toBitGroup(),
-            0x8000000000008089uL.toLong().toBitGroup(),
-            0x8000000000008003uL.toLong().toBitGroup(),
-            0x8000000000008002uL.toLong().toBitGroup(),
-            0x8000000000000080uL.toLong().toBitGroup(),
-            0x000000000000800auL.toLong().toBitGroup(),
-            0x800000008000000auL.toLong().toBitGroup(),
-            0x8000000080008081uL.toLong().toBitGroup(),
-            0x8000000000008080uL.toLong().toBitGroup(),
-            0x0000000080000001uL.toLong().toBitGroup(),
-            0x8000000080008008uL.toLong().toBitGroup(),
         )
 
         private val ABSORB_CONSTANTS = arrayOf(
