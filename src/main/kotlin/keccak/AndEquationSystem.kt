@@ -72,6 +72,26 @@ class AndEquationSystem {
                 !rightXorResults[eqIndex]
     }
 
+    fun hasVariable(eqIndex: Int, varIndex: Int): Boolean {
+        return equations[eqIndex].andOpLeft[varIndex] ||
+                equations[eqIndex].andOpRight[varIndex] ||
+                equations[eqIndex].rightXor[varIndex]
+    }
+
+    fun hasSideMatch(eq0: Int, eq1: Int): Boolean {
+        val a0 = equations[eq0].andOpLeft
+        val a1 = equations[eq0].andOpRight
+        val a2 = equations[eq0].rightXor
+
+        val b0 = equations[eq1].andOpLeft
+        val b1 = equations[eq1].andOpRight
+        val b2 = equations[eq1].rightXor
+
+        return a0 == b0 || a0 == b1 || a0 == b2 ||
+                a1 == b0 || a1 == b1 || a1 == b2 ||
+                a2 == b0 || a2 == b1 || a2 == b2
+    }
+
     fun countEmptyEquations(): Int {
         var eqIndex = 0
         var counter = 0
@@ -268,6 +288,14 @@ class AndEquationSystem {
         }
 
         return solutions
+    }
+
+    fun exchange(i: Int, j: Int) {
+        if (i == j) return
+        equations.exchange(i, j)
+        andOpLeftResults.exchange(i, j)
+        andOpRightResults.exchange(i, j)
+        rightXorResults.exchange(i, j)
     }
 
     fun clear(eqIndex: Int) {

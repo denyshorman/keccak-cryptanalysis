@@ -1,6 +1,7 @@
 package keccak.util
 
 import keccak.*
+import java.io.OutputStream
 
 fun Node.printNodes() {
     if (this !is Xor) return
@@ -152,11 +153,53 @@ fun Node.printGroups() {
     }
 }
 
+fun areCompatible(
+    interpolation: Node,
+    expected: Node,
+    varPrefix: String = "x",
+    varsCount: Int = (interpolation * expected).countVariables(varPrefix)
+): Boolean {
+    val xIter = CombinationIteratorSimple(varsCount)
+    var compatible = true
+
+    xIter.iterate {
+        val a = interpolation.evaluate(xIter.combination, varPrefix)
+        val b = expected.evaluate(xIter.combination, varPrefix)
+        if (!a && b) {
+            compatible = false
+        }
+        compatible
+    }
+
+    return compatible
+}
+
+fun compatibilityDifference(
+    interpolation: Node,
+    expected: Node,
+    varPrefix: String = "x",
+    varsCount: Int = (interpolation * expected).countVariables(varPrefix)
+): Int {
+    val xIter = CombinationIteratorSimple(varsCount)
+    var diff = 0
+
+    xIter.iterateAll {
+        val a = interpolation.evaluate(xIter.combination, varPrefix)
+        val b = expected.evaluate(xIter.combination, varPrefix)
+        if (!a && b) {
+            diff++
+        }
+    }
+
+    return diff
+}
+
 fun Node.printAllFuncSplitAnd(
     splitCount: Int,
     varPrefix: String = "x",
     factor: Boolean = true,
     printCondition: ((Array<Node>) -> Boolean)? = null,
+    outputStream: OutputStream = System.out,
 ) {
     val base = this
     val xIter = CombinationIteratorSimple(base.countVariables(varPrefix))
@@ -198,10 +241,10 @@ fun Node.printAllFuncSplitAnd(
             if (factor) {
                 preparedTerm = preparedTerm.factor()
             }
-            println(preparedTerm)
+            outputStream.write((preparedTerm.toString() + "\n").toByteArray())
         }
 
-        println()
+        outputStream.write("\n".toByteArray())
     }
 
     fun iterate(idx: Int) {

@@ -142,17 +142,18 @@ fun XorEquationSystem.toBitEquation(eqIndex: Int): XorEquation {
     return XorEquation(cols, eq, res)
 }
 
-fun XorEquationSystem.toNodeEquationSystem(varPrefix: String = "x", varOffset: Int = 1): NodeEquationSystem {
-    val equations = Array(rows) { eqIndex ->
-        val left = LinkedList<Node>()
+fun XorEquationSystem.toNodeEquationSystem(varPrefix: String = "x", varOffset: Int = 0): NodeEquationSystem {
+    val equations = Array<Node>(rows) { eqIndex ->
+        val nodes = LinkedList<Node>()
+        nodes.add(Bit(results[eqIndex]))
 
         var bitIndex = equations[eqIndex].nextSetBit(0)
         while (bitIndex >= 0) {
-            left.add(Variable("$varPrefix${bitIndex + varOffset}"))
+            nodes.add(Variable("$varPrefix${bitIndex + varOffset}"))
             bitIndex = equations[eqIndex].nextSetBit(bitIndex + 1)
         }
 
-        NodeEquation(Xor(left), Bit(results[eqIndex]))
+        Xor(nodes)
     }
 
     return NodeEquationSystem(equations)

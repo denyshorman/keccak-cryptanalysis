@@ -64,6 +64,7 @@ value class Variable(val name: String) : Node {
 }
 
 class Xor : Node {
+    private val hashCode: Lazy<Int>
     val nodes: Set<Node>
 
     constructor(vararg initNodes: Node) : this(initNodes.asIterable())
@@ -73,6 +74,7 @@ class Xor : Node {
         nodes = HashSet<Node>()
         nodes.addNodes(initNodes)
         nodes.pad()
+        hashCode = lazy(LazyThreadSafetyMode.NONE, nodes::hashCode)
     }
 
     override fun evaluate(context: NodeContext): Bit {
@@ -92,16 +94,12 @@ class Xor : Node {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-
         other as Xor
-
-        if (nodes != other.nodes) return false
-
-        return true
+        return nodes == other.nodes
     }
 
     override fun hashCode(): Int {
-        return nodes.hashCode()
+        return this.hashCode.value
     }
 
     override fun toString(): String {
@@ -137,6 +135,7 @@ class Xor : Node {
 }
 
 class And : Node {
+    private val hashCode: Lazy<Int>
     val nodes: Set<Node>
 
     constructor(vararg initNodes: Node) : this(initNodes.asIterable())
@@ -151,6 +150,8 @@ class And : Node {
         } catch (_: Zero) {
             setOf(Bit())
         }
+
+        hashCode = lazy(LazyThreadSafetyMode.NONE, nodes::hashCode)
     }
 
     override fun evaluate(context: NodeContext): Bit {
@@ -167,16 +168,12 @@ class And : Node {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-
         other as And
-
-        if (nodes != other.nodes) return false
-
-        return true
+        return nodes == other.nodes
     }
 
     override fun hashCode(): Int {
-        return nodes.hashCode()
+        return this.hashCode.value
     }
 
     override fun toString(): String {

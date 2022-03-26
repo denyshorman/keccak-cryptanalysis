@@ -211,17 +211,12 @@ fun BitSet.toString(size: Int): String {
     return String(CharArray(size) { this[it].toNumChar() })
 }
 
-fun BitSet.toXorString(
+fun BitSet.toVarsList(
     freeBit: Boolean = false,
     varPrefix: String = "x",
     varOffset: Int = 0,
     expressVarIndex: Int? = null,
-    defaultIfEmpty: String = "0",
-): String {
-    if (isEmpty) {
-        return if (freeBit) freeBit.toNumChar().toString() else defaultIfEmpty
-    }
-
+): MutableList<String> {
     val vars = LinkedList<String>()
 
     iterateOverAllSetBits { bitIndex ->
@@ -238,7 +233,22 @@ fun BitSet.toXorString(
         vars.addLast(freeBit.toNumChar().toString())
     }
 
-    return vars.joinToString(separator = " + ")
+    return vars
+}
+
+fun BitSet.toXorString(
+    freeBit: Boolean = false,
+    varPrefix: String = "x",
+    varOffset: Int = 0,
+    expressVarIndex: Int? = null,
+    defaultIfEmpty: String = "0",
+): String {
+    if (isEmpty) {
+        return if (freeBit) freeBit.toNumChar().toString() else defaultIfEmpty
+    }
+
+    return toVarsList(freeBit, varPrefix, varOffset, expressVarIndex)
+        .joinToString(separator = " + ")
 }
 
 fun BitSet.toNode(
