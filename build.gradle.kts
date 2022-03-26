@@ -10,19 +10,19 @@ repositories {
     mavenCentral()
 }
 
-val kotestVersion = "5.0.2"
+val kotestVersion = "5.2.1"
 
 dependencies {
     implementation("org.web3j:core:4.8.9")
-    implementation("io.github.microutils:kotlin-logging-jvm:2.1.20")
-    implementation("ch.qos.logback:logback-classic:1.2.9")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
+    implementation("io.github.microutils:kotlin-logging-jvm:2.1.21")
+    implementation("ch.qos.logback:logback-classic:1.2.11")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
 
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-json:$kotestVersion")
-    testImplementation("io.mockk:mockk:1.12.1")
+    testImplementation("io.mockk:mockk:1.12.3")
 }
 
 tasks {
