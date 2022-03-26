@@ -44,34 +44,57 @@ class KeccakSystemUtilsKtTest : FunSpec({
         println(offsets)
     }
 
-    test("invertGroup") {
-        val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
+    context("invertGroup") {
+        test("1") {
+            val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
 
-        val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
-        val andSystem = hashResult.equationSystem.sortBySolvableGroups()
+            val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
+            val andSystem = hashResult.equationSystem.sortBySolvableGroups()
 
-        val andNodeSystem = andSystem.invertGroup(groupIndex = 1)
+            val andNodeSystem = andSystem.invertGroup(groupIndex = 1)
 
-        val vars = (1088 until 1088 + 1600).map { Variable("x$it") }
+            val vars = (1088 until 1088 + 1600).map { Variable("x$it") }
 
-        andNodeSystem.solve(
-            logProgress = true,
-            progressStep = 32,
-            priorityNodes = vars
-        )
+            andNodeSystem.solve(
+                logProgress = true,
+                progressStep = 32,
+                priorityNodes = vars
+            )
 
-        andNodeSystem.expand()
+            andNodeSystem.expand()
 
-        val stream = FileOutputStream("test.txt")
+            val stream = FileOutputStream("test.txt")
 
-        var i = 0
-        while (i < andNodeSystem.rows) {
-            stream.write((andNodeSystem.equations[i].toString() + "\n").toByteArray(Charsets.US_ASCII))
-            i++
+            var i = 0
+            while (i < andNodeSystem.rows) {
+                stream.write((andNodeSystem.equations[i].toString() + "\n").toByteArray(Charsets.US_ASCII))
+                i++
+            }
+
+            stream.close()
+
+            //println(andNodeSystem)
         }
 
-        stream.close()
+        test("2") {
+            val msg = byteArrayOf(43, -41, 18, -104, -29, 71, -26, -52, -77, 125, -82, 85, -96, 0, 108, -45, 118, -98, 110, 47, -53, -85, 0, -18, 13, 98, 26, 69, -121, -84, -121, -45, 100)
 
-        //println(andNodeSystem)
+            val hashResult = Keccak256EqSystemGenerator.INSTANCE.hash(msg, replaceRulesInverse = true, replacePadding = false)
+            val andSystem = hashResult.equationSystem.sortBySolvableGroups()
+
+            val andNodeSystem = andSystem.invertGroup(groupIndex = 23)
+
+            andNodeSystem.expand()
+
+            val stream = FileOutputStream("test.txt")
+
+            var i = 0
+            while (i < andNodeSystem.rows) {
+                stream.write((andNodeSystem.equations[i].toString() + "\n").toByteArray(Charsets.US_ASCII))
+                i++
+            }
+
+            stream.close()
+        }
     }
 })

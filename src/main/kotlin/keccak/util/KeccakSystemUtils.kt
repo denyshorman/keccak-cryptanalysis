@@ -81,58 +81,91 @@ fun AndEquationSystem.buildGroupOffsets(): Array<IntArray> {
 }
 
 fun AndEquationSystem.invertGroup(groupIndex: Int): NodeEquationSystem {
+    val groupSize = 5
     val batchCount = 1600
     val groupsCount = rows / batchCount
+    val t = Bit(true)
+    val f = Bit(false)
+    val x = Array(groupSize) { BitSet(cols) }
+    val y = Array(groupSize) { BitSet(cols) }
+    val xr = BooleanArray(groupSize)
+    val yr = BooleanArray(groupSize)
+    val xx = Array<Node>(groupSize) { f }
+    val yy = Array<Node>(groupSize) { f }
 
     val nodeEqSystem = NodeEquationSystem(batchCount)
 
-    if (groupIndex + 1 == groupsCount) {
+    val startIndex = groupIndex * batchCount
+    val endIndex = startIndex + batchCount
+    val lastGroup = groupIndex + 1 == groupsCount
 
-    } else {
-        val groupSize = 5
-        val t = Bit(true)
-        val f = Bit(false)
-        val x = Array(groupSize) { BitSet(cols) }
-        val y = Array(groupSize) { BitSet(cols) }
-        val xr = BooleanArray(groupSize)
-        val yr = BooleanArray(groupSize)
-        val xx = Array<Node>(groupSize) { f }
-        val yy = Array<Node>(groupSize) { f }
-
-        var eqIndex = groupIndex * batchCount
-        val endIndex = eqIndex + batchCount
-        while (eqIndex < endIndex) {
-            var i = 0
-            while (i < groupSize) {
+    fun copyGroup(eqIndex: Int) {
+        var i = 0
+        while (i < groupSize) {
+            if (lastGroup && i == 4) {
+                x[i].xor(equations[eqIndex].andOpRight)
+                xr[i] = !andOpRightResults[eqIndex]
+            } else {
                 x[i].xor(equations[eqIndex + (i + 2) % groupSize].andOpLeft)
                 xr[i] = andOpLeftResults[eqIndex + (i + 2) % groupSize]
-                xx[i] = x[i].toNode(xr[i]).simplify()
-
-                y[i].xor(equations[eqIndex + i].rightXor)
-                y[i].xor(x[i])
-                yr[i] = rightXorResults[eqIndex + i] xor xr[i]
-                yy[i] = y[i].toNode(yr[i]).simplify()
-
-                i++
             }
 
-            i = 0
+            xx[i] = x[i].toNode(xr[i]).simplify()
+
+            y[i].xor(equations[eqIndex + i].rightXor)
+            y[i].xor(x[i])
+            yr[i] = rightXorResults[eqIndex + i] xor xr[i]
+            yy[i] = y[i].toNode(yr[i]).simplify()
+
+            i++
+        }
+    }
+
+    fun clearGroup() {
+        var i = 0
+        while (i < groupSize) {
+            x[i].clear()
+            y[i].clear()
+            xr[i] = false
+            yr[i] = false
+            xx[i] = f
+            yy[i] = f
+            i++
+        }
+    }
+
+    var eqIndex = startIndex
+
+    if (lastGroup) {
+        while (eqIndex < endIndex) {
+            if (isEmpty(eqIndex)) {
+                eqIndex += groupSize
+                continue
+            }
+
+            copyGroup(eqIndex)
+
+            nodeEqSystem.equations.add((xx[0] + xx[1]*Bit(!yr[2] && yr[4]) + Bit((yr[3] && !yr[4]) xor yr[0])).simplify())
+            nodeEqSystem.equations.add((xx[2] + xx[1]*Bit((yr[3] && !yr[4]) xor yr[0]) + Bit((yr[3] && !yr[4]) xor yr[0] xor yr[2])).simplify())
+            nodeEqSystem.equations.add((xx[3] + xx[1]*Bit(!yr[2]) + Bit(yr[3])).simplify())
+            nodeEqSystem.equations.add((xx[4] + xx[1]*Bit(yr[0] && !yr[3]) + Bit(yr[4] xor (!yr[3] && (yr[0] xor yr[2])))).simplify())
+
+            clearGroup()
+
+            eqIndex += groupSize
+        }
+    } else {
+        while (eqIndex < endIndex) {
+            copyGroup(eqIndex)
+
+            var i = 0
             while (i < groupSize) {
                 val r = xx[i] + yy[i] + (yy[(i + 4) % groupSize] + t)*(yy[(i + 1) % groupSize]*(yy[(i + 2) % groupSize] + t) + yy[(i + 3) % groupSize])
                 nodeEqSystem.equations.add(r)
                 i++
             }
 
-            i = 0
-            while (i < groupSize) {
-                x[i].clear()
-                y[i].clear()
-                xr[i] = false
-                yr[i] = false
-                xx[i] = f
-                yy[i] = f
-                i++
-            }
+            clearGroup()
 
             eqIndex += groupSize
         }
